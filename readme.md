@@ -104,68 +104,110 @@ graph TD
 
 ## 5. 디렉토리 구조 (Directory Structure)
 
-### 5.1 Backend (/backend)
+### 5.1 Database (/database)
+
+Postgresql sql script 파일 도메인별 기능별로 분리관리
+
+```text
+database/
+├── 01_com/                # CMM (공통)
+│   ├── tables.sql         # 테이블 정의
+│   ├── functions.sql      # 채번 함수 등
+│   └── seed.sql           # 기초 코드 데이터
+├── 02_iam/                # IAM (인증/권한)
+│   ├── tables.sql
+│   └── seed.sql
+├── 03_usr/                # USR (사용자/조직)
+│   ├── tables.sql
+│   └── seed.sql
+├── 04_fac/                # FAC (시설)
+│   └── tables.sql
+├── 05_eqp/                # EQP (설비)
+│   └── tables.sql
+└── deploy.sql             # [중요] 모든 SQL을 순서대로 호출하는 마스터 파일
+```
+
+### 5.2 Backend (/backend)
 
 파이썬의 "명시적 해결책" 철학을 준수하며, 기능별로 파일을 분리
 
 ```text
 backend/
 ├── app/
-│   ├── core/
-│   │   ├── config.py          # 환경설정 (.env 로드)
-│   │   └── database.py        # DB 세션 (app.core.database)
-│   ├── api/
+│   ├── core/                  #  전역 설정 및 인프라 계층
+│   │   ├── config.py          #  환경설정 (.env 로드)
+│   │   └── database.py        #  DB 세션 관리 (app.core.database)
+│   │
+│   ├── domains/               #  DDD의 핵심: 비즈니스 도메인별 응집
+│   │   ├── cmm/               #  [Common] 공통 코드, 파일, 채번
+│   │   │   ├── models.py      #  SQLAlchemy 모델
+│   │   │   ├── schemas.py     #  Pydantic 스키마
+│   │   │   ├── service.py     #  비즈니스 로직
+│   │   │   └── router.py      #  도메인 전용 라우터
+│   │   ├── fac/               #  [Facility] 시설/공간 도메인
+│   │   │   ├── models.py
+│   │   │   ├── schemas.py
+│   │   │   ├── service.py
+│   │   │   └── router.py
+│   │   └── eqp/               #  [Equipment] 설비 도메인
+│   │       ├── models.py
+│   │       ├── schemas.py
+│   │       ├── service.py
+│   │       └── router.py
+│   │
+│   ├── api/                   #  외부 노출 계층 (도메인 라우터 통합)
 │   │   └── v1/
-│   │       ├── endpoints/     # API 라우터 (도메인별 분리)
-│   │       │   ├── cmm.py
-│   │       │   ├── fac.py
-│   │       │   └── eqp.py
-│   │       └── api.py         # 라우터 통합
-│   ├── schemas/               # Pydantic 모델 (Request/Response)
-│   │   ├── fac_schema.py
-│   │   └── eqp_schema.py
-│   ├── models/                # SQLAlchemy 모델 (DB Tables)
-│   │   ├── fac_model.py
-│   │   └── eqp_model.py
-│   └── services/              # 비즈니스 로직
-│       ├── fac_service.py
-│       └── eqp_service.py
-├── tests/                     # Pytest
+│   │       └── api_router.py  #  각 도메인의 router를 하나로 병합
+│   │
+│   └── main.py                #  애플리케이션 진입점
+│
+├── tests/                     #  도메인별 테스트 코드
 ├── Dockerfile
-├── requirements.txt
-└── main.py                    # 앱 진입점
+└── requirements.txt
 ```
 
-### 5.2 Frontend (/frontend)
+### 5.3 Frontend (/frontend)
 
 Vite 기반 React 프로젝트 구조입니다.
 
 ```text
-frontend/
-├── src/
-│   ├── assets/
-│   ├── components/            # 공통 컴포넌트
-│   ├── pages/                 # 화면 단위 (도메인별 폴더링)
-│   │   ├── FAC/               # [시설]
-│   │   │   ├── FacilityList.tsx
-│   │   │   └── FacilityDetail.tsx
-│   │   ├── EQP/               # [설비]
-│   │   │   ├── EquipmentList.tsx
-│   │   │   └── EquipmentRegister.tsx
-│   │   └── ...
-│   ├── services/              # API 호출 함수 (Axios)
-│   │   ├── facService.ts
-│   │   └── eqpService.ts
-│   ├── types/                 # TypeScript 인터페이스
-│   │   ├── fac.d.ts
-│   │   └── eqp.d.ts
-│   └── App.tsx
+frontend/src/
+├── shared/                  # 모든 도메인이 공통으로 사용하는 요소
+│   ├── components/          # 공통 UI (CustomButton, Layout 등)
+│   ├── hooks/               # 공통 Hook (useAuth, useLocalStorage 등)
+│   ├── utils/               # 공통 유틸 함수 (dateFormatter 등)
+│   └── api/                 # Axios 인스턴스 설정 (interceptors 등)
+│
+├── domains/                 # DDD 핵심: 도메인별 응집
+│   ├── cmm/                 # [Common] 공통 코드, 파일 관리
+│   │   ├── api.ts           # 도메인 전용 API 호출
+│   │   ├── types.ts         # TypeScript 인터페이스
+│   │   ├── hooks.ts         # React Query 전용 Hook
+│   │   ├── components/      # 도메인 내부용 컴포넌트 (CodeSelect 등)
+│   │   └── pages/           # 도메인 메인 화면
+│   │
+│   ├── fac/                 # [Facility] 시설 관리
+│   │   ├── api.ts
+│   │   ├── types.ts
+│   │   ├── hooks.ts
+│   │   ├── components/      # (예: FacilityCard.tsx)
+│   │   └── pages/           # (예: FacilityListPage.tsx)
+│   │
+│   └── eqp/                 # [Equipment] 설비 관리
+│       ├── api.ts
+│       ├── types.ts
+│       ├── hooks.ts
+│       ├── components/
+│       └── pages/
+│
+├── App.tsx                  # 전역 설정 (AntD ConfigProvider 등)
+└── main.tsx                 # Entry Point
 ├── Dockerfile
 ├── package.json
 └── vite.config.ts
 ```
 
-### 5.3 Infrastructure (/infra)
+### 5.4 Infrastructure (/infra)
 
 Vite 기반 React 프로젝트 구조입니다.
 

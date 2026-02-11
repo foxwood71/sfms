@@ -1,0 +1,9 @@
+# 1. 가상환경 생성 (버전 이름 순서)
+# pyenv virtualenv [설치된 버전] [가상환경 이름]
+pyenv virtualenv 3.13.11 sfms-env
+
+# 2. 프로젝트 폴더(backend/)로 이동
+cd backend
+
+# 3. 해당 폴더에 가상환경 고정
+pyenv local sfms-env
