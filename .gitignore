@@ -1,0 +1,13 @@
+# [Data & Infrastructure]
+infra/data/
+infra/.env
+
+# [Backend]
+backend/__pycache__/
+backend/.pytest_cache/
+backend/.env
+
+# [Frontend]
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
