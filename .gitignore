@@ -1,13 +1,12 @@
 # [Data & Infrastructure]
-infra/data/
-infra/.env
+./infra/data/
+# ./infra/.env
 
 # [Backend]
-backend/__pycache__/
-backend/.pytest_cache/
-backend/.env
+**/__pycache__/
+**/.pytest_cache/
+# ./backend/.env
 
 # [Frontend]
-frontend/node_modules/
-frontend/dist/
-frontend/.env.local
+**/node_modules/
+**/dist/

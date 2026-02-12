@@ -22,7 +22,14 @@
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+
+    /* Path mapping for vite-tsconfig-paths */
+    "paths": {
+      // 별칭 정의
+      "@/*": ["./src/*"],
+      "#utils/*": ["./src/utils/*"] // 필요에 따라 추가/수정
+    }
   },
   "include": ["src"]
 }
