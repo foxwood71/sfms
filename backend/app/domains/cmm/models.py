@@ -1,8 +1,7 @@
-"""SFMS Common (CMM) Schema Models.
+"""CMM 도메인 엔티티 정의 모듈.
 
-Defines core domain models for system configuration, code management,
-and file attachment handling in PostgreSQL 'cmm' schema.
-Used with SQLAlchemy ORM for FastAPI CRUD operations.
+PostgreSQL 'cmm' 스키마에 정의된 공통 코드 및 첨부파일
+테이블과 매핑되는 SQLAlchemy 모델을 포함합니다.
 """
 
 import uuid
@@ -81,18 +80,17 @@ class CodeGroup(Base):
 
 
 class CodeDetail(Base):
-    """코드상세 테이블 (코드그룹-상세 복합 PK).
+    """공통 코드 상세 정보를 관리하는 모델.
 
-    각 그룹의 개별 코드값을 관리. JSONB props로 확장 속성 지원.
+    가변 속성을 저장하기 위한 JSONB props 필드를 포함하며,
+    그룹 코드와 상세 코드의 복합 키 구조를 가집니다.
 
     Attributes:
-        group_code: 그룹코드 (FK/PK).
-        detail_code: 상세코드 (PK, 예: ACTIVE).
-        detail_name: 코드명 (예: 활성).
-        props: 확장 속성 JSON (색상, 아이콘 등).
-        sort_order: 정렬순서.
-        is_active: 활성화 여부.
-
+        group_code (str): 코드 그룹 식별자 (FK).
+        detail_code (str): 상세 코드 식별자 (PK).
+        detail_name (str): 사용자에게 표시될 코드 명칭.
+        props (dict): 코드별 가변 메타데이터 (색상, 아이콘 등).
+        sort_order (int): UI 출력 순서.
     """
 
     __tablename__ = "code_details"

@@ -1,6 +1,7 @@
-"""SFMS Database configuration and session management.
+"""SFMS 데이터베이스 설정 및 세션 관리 모듈.
 
-Provides SQLAlchemy engine, session factory for FastAPI dependency.
+SQLAlchemy 엔진을 생성하고 FastAPI 요청 생명주기에 맞춘
+세션 제너레이터(get_db)를 제공합니다.
 """
 
 import os
@@ -37,13 +38,13 @@ Base = declarative_base()
 
 
 def get_db() -> Generator[Session]:
-    """Database session을 제공하는 FastAPI 의존성.
+    """데이터베이스 세션을 생성하고 관리하는 의존성 주입용 함수.
 
-    Yield 후 자동 rollback/commit 처리.
+    FastAPI의 Depends와 함께 사용되어 요청마다 세션을 할당하고,
+    작업이 완료되면 자동으로 세션을 종료(close)합니다.
 
-    Returns:
-        Generator[Session, None, None]: SQLAlchemy 세션 제너레이터.
-
+    Yields:
+        Session: SQLAlchemy 데이터베이스 세션 객체.
     """
     db = SessionLocal()
     try:

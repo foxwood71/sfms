@@ -1,150 +1,273 @@
-import { PlusOutlined } from "@ant-design/icons";
+import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import type { ProColumns } from "@ant-design/pro-components";
 import {
 	ModalForm,
 	PageContainer,
 	ProCard,
+	ProFormDigit,
 	ProFormSwitch,
 	ProFormText,
 	ProFormTextArea,
 	ProTable,
 } from "@ant-design/pro-components";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, message, Tag, theme } from "antd";
+import { Button, message, Popconfirm, Tag, theme } from "antd";
 import axios from "axios";
 import type React from "react";
 import { useState } from "react";
-import { createCodeGroup, getCodeDetails, getCodeGroups } from "../api";
+import {
+	createCodeDetail,
+	createCodeGroup,
+	deleteCodeDetail,
+	deleteCodeGroup,
+	getCodeDetails,
+	getCodeGroups,
+	updateCodeDetail,
+	updateCodeGroup,
+} from "../api";
 import type { CodeDetail, CodeGroup } from "../types";
 
 const CodeManagePage: React.FC = () => {
-	const queryClient = useQueryClient(); // React Query 클라이언트 (목록 갱신용)
-	const { token } = theme.useToken(); // 디자인 토큰 가져오기
-	// 선택된 그룹 코드 상태 관리
-	const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
-	const [modalVisible, setModalVisible] = useState(false);
+	const queryClient = useQueryClient();
+	const { token } = theme.useToken();
 
-	// 1. 코드 그룹 데이터 가져오기 (React Query)
+	// 상태 관리
+	const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+	const [groupModalVisible, setGroupModalVisible] = useState(false);
+	const [detailModalVisible, setDetailModalVisible] = useState(false);
+	const [editingGroup, setEditingGroup] = useState<CodeGroup | null>(null);
+	const [editingDetail, setEditingDetail] = useState<CodeDetail | null>(null);
+
+	// [🔥 핵심 수정 1] 전체 카드 높이
+	// 상단 헤더 공간 등을 고려해 넉넉히 잡습니다.
+	const CONTENT_HEIGHT = "calc(100vh - 200px)";
+
+	// [🔥 핵심 수정 2] 테이블 스크롤 높이 (이것이 카드보다 확실히 작아야 함!)
+	// 기존 320px -> 420px로 변경하여 220px의 여유 공간을 확보합니다.
+	// 이제 툴바, 헤더, 가로 스크롤바가 생겨도 카드를 넘치지 않습니다.
+	const TABLE_SCROLL_Y = "calc(100vh - 420px)";
+
+	// 1. 데이터 조회
 	const { data: groups, isLoading: isGroupLoading } = useQuery({
 		queryKey: ["codeGroups"],
 		queryFn: getCodeGroups,
 	});
 
-	// 2. 선택된 그룹의 상세 코드 가져오기
 	const { data: details, isLoading: isDetailLoading } = useQuery({
 		queryKey: ["codeDetails", selectedGroup],
 		queryFn: () => {
-			if (!selectedGroup) return Promise.reject("그룹이 선택되지 않았습니다.");
+			if (!selectedGroup) return [];
 			return getCodeDetails(selectedGroup);
 		},
-		enabled: !!selectedGroup, // 그룹이 선택되었을 때만 실행
+		enabled: !!selectedGroup,
 	});
 
-	// 3. 코드 그룹 생성 뮤테이션
-	const createGroupMutation = useMutation({
-		mutationFn: createCodeGroup,
-		onSuccess: () => {
-			message.success("저장되었습니다.");
-			setModalVisible(false); // 모달 닫기
-			queryClient.invalidateQueries({ queryKey: ["codeGroups"] }); // 목록 새로고침
-		},
-		onError: (error: Error) => {
-			// 1. axios 에러인지 먼저 확인 (Type Guard)
-			if (axios.isAxiosError(error)) {
-				// 2. 서버에서 보내준 상세 에러 메시지 추출
-				// 서버 응답 body 구조가 { detail: string } 형태라고 가정합니다.
-				const detail = error.response?.data?.detail;
-				message.error(`저장 실패: ${detail || error.message}`);
-			} else {
-				// 3. 일반적인 에러 처리
-				message.error(`저장 실패: ${error.message}`);
-			}
-		},
-	});
-
-	// 4. 저장 버튼 클릭 시 실행될 함수
-	const handleAddGroup = async (values: Omit<CodeGroup, "is_system">) => {
-		await createGroupMutation.mutateAsync({
-			...values,
-			is_system: false,
-		});
-		return true;
+	// 2. 에러 핸들러
+	const handleAxiosError = (error: unknown, prefix: string) => {
+		let detail = "알 수 없는 오류가 발생했습니다.";
+		if (axios.isAxiosError(error)) {
+			detail = error.response?.data?.detail || error.message;
+		} else if (error instanceof Error) {
+			detail = error.message;
+		}
+		message.error(`${prefix}: ${detail}`);
 	};
 
-	// 테이블 컬럼 정의: 코드 그룹
+	// 3. 뮤테이션 (저장/수정)
+	const groupMutation = useMutation({
+		mutationFn: (data: Partial<CodeGroup>) =>
+			editingGroup
+				? updateCodeGroup(editingGroup.group_code, data)
+				: createCodeGroup(data as CodeGroup),
+		onSuccess: () => {
+			message.success("그룹 정보가 저장되었습니다.");
+			setGroupModalVisible(false);
+			queryClient.invalidateQueries({ queryKey: ["codeGroups"] });
+		},
+		onError: (err) => handleAxiosError(err, "그룹 저장 실패"),
+	});
+
+	const detailMutation = useMutation({
+		mutationFn: (data: Partial<CodeDetail>) => {
+			if (!selectedGroup) {
+				throw new Error("그룹 코드가 누락되었습니다.");
+			}
+			return editingDetail
+				? updateCodeDetail(selectedGroup, editingDetail.detail_code, data)
+				: createCodeDetail({
+						...data,
+						group_code: selectedGroup,
+					} as CodeDetail);
+		},
+		onSuccess: () => {
+			message.success("상세 코드가 저장되었습니다.");
+			setDetailModalVisible(false);
+			queryClient.invalidateQueries({
+				queryKey: ["codeDetails", selectedGroup],
+			});
+		},
+		onError: (err) => handleAxiosError(err, "코드 저장 실패"),
+	});
+
+	// 4. 삭제 처리
+	const onDeleteGroup = async (code: string) => {
+		try {
+			await deleteCodeGroup(code);
+			message.success("그룹이 삭제되었습니다.");
+			if (selectedGroup === code) setSelectedGroup(null);
+			queryClient.invalidateQueries({ queryKey: ["codeGroups"] });
+		} catch (err) {
+			handleAxiosError(err, "그룹 삭제 실패");
+		}
+	};
+
+	const onDeleteDetail = async (detailCode: string) => {
+		if (!selectedGroup) {
+			message.error("그룹 정보가 유효하지 않습니다.");
+			return;
+		}
+		try {
+			await deleteCodeDetail(selectedGroup, detailCode);
+			message.success("코드가 삭제되었습니다.");
+			queryClient.invalidateQueries({
+				queryKey: ["codeDetails", selectedGroup],
+			});
+		} catch (err) {
+			handleAxiosError(err, "코드 삭제 실패");
+		}
+	};
+
+	// 5. 컬럼 정의 (너비 넓힌 버전 유지)
 	const groupColumns: ProColumns<CodeGroup>[] = [
-		{
-			title: "그룹 코드",
-			dataIndex: "group_code",
-			copyable: true,
-			width: 120,
-		},
-		{
-			title: "그룹명",
-			dataIndex: "group_name",
-			ellipsis: true,
-		},
+		{ title: "그룹 코드", dataIndex: "group_code", width: 180, copyable: true },
+		{ title: "그룹명", dataIndex: "group_name", ellipsis: true },
 		{
 			title: "상태",
 			dataIndex: "is_active",
-			width: 80,
-			render: (_, record) => (
-				<Tag color={record.is_active ? "green" : "red"}>
-					{record.is_active ? "사용" : "미사용"}
-				</Tag>
+			width: 70,
+			render: (val) => (
+				<Tag color={val ? "green" : "red"}>{val ? "사용" : "중지"}</Tag>
 			),
+		},
+		{
+			title: "작업",
+			//valueType: "option",
+			width: 80,
+			align: "center",
+			render: (_, record) => [
+				<EditOutlined
+					key="edit"
+					onClick={(e) => {
+						e.stopPropagation();
+						setEditingGroup(record);
+						setGroupModalVisible(true);
+					}}
+				/>,
+				<Popconfirm
+					key="del"
+					title="그룹을 삭제하시겠습니까?"
+					onConfirm={() => onDeleteGroup(record.group_code)}
+				>
+					<DeleteOutlined style={{ color: token.colorError }} />
+				</Popconfirm>,
+			],
 		},
 	];
 
-	// 테이블 컬럼 정의: 상세 코드
 	const detailColumns: ProColumns<CodeDetail>[] = [
-		{
-			title: "상세 코드",
-			dataIndex: "detail_code",
-			width: 100,
-		},
-		{
-			title: "코드명",
-			dataIndex: "detail_name",
-		},
-		{
-			title: "정렬",
-			dataIndex: "sort_order",
-			width: 80,
-			align: "center",
-		},
+		{ title: "상세 코드", dataIndex: "detail_code", width: 180 },
+		{ title: "코드명", dataIndex: "detail_name" },
+		{ title: "정렬", dataIndex: "sort_order", width: 60, align: "center" },
 		{
 			title: "상태",
 			dataIndex: "is_active",
+			width: 70,
+			render: (val) => (
+				<Tag color={val ? "blue" : "default"}>{val ? "활성" : "비활성"}</Tag>
+			),
+		},
+		{
+			title: "작업",
+			//valueType: "option",
 			width: 80,
-			valueEnum: {
-				true: { text: "사용", status: "Success" },
-				false: { text: "미사용", status: "Error" },
-			},
+			align: "center",
+			render: (_, record) => [
+				<EditOutlined
+					key="edit"
+					onClick={() => {
+						setEditingDetail(record);
+						setDetailModalVisible(true);
+					}}
+				/>,
+				<Popconfirm
+					key="del"
+					title="코드를 삭제하시겠습니까?"
+					onConfirm={() => onDeleteDetail(record.detail_code)}
+				>
+					<DeleteOutlined style={{ color: token.colorError }} />
+				</Popconfirm>,
+			],
 		},
 	];
 
 	return (
-		<PageContainer header={{ title: "공통 코드 관리" }}>
-			<ProCard ghost gutter={8} style={{ height: "calc(100vh - 100px)" }}>
-				{/* 좌측 패널: 코드 그룹 목록 */}
-				<ProCard colSpan={10} title="코드 그룹" headerBordered>
+		<PageContainer
+			fixedHeader
+			header={{ title: "공통 코드 관리" }}
+			// [🔥 핵심 수정 3] 전체 레이아웃 스크롤 방지
+			style={{ overflow: "hidden" }}
+			token={{
+				paddingInlinePageContainerContent: 24,
+				paddingBlockPageContainerContent: 0,
+			}}
+		>
+			<ProCard
+				ghost
+				gutter={16}
+				style={{
+					height: CONTENT_HEIGHT,
+					marginTop: 16,
+				}}
+			>
+				{/* 좌측 패널: 코드 그룹 */}
+				<ProCard
+					colSpan={10}
+					title="코드 그룹"
+					headerBordered
+					bordered
+					boxShadow
+					style={{ height: "100%" }}
+					// [🔥 핵심 수정 4] 카드 본문 스크롤 방지 (overflow: hidden)
+					bodyStyle={{
+						padding: 0,
+						overflow: "hidden",
+						height: "100%",
+						display: "flex",
+						flexDirection: "column",
+					}}
+				>
 					<ProTable<CodeGroup>
+						size="small"
 						rowKey="group_code"
 						columns={groupColumns}
 						dataSource={groups}
 						loading={isGroupLoading}
-						search={false} // 검색창 숨김 (심플하게)
-						options={false} // 설정 버튼 숨김
-						pagination={{ pageSize: 10 }}
+						search={false}
+						options={false}
+						pagination={false}
+						scroll={{ y: TABLE_SCROLL_Y }}
 						toolBarRender={() => [
 							<Button
 								key="add"
 								type="primary"
+								size="small"
 								icon={<PlusOutlined />}
-								onClick={() => setModalVisible(true)}
+								onClick={() => {
+									setEditingGroup(null);
+									setGroupModalVisible(true);
+								}}
 							>
-								그룹 추가
+								추가
 							</Button>,
 						]}
 						onRow={(record) => ({
@@ -160,14 +283,26 @@ const CodeManagePage: React.FC = () => {
 					/>
 				</ProCard>
 
-				{/* 우측 패널: 상세 코드 목록 */}
+				{/* 우측 패널: 상세 코드 */}
 				<ProCard
 					colSpan={14}
 					title={selectedGroup ? `[${selectedGroup}] 상세 코드` : "상세 코드"}
 					headerBordered
+					bordered
+					boxShadow
+					style={{ height: "100%" }}
+					// [🔥 핵심 수정 5] 우측도 동일하게 스크롤 방지
+					bodyStyle={{
+						padding: 0,
+						overflow: "hidden",
+						height: "100%",
+						display: "flex",
+						flexDirection: "column",
+					}}
 				>
 					{selectedGroup ? (
 						<ProTable<CodeDetail>
+							size="small"
 							rowKey="detail_code"
 							columns={detailColumns}
 							dataSource={details}
@@ -175,43 +310,88 @@ const CodeManagePage: React.FC = () => {
 							search={false}
 							options={false}
 							pagination={false}
+							scroll={{ y: TABLE_SCROLL_Y }}
 							toolBarRender={() => [
-								<Button key="add" icon={<PlusOutlined />}>
-									코드 추가
+								<Button
+									key="add"
+									size="small"
+									icon={<PlusOutlined />}
+									onClick={() => {
+										setEditingDetail(null);
+										setDetailModalVisible(true);
+									}}
+								>
+									추가
 								</Button>,
 							]}
 						/>
 					) : (
-						<div style={{ textAlign: "center", padding: 50, color: "#999" }}>
+						<div
+							style={{
+								flex: 1,
+								display: "flex",
+								justifyContent: "center",
+								alignItems: "center",
+								color: token.colorTextDisabled,
+							}}
+						>
 							좌측에서 그룹을 선택해주세요.
 						</div>
 					)}
 				</ProCard>
 			</ProCard>
-			{/* ✅ 그룹 추가 모달 */}
+
+			{/* 모달 부분은 기존과 동일하므로 아래에 이어서 작성되어 있습니다 */}
 			<ModalForm
-				title="새 코드 그룹 추가"
-				open={modalVisible}
-				onOpenChange={setModalVisible}
-				onFinish={handleAddGroup} // 실제 저장 함수 연결
+				title={editingGroup ? "코드 그룹 수정" : "새 코드 그룹 추가"}
+				open={groupModalVisible}
+				onOpenChange={setGroupModalVisible}
+				onFinish={async (values) => {
+					await groupMutation.mutateAsync(values);
+					return true;
+				}}
+				initialValues={editingGroup || { is_active: true }}
 				modalProps={{ destroyOnClose: true }}
 			>
 				<ProFormText
 					name="group_code"
 					label="그룹 코드"
-					placeholder="예: FAC_TYPE"
-					required
-					rules={[{ required: true, message: "그룹 코드를 입력해주세요" }]}
+					disabled={!!editingGroup}
+					rules={[{ required: true }]}
 				/>
 				<ProFormText
 					name="group_name"
 					label="그룹명"
-					placeholder="예: 시설 유형"
-					required
-					rules={[{ required: true, message: "그룹명을 입력해주세요" }]}
+					rules={[{ required: true }]}
 				/>
 				<ProFormTextArea name="description" label="설명" />
-				<ProFormSwitch name="is_active" label="사용 여부" initialValue={true} />
+				<ProFormSwitch name="is_active" label="사용 여부" />
+			</ModalForm>
+
+			<ModalForm
+				title={editingDetail ? "상세 코드 수정" : "새 상세 코드 추가"}
+				open={detailModalVisible}
+				onOpenChange={setDetailModalVisible}
+				onFinish={async (values) => {
+					await detailMutation.mutateAsync(values);
+					return true;
+				}}
+				initialValues={editingDetail || { is_active: true, sort_order: 0 }}
+				modalProps={{ destroyOnClose: true }}
+			>
+				<ProFormText
+					name="detail_code"
+					label="상세 코드"
+					disabled={!!editingDetail}
+					rules={[{ required: true }]}
+				/>
+				<ProFormText
+					name="detail_name"
+					label="코드명"
+					rules={[{ required: true }]}
+				/>
+				<ProFormDigit name="sort_order" label="정렬 순서" />
+				<ProFormSwitch name="is_active" label="활성 여부" />
 			</ModalForm>
 		</PageContainer>
 	);

@@ -11,16 +11,23 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.v1.api_router import api_router
+from app.core.config import Settings
 from app.core.database import Base, engine
 
 # 개발용: 애플리케이션 시작 시 테이블 자동 생성
 # 프로덕션: Alembic 마이그레이션 사용 권장
 Base.metadata.create_all(bind=engine)
 
+#  환경 설정 로드
+settings = Settings()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """애플리케이션 생명주기 관리.
+    """애플리케이션의 시작과 종료 시점에 실행되는 생명주기 훅입니다.
+
+    Args:
+        app (FastAPI): FastAPI 애플리케이션 인스턴스.
 
     startup: DB 연결 풀 초기화, 캐시 로드.
     shutdown: 연결 종료, 리소스 정리.
@@ -35,14 +42,14 @@ async def lifespan(app: FastAPI):
 # 메인 FastAPI 앱
 app = FastAPI(
     title="SFMS API Service",
-    description="하수처리시설 관리 시스템 RESTful API\nPostgreSQL + MinIO + FastAPI 0.128",
+    description="하수처리시설 관리 시스템 RESTful API\nPostgreSQL + MinIO + FastAPI 기반",
     version="1.0.0",
     lifespan=lifespan,  # 생명주기 훅
     docs_url="/docs",  # Swagger UI
     redoc_url="/redoc",  # ReDoc
 )
 
-# CORS 미들웨어 (프론트엔드 연동)
+# CORS 미들웨어: React(Vite) 개발 서버 포트 대응
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://localhost:5173"],  # React/Next.js
@@ -52,7 +59,6 @@ app.add_middleware(
 )
 
 
-# 404 핸들러
 @app.exception_handler(404)
 async def not_found_handler(request: Request, exc: Exception):
     """
@@ -86,7 +92,7 @@ def health_check():
         dict: 서버 상태 및 버전 정보.
 
     """
-    return {"status": "ok", "version": "3.13.11"}
+    return {"status": "ok", "app_version": app.version, "python_version": "3.13.11"}
 
 
 @app.get("/health", tags=["Health"])

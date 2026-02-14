@@ -5,7 +5,7 @@ SQLAlchemy ORM 모델 ↔ JSON 변환 지원 (from_attributes=True).
 """
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -30,6 +30,45 @@ class CodeGroupCreate(BaseModel):
     description: str | None = None
     is_active: bool = True
     is_system: bool = False
+
+
+class CodeDetailCreate(BaseModel):
+    """코드 상세 생성 요청 스키마
+
+    POST /cmm/groups/details 엔드포인트 입력 데이터.
+
+    Attributes:
+        group_code: 고유 그룹코드 (PK, 최대 30자).
+        detail_code: 고유 상세코드 (PK, 최대 30자).
+        detail_name: 코드명 (필수, 최대 100자).
+        props: 확장 속성 (색상, 아이콘 등).
+        sort_order: 정렬 순서 (기본: 0).
+        is_active: 활성화 여부 (기본: True).
+    """
+
+    group_code: str
+    detail_code: str
+    detail_name: str
+    props: dict[str, Any] | None = {}
+    sort_order: int = 0
+    is_active: bool = True
+
+
+class CodeGroupUpdate(BaseModel):
+    """코드 그룹 수정 요청 스키마"""
+
+    group_name: Optional[str] = None
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class CodeDetailUpdate(BaseModel):
+    """코드 상세 수정 요청 스키마"""
+
+    detail_name: Optional[str] = None
+    props: Optional[dict[str, Any]] = None
+    sort_order: Optional[int] = None
+    is_active: Optional[bool] = None
 
 
 class CodeGroupResponse(BaseModel):
@@ -91,6 +130,31 @@ class SequenceResponse(BaseModel):
     """
 
     sequence: str
+
+
+class AttachmentCreate(BaseModel):
+    """파일 정보 등록용 내부 스키마."""
+
+    domain_code: str
+    ref_id: str
+    file_name: str
+    file_path: str
+    file_size: int
+    content_type: str
+
+
+class AttachmentUpdate(BaseModel):
+    """첨부파일 메타데이터 수정 요청 스키마
+
+    PATCH /cmm/attachments/{file_id} 엔드포인트에서 사용.
+
+    Attributes:
+        ref_id: 연관 업무 데이터 ID 수정 (예: 잘못 연결된 시설 ID 변경)[cite: 9].
+        file_name: 사용자에게 노출되는 원본 파일명 수정[cite: 9].
+    """
+
+    ref_id: str | None = None
+    file_name: str | None = None
 
 
 class AttachmentResponse(BaseModel):

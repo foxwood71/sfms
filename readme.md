@@ -17,6 +17,7 @@
 
 - **Container**: Docker, Docker Compose (v3.8+)
 - **Gateway**: Nginx (Reverse Proxy)
+- **Database**: PostgreSQL 16+
 - **Storage**: MinIO (S3 Compatible) - 도면, PDF, 문서 저장소
 - **Management**: Portainer, pgadmin4, Gitea (Optional)
 
@@ -27,7 +28,6 @@
 - **Database**: PostgreSQL 16+
 - **ORM**: SQLAlchemy (Async Engine)
 - **Schema Validation**: Pydantic v2
-- **Linter**: Flake8
 - **VersionManger**: mise
 - **PackageManager**: uv
 - **Linting & Formatting**: Ruff
@@ -38,7 +38,7 @@
 - **Language**: TypeScript
 - **UI Library**: Ant Design v5 + ProComponents (ProTable, ProForm)
 - **State Management**: TanStack Query (React Query)
-- **Style**: Tailwind CSS + AntD Token System
+- **Style**: Tailwind CS 4 + AntD Token System
 - **VersionManger**: mise
 - **PackageManager**: pnpm
 - **Linting & Formatting**: Biome
@@ -237,31 +237,43 @@ infra/
 
 ## 6. 개발 규칙 (Convention)
 
-### 6.1 Database (PostgreSQL)
+### 6.1 공통사항
+
+1. 언어: 모든 답변은 한국어로 진행
+
+### 6.2 Database (PostgreSQL)
 
 1. Naming: Snake Case (eqp_master, created_at).
+
 2. Comment: 모든 테이블과 컬럼에 COMMENT ON 필수 작성.
+
 3. Migration: Alembic 사용, 버전 파일은 Git 관리.
 
-### 6.2 Python (Backend)
+### 6.3 Python (Backend)
 
-1. Style: Flake8 준수.
+1. Style: Ruff 준수, 독케스팅 추가
 
 2. Indent: Space 4 (Tabs 금지).
 
-3. Inline Comment: 코드와 주석 사이에 Space 2개 삽입 (code # comment).
+3. Inline Comment: 코드와 주석 사이에 Space 2개 삽입 # 뒤에는 한칸삽입 (code # comment).
 
 4. DB Connection: DB 연결 객체 명칭은 app.core.database로 통일.
 
-### 6.3 TypeScript (Frontend)
+### 6.4 TypeScript (Frontend)
 
-1. UI: Ant Design ProTable 적극 활용 (size="small").
+1. Style: Biome 준수, 독케스팅 추가
 
-2. Popup: 상세 화면은 Modal보다 Drawer(우측 패널) 우선 사용.
+2. Indent: Space 2 (Tabs 금지).
 
-3. Structure: View(Component)와 Logic(Service)의 철저한 분리.
+3. UI:
+   - Ant Design: v5 다크 모드(theme.darkAlgorithm)를 적용 , Table의 rowSelectedBg 등을 theme.ts에서 직접 제어, 기본적인  theme 제공
+   - Ant Design ProTable 적극 활용 (size="small").
 
-4. any와 unknow의 사용의 최대한 억제
+4. Popup: 상세 화면은 Modal보다 Drawer(우측 패널) 우선 사용.
+
+5. Structure: View(Component)와 Logic(Service)의 철저한 분리.
+
+6. any와 unknow의 사용의 최대한 억제
 
 ---
 

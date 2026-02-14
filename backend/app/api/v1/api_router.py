@@ -8,9 +8,10 @@ from fastapi import APIRouter
 
 from app.domains.cmm.router import router as cmm_router
 
-# from app.domains.fac.router import router as fac_router  # 비활성 도메인
-# from app.domains.wwt.router import router as wwt_router  # 추후 추가
-#  추후 eqp, wqt 등 도메인 추가 시 여기서 통합
+#  [Roadmap] 추후 구현 시 주석 해제하여 연결
+# from app.domains.iam.router import router as iam_router
+# from app.domains.fac.router import router as fac_router
+# from app.domains.eqp.router import router as eqp_router
 
 
 api_router = APIRouter()
@@ -18,8 +19,14 @@ api_router = APIRouter()
 #  각 도메인의 라우터를 통합 관리
 api_router.include_router(cmm_router)
 
-# api_router.include_router(fac_router, tags=["FAC"])
-# api_router.include_router(wwt_router, tags=["WWT"])
+# --- 2. 인증/권한 도메인 (Identity) ---
+#  로그인, 토큰 갱신, 메뉴 권한 관리
+# api_router.include_router(iam_router, prefix="/iam", tags=["Identity"])
 
-# 메인 api_router를 app/main.py에서 사용:
-# app.include_router(api_router, prefix="/api/v1")
+# --- 3. 시설 관리 도메인 (Facility) ---
+#  시설물 및 공간 정보 관리
+# api_router.include_router(fac_router, prefix="/fac", tags=["Facility"])
+
+# --- 4. 설비 관리 도메인 (Equipment) ---
+#  기계, 전기, 계측제어 설비 마스터 관리
+# api_router.include_router(eqp_router, prefix="/eqp", tags=["Equipment"]))
