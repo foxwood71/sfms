@@ -1,23 +1,55 @@
-from pydantic import BaseModel, ConfigDict
-from typing import Optional, Dict, Any
+"""CMM (Common Module Management) Pydantic 스키마 정의.
+
+FastAPI 요청/응답 데이터 검증 및 직렬화.
+SQLAlchemy ORM 모델 ↔ JSON 변환 지원 (from_attributes=True).
+"""
+
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
+from pydantic import BaseModel, ConfigDict
 
-# 1. [추가] 그룹 생성 요청 스키마
+
 class CodeGroupCreate(BaseModel):
+    """코드그룹 생성 요청 스키마.
+
+    POST /cmm/groups 엔드포인트 입력 데이터.
+
+    Attributes:
+        group_code: 고유 그룹코드 (PK, 최대 30자).
+        group_name: 그룹명 (필수, 최대 100자).
+        description: 그룹 설명 (선택).
+        is_active: 활성화 여부 (기본: True).
+        is_system: 시스템 기본코드 여부 (기본: False).
+
+    """
+
     group_code: str
     group_name: str
-    description: Optional[str] = None
+    description: str | None = None
     is_active: bool = True
     is_system: bool = False
 
 
-# 2. 조회 응답 스키마 (Create와 분리)
 class CodeGroupResponse(BaseModel):
+    """코드그룹 조회 응답 스키마.
+
+    GET /cmm/groups 반환 데이터.
+    SQLAlchemy ORM → JSON 직렬화 지원.
+
+    Attributes:
+        group_code: 그룹코드 (PK).
+        group_name: 그룹명.
+        description: 설명.
+        is_active: 활성화 상태.
+        is_system: 시스템 코드 여부.
+
+    """
+
     group_code: str
     group_name: str
-    description: Optional[str] = None
+    description: str | None = None
     is_active: bool
     is_system: bool
 
@@ -25,9 +57,23 @@ class CodeGroupResponse(BaseModel):
 
 
 class CodeDetailResponse(BaseModel):
+    """코드상세 조회 응답 스키마.
+
+    코드그룹 내 개별 코드 정보.
+    JSONB props 필드 직렬화 지원.
+
+    Attributes:
+        detail_code: 상세코드 (PK).
+        detail_name: 코드명.
+        props: 확장 속성 (JSONB → dict).
+        sort_order: 정렬 순서.
+        is_active: 활성화 상태.
+
+    """
+
     detail_code: str
     detail_name: str
-    props: Optional[Dict[str, Any]] = {}  # JSONB 대응
+    props: dict[str, Any] | None = {}  # JSONB 대응
     sort_order: int
     is_active: bool
 
@@ -35,10 +81,34 @@ class CodeDetailResponse(BaseModel):
 
 
 class SequenceResponse(BaseModel):
+    """시퀀스 번호 응답 스키마.
+
+    자동 ID 생성 시 사용 (예: ref_id).
+
+    Attributes:
+        sequence: 생성된 시퀀스 문자열 (예: "FAC-001").
+
+    """
+
     sequence: str
 
 
 class AttachmentResponse(BaseModel):
+    """파일 첨부 조회 응답 스키마.
+
+    MinIO 업로드 후 cmm.attachments 반환 데이터.
+
+    Attributes:
+        file_id: UUID 고유 파일 ID.
+        domain_code: 도메인 코드.
+        ref_id: 연관 데이터 ID.
+        file_name: 원본 파일명.
+        file_size: 파일 크기 (bytes).
+        content_type: MIME 타입.
+        created_at: 업로드 일시.
+
+    """
+
     file_id: UUID
     domain_code: str
     ref_id: str

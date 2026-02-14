@@ -1,0 +1,6 @@
+# backend/ruff.toml
+line-length = 88
+
+[lint]
+ignore = []
+select = ["I001", "D1"] # Import 정렬, Docstring 체크 등

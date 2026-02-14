@@ -8,7 +8,6 @@
   - **Data Density High**: 엔터프라이즈급 데이터 밀집형 UI (Ant Design Pro `size="small"`)
   - **Domain Driven**: 3-Letter Code 기반의 명확한 도메인 분리
   - **Stability**: 레가시 데이터의 안정적인 마이그레이션 및 이력 관리
-- **개발 환경**: 1인 개발 (Full-stack), Docker 기반의 컨테이너 환경
 
 ---
 
@@ -19,16 +18,19 @@
 - **Container**: Docker, Docker Compose (v3.8+)
 - **Gateway**: Nginx (Reverse Proxy)
 - **Storage**: MinIO (S3 Compatible) - 도면, PDF, 문서 저장소
-- **Management**: Portainer (Optional)
+- **Management**: Portainer, pgadmin4, Gitea (Optional)
 
 ### Backend (Logic & Data)
 
-- **Language**: Python 3.11+
+- **Language**: Python 3.13+
 - **Framework**: FastAPI (Async)
-- **Database**: PostgreSQL 15+
+- **Database**: PostgreSQL 16+
 - **ORM**: SQLAlchemy (Async Engine)
 - **Schema Validation**: Pydantic v2
 - **Linter**: Flake8
+- **VersionManger**: mise
+- **PackageManager**: uv
+- **Linting & Formatting**: Ruff
 
 ### Frontend (UI/UX)
 
@@ -37,6 +39,9 @@
 - **UI Library**: Ant Design v5 + ProComponents (ProTable, ProForm)
 - **State Management**: TanStack Query (React Query)
 - **Style**: Tailwind CSS + AntD Token System
+- **VersionManger**: mise
+- **PackageManager**: pnpm
+- **Linting & Formatting**: Biome
 
 ---
 

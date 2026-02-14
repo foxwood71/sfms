@@ -9,8 +9,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "biome lint ./src",
+    "lint:fix": "biome check --apply ./src",
+    "format": "biome format ./src --write",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.0",
@@ -23,7 +26,9 @@
     "react-router-dom": "^7.13.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.3.15",
     "@eslint/js": "^9.39.1",
+    "@tailwindcss/vite": "^4.1.18",
     "@types/node": "^24.10.13",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",

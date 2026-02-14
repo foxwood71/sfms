@@ -1,39 +1,71 @@
 [project]
-name = "backend"
-version = "0.1.0"
+dependencies = [
+  "annotated-doc==0.0.4",
+  "annotated-types==0.7.0",
+  "anyio==4.12.1",
+  "boto3==1.42.46",
+  "botocore==1.42.46",
+  "click==8.3.1",
+  "fastapi==0.128.7",
+  "greenlet==3.3.1",
+  "h11==0.16.0",
+  "idna==3.11",
+  "jmespath==1.1.0",
+  "mccabe==0.7.0",
+  "pip==26.0.1",
+  "psycopg2-binary==2.9.11",
+  "pycodestyle==2.14.0",
+  "pydantic==2.12.5",
+  "pydantic-core==2.41.5",
+  "pydantic-settings>=2.12.0",
+  "pyflakes==3.4.0",
+  "python-dateutil==2.9.0.post0",
+  "python-dotenv>=1.2.1",
+  "python-multipart==0.0.22",
+  "s3transfer==0.16.0",
+  "six==1.17.0",
+  "sqlalchemy==2.0.46",
+  "starlette==0.52.1",
+  "typing-extensions==4.15.0",
+  "typing-inspection==0.4.2",
+  "urllib3==2.6.3",
+  "uvicorn==0.40.0",
+]
 description = "Add your description here"
+name = "backend"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = [
-    "annotated-doc==0.0.4",
-    "annotated-types==0.7.0",
-    "anyio==4.12.1",
-    "boto3==1.42.46",
-    "botocore==1.42.46",
-    "click==8.3.1",
-    "fastapi==0.128.7",
-    "flake8==7.3.0",
-    "greenlet==3.3.1",
-    "h11==0.16.0",
-    "idna==3.11",
-    "jmespath==1.1.0",
-    "mccabe==0.7.0",
-    "pip==26.0.1",
-    "psycopg2-binary==2.9.11",
-    "pycodestyle==2.14.0",
-    "pydantic==2.12.5",
-    "pydantic-core==2.41.5",
-    "pydantic-settings>=2.12.0",
-    "pyflakes==3.4.0",
-    "python-dateutil==2.9.0.post0",
-    "python-dotenv>=1.2.1",
-    "python-multipart==0.0.22",
-    "s3transfer==0.16.0",
-    "six==1.17.0",
-    "sqlalchemy==2.0.46",
-    "starlette==0.52.1",
-    "typing-extensions==4.15.0",
-    "typing-inspection==0.4.2",
-    "urllib3==2.6.3",
-    "uvicorn==0.40.0",
+version = "0.1.0"
+
+[dependency-groups]
+dev = [
+  "ruff>=0.15.1",
 ]
+
+[build-system]
+build-backend = "hatchling.build" # uv 호환 강화
+requires = ["hatchling"] 
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+
+[tool.ruff.format]
+exclude = [
+  ".git",
+  ".venv",
+  "__pypackages__",
+]
+quote-style = "double"
+skip-magic-trailing-comma = false
+
+[tool.ruff.lint]
+fixable = ["ALL"] # 자동 수정 가능 규칙 우선
+ignore = ["E501", "ERA001"] # line too long 무시, 주석 처리된 코드 무시
+select = ["ALL"] # 모든 규칙 (Ruff-specific 포함, E501 자동 제외)
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401", "F403"] # unused import 강화
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]

@@ -1,16 +1,75 @@
 {
-  "editor.tabSize": 4,
+  // -------------------------------------------------------------
+  // 1. 공통 에디터 설정
+  // -------------------------------------------------------------
   "editor.insertSpaces": true,
-  "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
   "editor.formatOnSave": true,
-  "editor.codeActionsOnSave": {
-    "source.fixAll.ruff": "always"
-  },
+
+  // 탐색기에서 숨길 파일들
   "files.exclude": {
     "**/__pycache__": true,
-    "**/.pytest_cache": true
+    "**/.pytest_cache": true,
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/.DS_Store": true
   },
 
-  "python-envs.defaultEnvManager": "ms-python.python:pyenv",
-  "python-envs.pythonProjects": []
+  // -------------------------------------------------------------
+  // 2. Python 설정 (Backend - Ruff)
+  // -------------------------------------------------------------
+  // 가상환경 경로 (uv 사용 시 backend/.venv)
+  "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
+  "python.terminal.activateEnvironment": true,
+
+  // 기존 레거시 린터 설정 비활성화 (Ruff가 대신함)
+  "python.linting.enabled": false,
+  "python.formatting.provider": "none",
+
+  // [Python 파일 전용 설정]
+  "[python]": {
+    "editor.tabSize": 4,
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "explicit",
+      "source.organizeImports.ruff": "explicit"
+    }
+  },
+
+  // -------------------------------------------------------------
+  // 3. Frontend 설정 (React/TS - Biome)
+  // -------------------------------------------------------------
+  // pnpm + 하위 폴더 구조일 때 경로 명시
+  // 만약 VS Code를 'sfms' 폴더에서 열었다면:
+  "biome.lsp.bin": "./frontend/node_modules/.bin/biome",
+  // Biome을 기본 포매터로 지정하는 언어들
+  "[javascript]": {
+    "editor.tabSize": 2,
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[javascriptreact]": {
+    "editor.tabSize": 2,
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[typescript]": {
+    "editor.tabSize": 2,
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[typescriptreact]": {
+    "editor.tabSize": 2,
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[json]": {
+    "editor.tabSize": 2,
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[css]": {
+    "editor.tabSize": 2,
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+
+  // 저장 시 Biome 실행 (린트 수정 + import 정리)
+  "editor.codeActionsOnSave": {
+    "source.fixAll.biome": "explicit",
+    "source.organizeImports.biome": "explicit"
+  }
 }

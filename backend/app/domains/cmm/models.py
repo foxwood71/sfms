@@ -1,13 +1,47 @@
+"""SFMS Common (CMM) Schema Models.
+
+Defines core domain models for system configuration, code management,
+and file attachment handling in PostgreSQL 'cmm' schema.
+Used with SQLAlchemy ORM for FastAPI CRUD operations.
+"""
+
 import uuid
-from sqlalchemy import Column, String, Boolean, Integer, ForeignKey, DateTime, Text, BigInteger
+from typing import ClassVar
+
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.sql import func
+
 from app.core.database import Base  # app.core.database 명칭 사용
 
 
 class SystemDomain(Base):
+    """시스템 도메인 관리 테이블.
+
+    각 비즈니스 도메인(예: FAC-시설, WWT-폐수처리)을 정의하고
+    해당 도메인의 스키마와 메타데이터를 관리.
+
+    Attributes:
+        domain_code: 도메인 코드 (PK, 3자리, 예: FAC).
+        domain_name: 도메인 명칭 (예: 시설관리).
+        schema_name: PostgreSQL 스키마명 (예: fac).
+        description: 도메인 설명.
+        is_active: 활성화 여부.
+        created_at: 생성일시.
+
+    """
+
     __tablename__ = "system_domains"
-    __table_args__ = {"schema": "cmm"}
+    __table_args__: ClassVar[dict] = {"schema": "cmm"}
 
     domain_code = Column(String(3), primary_key=True)
     domain_name = Column(String(50), nullable=False)
@@ -18,8 +52,24 @@ class SystemDomain(Base):
 
 
 class CodeGroup(Base):
+    """코드그룹 마스터 테이블.
+
+    공통 코드 그룹을 관리 (예: 상태코드, 유형코드).
+    다국어/다중 도메인 코드 체계를 지원.
+
+    Attributes:
+        group_code: 그룹코드 (PK, 예: STATUS).
+        group_name: 그룹명 (예: 상태코드).
+        description: 그룹 설명.
+        is_system: 시스템 기본 코드 여부.
+        is_active: 활성화 여부.
+        created_at: 생성일시.
+        updated_at: 수정일시.
+
+    """
+
     __tablename__ = "code_groups"
-    __table_args__ = {"schema": "cmm"}
+    __table_args__: ClassVar[dict] = {"schema": "cmm"}
 
     group_code = Column(String(30), primary_key=True)
     group_name = Column(String(100), nullable=False)
@@ -31,20 +81,54 @@ class CodeGroup(Base):
 
 
 class CodeDetail(Base):
-    __tablename__ = "code_details"
-    __table_args__ = {"schema": "cmm"}
+    """코드상세 테이블 (코드그룹-상세 복합 PK).
 
-    group_code = Column(String(30), ForeignKey("cmm.code_groups.group_code"), primary_key=True)
+    각 그룹의 개별 코드값을 관리. JSONB props로 확장 속성 지원.
+
+    Attributes:
+        group_code: 그룹코드 (FK/PK).
+        detail_code: 상세코드 (PK, 예: ACTIVE).
+        detail_name: 코드명 (예: 활성).
+        props: 확장 속성 JSON (색상, 아이콘 등).
+        sort_order: 정렬순서.
+        is_active: 활성화 여부.
+
+    """
+
+    __tablename__ = "code_details"
+    __table_args__: ClassVar[dict] = {"schema": "cmm"}
+
+    group_code = Column(
+        String(30),
+        ForeignKey("cmm.code_groups.group_code"),
+        primary_key=True,
+    )
     detail_code = Column(String(30), primary_key=True)
     detail_name = Column(String(100), nullable=False)
-    props = Column(JSONB, server_default='{}')  # 가변 속성 저장용 JSONB
+    props = Column(JSONB, server_default="{}")  # 가변 속성 저장용 JSONB
     sort_order = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)
 
 
 class Attachment(Base):
+    """파일 첨부 관리 테이블.
+
+    MinIO S3-compatible 스토리지와 연동된 파일 메타데이터.
+
+    Attributes:
+        file_id: UUID 파일 고유ID (PK).
+        domain_code: 도메인 코드 (FK).
+        ref_id: 연관 데이터 ID (예: FAC-001).
+        file_name: 원본 파일명.
+        file_path: MinIO 경로.
+        file_size: 파일 크기 (bytes).
+        content_type: MIME 타입.
+        created_at: 업로드일시.
+
+    """
+
     __tablename__ = "attachments"
-    __table_args__ = {"schema": "cmm"}
+    __table_args__: ClassVar[dict] = {"schema": "cmm"}
 
     file_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     domain_code = Column(String(3), ForeignKey("cmm.system_domains.domain_code"))
