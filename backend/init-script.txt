@@ -1,9 +1,104 @@
+
+1. 필수 의존성 패키지 설치
+sudo apt update
+sudo apt install -y make build-essential libssl-dev zlib1g-dev \
+libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm \
+libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3-openssl git
+
+2. uv 설치하기
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source $HOME/.local/bin/env - 환경변수 적용
+
+3. Zsh 환경 설정 (.zshrc)
+# uv 환경설정
+. "$HOME/.local/bin/env"  # uv에서 권장하는 경로 설정 스크립트 실행
+# 만약 위 스크립트가 경로를 못 잡을 때를 대비한 백업 (필수는 아님)
+export PATH="$HOME/.local/bin:$PATH"
+# 자동 완성 설정 (이 부분이 있어야 탭 키로 명령어 완성이 됩니다)
+eval "$(uv generate-shell-completion zsh)"
+eval "$(uvx --generate-shell-completion zsh)"
+
+source ~/.zshrc
+
+4. 파이썬 설치
+uv python install 3.13
+
+5. 패키지 관리방식 
+작업,           기존 (pyenv + pip),                       변경 후 (uv)
+패키지 추가,    pip install <name> 후 pip freeze,         uv add <name>
+패키지 삭제,    pip uninstall <name>,                     uv remove <name>
+환경 재구축,    pip install -r requirements.txt,          uv sync
+스크립트 실행,  python main.py,                           uv run main.py
+
+uv self update - uv 자체 업그레이드
+
+
+5. 가상환경(virtualenv) 설정 및 사용
+cd backend
+
+단계	        명령어	              결과물
+초기화	      uv init	              pyproject.toml 생성
+버전 고정	    uv python pin 3.13	  .python-version 생성
+환경 구축	    uv sync	              .venv 및 uv.lock 생성
+
+uv init
+uv python pin 3.13
+uv run python --version  # 파이썬 버전 확인
+
+# requirements.txt의 내용을 pyproject.toml에 추가하고 설치
+uv add -r requirements.txt
+
+# 새로운 패키지 추가시
+uv add fastapi uvicorn
+
+# 패키지 재설치
+uv sync
+
+# uv에서 현재 인식하고 있는 파이썬 버전 확인
+uv run python --version 
+
+6. FastAPI 실행 방법
+ 가상환경을 backend/에 만들었다면, 실행 시에는 반드시 backend/ 폴더 위치
+
+#  FastAPI 개발 모드 실행 (uv 사용 시)
+uv run fastapi dev app/main.py
+
+#  또는 uvicorn 직접 실행
+uv run uvicorn app.main:app --reload
+
+
+
+# 프로젝트 폴더 생성 및 이동
+mkdir my-fastapi-app && cd my-fastapi-app
+
+# 파이썬 버전 고정 (Pinning)
+uv python pin 3.12.0
+
+# uv 프로젝트 초기화 (pyproject.toml 생성)
+uv init
+
+# FastAPI 및 uvicorn 추가
+uv add fastapi uvicorn
+
+방법 A: uv run으로 실행 (가장 추천)
+uv run uvicorn app.main:app --reload
+
+방법 B: FastAPI CLI 활용 (최신 방식)
+uv run fastapi dev main.py
+
+
+
+
 # 1. 가상환경 생성 (버전 이름 순서)
 # pyenv virtualenv [설치된 버전] [가상환경 이름]
-pyenv virtualenv 3.13.11 sfms-env
+pyenv virtualenv 3.13 sfms-env
 
 # 2. 프로젝트 폴더(backend/)로 이동
 cd backend
 
 # 3. 해당 폴더에 가상환경 고정
 pyenv local sfms-env
+
+
+
+

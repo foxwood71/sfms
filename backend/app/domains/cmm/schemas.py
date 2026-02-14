@@ -4,6 +4,26 @@ from datetime import datetime
 from uuid import UUID
 
 
+# 1. [추가] 그룹 생성 요청 스키마
+class CodeGroupCreate(BaseModel):
+    group_code: str
+    group_name: str
+    description: Optional[str] = None
+    is_active: bool = True
+    is_system: bool = False
+
+
+# 2. 조회 응답 스키마 (Create와 분리)
+class CodeGroupResponse(BaseModel):
+    group_code: str
+    group_name: str
+    description: Optional[str] = None
+    is_active: bool
+    is_system: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class CodeDetailResponse(BaseModel):
     detail_code: str
     detail_name: str

@@ -1,10 +1,31 @@
-from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
+from typing import List
 from sqlalchemy.orm import Session
+from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, status
+
 from app.core.database import get_db
-from .service import CmmService, S3Service
+from app.domains.cmm.service import CmmService, S3Service
+from app.domains.cmm.schemas import CodeGroupResponse, CodeGroupCreate
 
 
 router = APIRouter(prefix="/cmm", tags=["Common"])
+service = CmmService()
+
+
+@router.get("/groups", response_model=List[CodeGroupResponse])
+def get_groups(db: Session = Depends(get_db)):
+    return service.get_code_groups(db)
+
+
+# [추가] 그룹 생성 API (POST)
+@router.post("/groups", response_model=CodeGroupResponse, status_code=status.HTTP_201_CREATED)
+def create_group(
+    group_data: CodeGroupCreate,
+    db: Session = Depends(get_db)
+):
+    """
+    새로운 공통 코드 그룹을 생성합니다.
+    """
+    return service.create_code_group(db, group_data)
 
 
 @router.post("/upload")

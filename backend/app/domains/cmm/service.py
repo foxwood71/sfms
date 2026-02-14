@@ -1,15 +1,58 @@
 import boto3
+from botocore.exceptions import ClientError
+
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from botocore.exceptions import ClientError
+from fastapi import HTTPException, status
+
 from app.core.config import Settings
-from .models import CodeDetail  # 상대 경로 임포트
+from .models import CmmCodeGroup, CodeDetail
+from .schemas import CodeGroupCreate  # 상대 경로 임포트
 
 
 settings = Settings()
 
 
 class CmmService:
+
+    def get_code_groups(self, db: Session):
+        return db.query(CmmCodeGroup).all()
+
+        # [추가] 코드 그룹 생성 함수
+    def create_code_group(self, db: Session, group_data: CodeGroupCreate):
+        # 1. 중복 체크
+        existing_group = db.query(CmmCodeGroup).filter(
+            CmmCodeGroup.group_code == group_data.group_code
+        ).first()
+
+        if existing_group:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="이미 존재하는 그룹 코드입니다."
+            )
+
+        # 2. 데이터 생성
+        new_group = CmmCodeGroup(
+            group_code=group_data.group_code,
+            group_name=group_data.group_name,
+            description=group_data.description,
+            is_active=group_data.is_active,
+            is_system=group_data.is_system
+        )
+
+        # 3. 저장 및 커밋
+        try:
+            db.add(new_group)
+            db.commit()
+            db.refresh(new_group)
+            return new_group
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"저장 중 오류가 발생했습니다: {str(e)}"
+            )
+
     @staticmethod
     def get_codes_by_group(db: Session, group_code: str):
         """특정 그룹의 상세 코드 목록을 조회합니다."""
