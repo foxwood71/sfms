@@ -18,6 +18,24 @@
     "**/.pytest_cache": true
   },
 
+  // 2. Explorer: File Nesting 설정 (관련 파일 묶기)
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.expand": false,
+  "explorer.fileNesting.patterns": {
+    // Frontend 관련: package.json을 기준으로 설정 파일들을 묶음
+    "package.json": "pnpm-lock.yaml, .npmrc, biome.json, tsconfig.*, vite.config.*, .env.local",
+    
+    // Backend 관련: pyproject.toml을 기준으로 Python 설정들을 묶음
+    "pyproject.toml": "uv.lock, .python-version, .flake8, .env, .env.dev, .env.prod",
+    
+    // 기타 공통 설정
+    ".env": ".env.*, .gitignore, .dockerignore",
+    "README.md": "LICENSE, CONTRIBUTING.md, CHANGELOG.md",
+    
+    // 컴포넌트 구조 정리 (선택 사항: .tsx 파일 아래 .css 등을 묶음)
+    "*.tsx": "$(capture).css, $(capture).scss, $(capture).test.tsx, $(capture).stories.tsx"
+  }
+
   // -------------------------------------------------------------
   // 2. Python 설정 (Backend - Ruff)
   // -------------------------------------------------------------
