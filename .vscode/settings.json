@@ -7,11 +7,15 @@
 
   // 탐색기에서 숨길 파일들
   "files.exclude": {
-    "**/__pycache__": true,
-    "**/.pytest_cache": true,
-    "**/node_modules": true,
-    "**/dist": true,
-    "**/.DS_Store": true
+    "**/.git": true,
+    "**/.DS_Store": true,
+    "**/node_modules": true,    // JS 라이브러리 숨기기
+    "**/__pycache__": true,     // Python 캐시 숨기기
+    "**/.venv": true,           // 가상환경 숨기기
+    "**/dist": true,            // 빌드 결과물 숨기기
+    "**/.uv": true,             // uv 관련 폴더 숨기기
+    "**/.mypy_cache": true,
+    "**/.pytest_cache": true
   },
 
   // -------------------------------------------------------------
@@ -71,5 +75,5 @@
   "editor.codeActionsOnSave": {
     "source.fixAll.biome": "explicit",
     "source.organizeImports.biome": "explicit"
-  }
+  },
 }

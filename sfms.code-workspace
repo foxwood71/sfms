@@ -1,0 +1,18 @@
+{
+"folders": [
+    { "name": "📁 SFMS ROOT", "path": "." },
+		{ "name": "🗄️ DATABASE", "path": "database" },
+    { "name": "⚙️ BACKEND", "path": "backend" },
+    { "name": "🎨 FRONTEND", "path": "frontend" },
+
+  ],
+  "settings": {
+    // ROOT_CONFIG에서는 하위 프로젝트 폴더를 숨겨서 중복을 방지합니다.
+    "files.exclude": {
+			"database": true,
+      "backend": true,
+      "frontend": true,
+
+    }
+  }
+}
