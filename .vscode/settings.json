@@ -34,7 +34,7 @@
     
     // 컴포넌트 구조 정리 (선택 사항: .tsx 파일 아래 .css 등을 묶음)
     "*.tsx": "$(capture).css, $(capture).scss, $(capture).test.tsx, $(capture).stories.tsx"
-  }
+  },
 
   // -------------------------------------------------------------
   // 2. Python 설정 (Backend - Ruff)
@@ -62,7 +62,7 @@
   // -------------------------------------------------------------
   // pnpm + 하위 폴더 구조일 때 경로 명시
   // 만약 VS Code를 'sfms' 폴더에서 열었다면:
-  "biome.lsp.bin": "./frontend/node_modules/.bin/biome",
+  "biome.lsp.bin": "./frontend/node_modules/.pnpm/@biomejs+cli-linux-x64@2.3.15/node_modules/@biomejs/cli-linux-x64/biome",
   // Biome을 기본 포매터로 지정하는 언어들
   "[javascript]": {
     "editor.tabSize": 2,
