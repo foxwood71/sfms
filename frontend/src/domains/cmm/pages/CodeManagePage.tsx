@@ -11,7 +11,7 @@ import {
 	ProTable,
 } from "@ant-design/pro-components";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, message, Popconfirm, Tag, theme } from "antd";
+import { Button, message, Popconfirm, Space, Tag, theme } from "antd";
 import axios from "axios";
 import type React from "react";
 import { useState } from "react";
@@ -40,12 +40,12 @@ const CodeManagePage: React.FC = () => {
 
 	// [🔥 핵심 수정 1] 전체 카드 높이
 	// 상단 헤더 공간 등을 고려해 넉넉히 잡습니다.
-	const CONTENT_HEIGHT = "calc(100vh - 200px)";
+	const CONTENT_HEIGHT = "calc(100vh - 180px)";
 
 	// [🔥 핵심 수정 2] 테이블 스크롤 높이 (이것이 카드보다 확실히 작아야 함!)
 	// 기존 320px -> 420px로 변경하여 220px의 여유 공간을 확보합니다.
 	// 이제 툴바, 헤더, 가로 스크롤바가 생겨도 카드를 넘치지 않습니다.
-	const TABLE_SCROLL_Y = "calc(100vh - 420px)";
+	const TABLE_SCROLL_Y = "calc(100vh - 370px)";
 
 	// 1. 데이터 조회
 	const { data: groups, isLoading: isGroupLoading } = useQuery({
@@ -139,12 +139,13 @@ const CodeManagePage: React.FC = () => {
 
 	// 5. 컬럼 정의 (너비 넓힌 버전 유지)
 	const groupColumns: ProColumns<CodeGroup>[] = [
-		{ title: "그룹 코드", dataIndex: "group_code", width: 180, copyable: true },
+		{ title: "그룹 코드", dataIndex: "group_code", width: 140, copyable: true },
 		{ title: "그룹명", dataIndex: "group_name", ellipsis: true },
 		{
 			title: "상태",
 			dataIndex: "is_active",
-			width: 70,
+			width: 60,
+			align: "center",
 			render: (val) => (
 				<Tag color={val ? "green" : "red"}>{val ? "사용" : "중지"}</Tag>
 			),
@@ -152,25 +153,38 @@ const CodeManagePage: React.FC = () => {
 		{
 			title: "작업",
 			//valueType: "option",
-			width: 80,
+			fixed: undefined,
+			width: 70,
 			align: "center",
-			render: (_, record) => [
-				<EditOutlined
-					key="edit"
-					onClick={(e) => {
-						e.stopPropagation();
-						setEditingGroup(record);
-						setGroupModalVisible(true);
-					}}
-				/>,
-				<Popconfirm
-					key="del"
-					title="그룹을 삭제하시겠습니까?"
-					onConfirm={() => onDeleteGroup(record.group_code)}
-				>
-					<DeleteOutlined style={{ color: token.colorError }} />
-				</Popconfirm>,
-			],
+			render: (_, record) => (
+				// Space로 감싸서 줄바꿈 방지
+				<Space size={0}>
+					<EditOutlined
+						key="edit"
+						onClick={(e) => {
+							e.stopPropagation();
+							setEditingGroup(record);
+							setGroupModalVisible(true);
+						}}
+						style={{
+							padding: 4,
+							cursor: "pointer",
+							color: token.colorTextSecondary,
+						}}
+					/>
+					<Popconfirm
+						key="del"
+						title="삭제?"
+						onConfirm={() => onDeleteGroup(record.group_code)}
+						okText="예"
+						cancelText="아니오"
+					>
+						<DeleteOutlined
+							style={{ padding: 4, color: token.colorError, cursor: "pointer" }}
+						/>
+					</Popconfirm>
+				</Space>
+			),
 		},
 	];
 
@@ -181,7 +195,7 @@ const CodeManagePage: React.FC = () => {
 		{
 			title: "상태",
 			dataIndex: "is_active",
-			width: 70,
+			width: 60,
 			render: (val) => (
 				<Tag color={val ? "blue" : "default"}>{val ? "활성" : "비활성"}</Tag>
 			),
@@ -189,24 +203,36 @@ const CodeManagePage: React.FC = () => {
 		{
 			title: "작업",
 			//valueType: "option",
-			width: 80,
+			fixed: undefined,
+			width: 70,
 			align: "center",
-			render: (_, record) => [
-				<EditOutlined
-					key="edit"
-					onClick={() => {
-						setEditingDetail(record);
-						setDetailModalVisible(true);
-					}}
-				/>,
-				<Popconfirm
-					key="del"
-					title="코드를 삭제하시겠습니까?"
-					onConfirm={() => onDeleteDetail(record.detail_code)}
-				>
-					<DeleteOutlined style={{ color: token.colorError }} />
-				</Popconfirm>,
-			],
+			render: (_, record) => (
+				<Space size={0}>
+					<EditOutlined
+						key="edit"
+						onClick={() => {
+							setEditingDetail(record);
+							setDetailModalVisible(true);
+						}}
+						style={{
+							padding: 4,
+							cursor: "pointer",
+							color: token.colorTextSecondary,
+						}}
+					/>
+					<Popconfirm
+						key="del"
+						title="삭제?"
+						onConfirm={() => onDeleteDetail(record.detail_code)}
+						okText="예"
+						cancelText="아니오"
+					>
+						<DeleteOutlined
+							style={{ padding: 4, color: token.colorError, cursor: "pointer" }}
+						/>
+					</Popconfirm>
+				</Space>
+			),
 		},
 	];
 

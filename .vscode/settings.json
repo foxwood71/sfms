@@ -34,7 +34,7 @@
     
     // 컴포넌트 구조 정리 (선택 사항: .tsx 파일 아래 .css 등을 묶음)
     "*.tsx": "$(capture).css, $(capture).scss, $(capture).test.tsx, $(capture).stories.tsx"
-  }
+  },
 
   // -------------------------------------------------------------
   // 2. Python 설정 (Backend - Ruff)
@@ -94,4 +94,29 @@
     "source.fixAll.biome": "explicit",
     "source.organizeImports.biome": "explicit"
   },
+  
+  // -------------------------------------------------------------
+  // 4. MD 설정
+  // -------------------------------------------------------------
+  "markdownlint.config": {
+    "MD033": { "allowed_elements": ["br", "div", "details"] },
+    "MD032": false
+  },
+
+  // -------------------------------------------------------------
+  // 5.ICON 설정
+  // -------------------------------------------------------------
+  // 아이콘 설정: Material Icon Theme
+  "material-icon-theme.files.associations": {
+    "pgsql": "sql"
+  },
+
+  // 아이콘 설정: VSCode Icons
+  "vsicons.associations.files": [
+    {
+      "icon": "sql",
+      "extensions": ["pgsql"],
+      "format": "svg"
+    }
+  ],
 }
