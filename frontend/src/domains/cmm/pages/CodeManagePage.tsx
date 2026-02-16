@@ -28,6 +28,9 @@ import {
 import type { CodeDetail, CodeGroup } from "../types";
 
 const CodeManagePage: React.FC = () => {
+	
+	const maxRowsWithoutScroll = 18; // 스크롤 없이 보여줄 최대 행 수 (그룹)
+
 	const queryClient = useQueryClient();
 	const { token } = theme.useToken();
 
@@ -281,7 +284,8 @@ const CodeManagePage: React.FC = () => {
 						search={false}
 						options={false}
 						pagination={false}
-						scroll={{ y: TABLE_SCROLL_Y }}
+						//scroll={{ y: TABLE_SCROLL_Y }}
+						{...(groups && groups.length> maxRowsWithoutScroll && {scroll: { y: TABLE_SCROLL_Y }})}  
 						toolBarRender={() => [
 							<Button
 								key="add"
@@ -336,7 +340,8 @@ const CodeManagePage: React.FC = () => {
 							search={false}
 							options={false}
 							pagination={false}
-							scroll={{ y: TABLE_SCROLL_Y }}
+							// scroll={{ y: TABLE_SCROLL_Y }}
+							{...(details && details.length> maxRowsWithoutScroll && {scroll: { y: TABLE_SCROLL_Y }})}  // 데이터가 많을 때만 스크롤 적용
 							toolBarRender={() => [
 								<Button
 									key="add"

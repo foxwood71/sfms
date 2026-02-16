@@ -62,7 +62,7 @@
   // -------------------------------------------------------------
   // pnpm + 하위 폴더 구조일 때 경로 명시
   // 만약 VS Code를 'sfms' 폴더에서 열었다면:
-  "biome.lsp.bin": "./frontend/node_modules/.bin/biome",
+  "biome.lsp.bin": "./frontend/node_modules/.pnpm/@biomejs+cli-linux-x64@2.3.15/node_modules/@biomejs/cli-linux-x64/biome",
   // Biome을 기본 포매터로 지정하는 언어들
   "[javascript]": {
     "editor.tabSize": 2,

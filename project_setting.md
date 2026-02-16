@@ -66,9 +66,11 @@ cd ..
 npm create vite@latest frontend -- --template react
 
 cd frontend
-npm install
+mise install
+mise use -g pnpm
+
 # 선호하시는 lucide-react 아이콘 설치
-npm install lucide-react
+pnpm add lucide-react
 cd ..
 ```
 
@@ -78,9 +80,9 @@ cd ..
 
 # pnpm 설치 및 전역(global) 사용 설정
 mise use -g pnpm
-
 # 설치 확인
 pnpm -v
+
 ```
 
 기존 프로젝트를 pnpm으로 전환하기
