@@ -1,3 +1,116 @@
+# 📘 SFMS Phase 1 DATABASE 설계서 - 공통 관리 (CMM) (Revised v1.3)
+
+* **문서 버전:** v1.3 (Production Ready)
+* **작성일:** 2026-02-17
+* **기준 규격:** `SFMS Standard v1.2`
+
+---
+
+## 1. 🗺️ ERD (Entity Relationship Diagram)
+
+시스템 전반에서 사용하는 코드, 파일, 로그, 알림 등을 관리하는 영역입니다. 다른 모든 모듈의 기반이 됩니다.
+
+```mermaid
+erDiagram
+    %% =========================================================
+    %% 1. cmm (Common Module) - 오렌지 계열
+    %% =========================================================
+    
+    %% 관계 정의
+    cmm_system_domains ||--o{ cmm_sequence_rules : "1:1 (도메인별 채번규칙)"
+    cmm_system_domains ||--o{ cmm_audit_logs : "1:N (도메인별 감사 로그)"
+    cmm_system_domains ||--o{ cmm_attachments : "1:N (도메인별 파일)"
+    cmm_system_domains ||--o{ cmm_notifications : "1:N (도메인별 알림)"
+    cmm_system_domains ||--o{ cmm_code_groups : "1:N (도메인별 코드 그룹)"
+    cmm_code_groups ||--o{ cmm_code_details : "1:N (그룹-상세)" 
+
+    %% 테이블 정의
+    cmm_system_domains {
+        string domain_code PK "도메인 참조"
+        string domain_name
+        string schema_name
+        string description "..."
+    }
+    cmm_sequence_rules {
+        string domain_code PK,FK "도메인 참조"
+        string prefix
+        string year_format
+        int current_seq "..."
+    }
+    cmm_code_groups {
+
+        string group_code PK
+        string group_name
+        string domain_code FK "Nullable (Null=Global)"
+        boolean is_system "..."
+    }
+    cmm_code_details {
+        string group_code FK
+        string detail_code PK
+        string detail_name
+        int sort_order  "..."
+    }
+    cmm_attachments {
+        uuid id PK
+        string domain_code FK
+        string ref_id
+        string file_name
+        string file_path "..."
+    }
+    cmm_audit_logs {
+        bigint id PK
+        string target_domain
+        jsonb snapshot "Before/After"
+        string description "MinIO Key ..."
+    }
+    cmm_notifications {
+        int id PK
+        int receiver_user_id "Ref: usr_users"
+        string title
+        boolean is_read
+        string link_url
+        string description "..."
+    }
+
+    %% 스타일링
+    classDef cmm fill:#FFF3E0,stroke:#FF9800,stroke-width:2px,color:#000
+    class cmm_system_domains,cmm_code_groups,cmm_code_details,cmm_attachments,cmm_audit_logs,cmm_notifications,cmm_sequence_rules cmm
+
+```
+
+---
+
+## 2. 🗄️ 상세 스키마 명세서 (Schema Specifications)
+
+| Table Name | PK | Description | 주요 컬럼 및 JSONB 구조 |
+| --- | --- | --- | --- |
+| **system_domains** | `domain_code` | 시스템 모듈 정의 | `schema_name`(스키마), `is_active` |
+| **code_groups** | `group_code` | 공통 코드 그룹 | `is_system`(삭제불가 여부) |
+| **code_details** | `(group, detail)` | 공통 코드 상세 | `props` (JSONB): `{"color": "#F00", "unit": "kg"}` |
+| **attachments** | `id` (UUID) | **MinIO 파일 메타데이터** | `file_path`(MinIO Key), `ref_id`(참조ID), `legacy_id` |
+| **audit_logs** | `id` (BigInt) | **데이터 감사 로그** | `snapshot` (JSONB): `{"before": {...}, "after": {...}}` |
+| **notifications** | `id` | 사용자 알림 | `receiver_user_id`, `is_read`, `link_url` |
+| **sequence_rules** | `domain_code` | 문서 번호 채번 규칙 | `prefix`(접두어), `current_seq`(현재번호) |
+
+## 3. 🗄️ 상세 스키마 정의 (Schema Definition - Common & File & Log)
+
+**목적:** 시스템 전반의 공통 데이터, 파일 메타데이터(MinIO), 보안 감사 로그 관리.
+
+### 3.1 Table Specification
+
+| Table Name | Description | PK Type | Remarks |
+| --- | --- | --- | --- |
+| `system_domains` | 시스템 모듈(도메인) 등록 | `Varchar` | fac, usr, cmm 등 |
+| `code_groups` | 공통 코드 그룹 | `Varchar` | |
+| `code_details` | 공통 코드 상세 | `Composite` | **JSONB Props** 적용 |
+| `attachments` | **MinIO 파일 메타데이터** | `UUID` | 물리적 파일은 MinIO 저장 |
+| `audit_logs` | 데이터 변경 감사 로그 | `BigInt` | **JSONB Snapshot** 필수 |
+| `sequence_rules` | 문서 번호 자동 채번 규칙 | `Varchar` | |
+| `notifications` | 사용자 알림 | `BigInt` | |
+
+### 3.2 DDL Script (SQL)
+
+```sql
 -----------------------------------------------------------
 -- 🟨 cmm 도메인 (공통 관리) - 최종 확정본
 -----------------------------------------------------------
@@ -168,8 +281,8 @@ CREATE TABLE cmm.attachments (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
     domain_code         VARCHAR(3) NOT NULL REFERENCES cmm.system_domains(domain_code),
-    resource_type       VARCHAR(50) NOT NULL, -- 구분자 (예: facilities, spaces)
-    ref_id              BIGINT NOT NULL,           -- 참조하는 원본 데이터의 ID (String 처리)
+    resource_type       VARCHAR(50) NOT NULL, -- 구분자 (예: facilities, spaces) << 추가
+    ref_id              BIGINT NOT NULL,           -- 참조하는 원본 데이터의 ID (BIGINT)
     category_code       VARCHAR(20) NOT NULL,           -- 파일 구분 코드 (Lookup: ATTACH_CAT)
 
     file_name           VARCHAR(255) NOT NULL,          -- 사용자가 업로드한 원본 파일명
@@ -474,3 +587,13 @@ COMMENT ON COLUMN cmm.v_code_lookup.value IS '코드 값 (Select Box value)';
 COMMENT ON COLUMN cmm.v_code_lookup.label IS '코드 표시명 (Select Box label)';
 COMMENT ON COLUMN cmm.v_code_lookup.props IS '코드 확장 속성 JSON';
 COMMENT ON COLUMN cmm.v_code_lookup.sort_order IS '정렬 순서';
+```
+
+---
+
+## 4. 🚀 레거시 마이그레이션 전략 (Migration Strategy)
+
+파일 및 이미지 (cmm)
+
+* DB에 저장된 `bytea`(BLOB) 데이터는 추출하여 MinIO의 `/legacy/{table_name}/{id}/` 경로에 저장합니다.
+* 저장 후 `cmm.attachments` 테이블에 파일 경로와 `legacy_id`를 기록하여 데이터 무결성을 유지합니다.

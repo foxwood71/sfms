@@ -1,4 +1,4 @@
-# 📐 SFMS Phase 1 - 핵심 로직 시퀀스 다이어그램 (02. IAM & 03. USR)
+# 📐 SFMS Phase 1 - 핵심 로직 시퀀스 다이어그램 (02. IAM & USR)
 
 * **문서 버전:** v1.0
 * **작성일:** 2026-02-17
@@ -84,8 +84,6 @@ sequenceDiagram
 3. **Permission Check:** 해당 API가 요구하는 권한(예: `FAC:UPDATE`)을 유저가 보유했는지 확인합니다.
 * *최적화:* 매번 DB에서 권한을 조회하면 느리므로, 로그인 시 발급된 **Token의 Payload(Claims)** 또는 **Redis 캐시**를 활용합니다.
 
-
-
 ### 2.2 Sequence Diagram
 
 ```mermaid
@@ -127,17 +125,80 @@ sequenceDiagram
 
 ---
 
-## 3. 🌳 USR: 조직도 트리 조회 (Organization Tree Assembly)
+## 3. 🔐 IAM: 로그아웃 (Logout & Token Invalidation)
+
+### 3.1. 핵심 로직
+
+**Access Token 무효화 (Blacklist):**
+* 로그아웃 요청 시 사용된 Access Token의 **잔여 유효 시간(TTL)**을 계산합니다.
+* Redis의 `blacklist:{jti}` 키에 저장하여, 해당 토큰이 만료될 때까지 재사용을 막습니다.
+
+**Refresh Token 삭제 (Kill Session):**
+* Redis에 저장된 `refresh:{user_id}` 키를 **즉시 삭제(`DEL`)**합니다.
+* 이로써 해커가 Access Token을 탈취했더라도 갱신(Refresh)이 불가능해집니다.
+
+**Audit Log:**
+* 누가 언제 로그아웃했는지 `adt_audit_logs`에 기록합니다.
+
+### 3.2. Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client
+    participant API as Auth Controller
+    participant Service as AuthService
+    participant Redis as Redis (Token Store)
+    participant DB as PostgreSQL (Audit)
+
+    Note over Client, API: 헤더에 Access Token 포함 필수
+
+    Client->>API: POST /auth/logout
+    
+    API->>Service: logout(current_user, token)
+    
+    activate Service
+    
+    Service->>Service: Decode Token -> Get 'jti', 'exp', 'user_id'
+    
+    par Access Token 무효화 (Blacklist)
+        Service->>Service: Calculate TTL = exp - now()
+        Service->>Redis: SETEX "blacklist:{jti}", TTL, "logout"
+        Note right of Redis: 토큰 만료 시간까지만<br/>블랙리스트 유지
+    and Refresh Token 삭제 (Kill Session)
+        Service->>Redis: DEL "refresh:{user_id}"
+        Note right of Redis: 리프레시 토큰 즉시 삭제<br/>(재발급 불가)
+    end
+    
+    Service->>DB: INSERT INTO audit_logs (action="LOGOUT", actor=user_id)
+    
+    Service-->>API: Success
+    deactivate Service
+    
+    API-->>Client: 200 OK
+
+```
+
+---
+
+### 👨‍💻 구현 팁 (Implementation Tips)
+
+* **TTL 계산:** `exp`(만료시간)가 현재 시간보다 과거라면(이미 만료된 토큰), 블랙리스트에 넣을 필요 없이 바로 성공 처리하면 됩니다.
+* **Redis Key 설계:**
+* 블랙리스트: `blacklist:jti:{uuid}` (Value는 "logout" 등 임의 값)
+* 리프레시 토큰: `refresh:user:{user_id}` (Value는 Refresh Token 문자열)
+
+## 4. 🌳 USR: 조직도 트리 조회 (Organization Tree Assembly)
 
 DB의 Flat 데이터(Adjacency List)를 프론트엔드용 **계층형 트리(Nested JSON)**로 변환하는 로직입니다.
 
-### 3.1 핵심 로직 설명
+### 4.1 핵심 로직 설명
 
 1. **Fetch All:** DB에서는 `WHERE is_active=true` 조건으로 전체 목록을 한 번에 가져옵니다 (N+1 문제 방지).
 2. **In-Memory Build:** Python의 Dictionary Reference를 활용하여 O(N) 복잡도로 트리를 조립합니다.
 3. **Cache:** 조직도는 변경 빈도가 낮고 조회 빈도가 높으므로 **Redis 캐싱**이 필수입니다.
 
-### 3.2 Sequence Diagram
+### 4.2 Sequence Diagram
 
 ```mermaid
 sequenceDiagram
@@ -173,20 +234,19 @@ sequenceDiagram
 
 ---
 
-## 4. 🔄 USR: 조직 이동 및 순환 참조 방지 (Circular Check)
+## 5. 🔄 USR: 조직 이동 및 순환 참조 방지 (Circular Check)
 
 부서 이동 시 **자신의 하위 부서 밑으로 들어가는 모순(Cycle)**을 방지하는 로직입니다.
 
-### 4.1 핵심 로직 설명
+### 5.1 핵심 로직 설명
 
 1. **Validation:** 자기 자신을 부모로 설정하는지 확인.
 2. **Descendant Check:** 이동하려는 `target_parent_id`가 나의 자손(Descendant)인지 확인해야 합니다.
 * DB의 `RECURSIVE CTE` 쿼리나, 메모리에 로드된 트리에서 탐색을 수행합니다.
 
+1. **Cache Eviction:** 구조가 변경되면 Redis의 `usr:org_tree` 키를 삭제합니다.
 
-3. **Cache Eviction:** 구조가 변경되면 Redis의 `usr:org_tree` 키를 삭제합니다.
-
-### 4.2 Sequence Diagram
+### 5.2 Sequence Diagram
 
 ```mermaid
 sequenceDiagram
@@ -226,16 +286,17 @@ sequenceDiagram
 
 ---
 
-## 5. 👨‍💻 개발자 구현 가이드 (Implementation Tips)
+## 6. 👨‍💻 개발자 구현 가이드 (Implementation Tips)
 
-### 1. IAM (인증)
+### 6.1. IAM (인증)
 
 * **비밀번호 해싱:** `passlib.context.CryptContext(schemes=["bcrypt"])` 사용을 권장합니다.
 * **JWT 라이브러리:** `PyJWT` 또는 `python-jose`를 사용하며, 알고리즘은 `HS256`이 가장 무난합니다.
 
-### 2. USR (조직)
+### 6.2. USR (조직)
 
-* **트리 조립 유틸리티 (Python 예시):**
+* **트리 조립 유틸리티 (Python 예시):**\
+  
 ```python
 def list_to_tree(nodes):
     tree = []
@@ -251,6 +312,5 @@ def list_to_tree(nodes):
     return tree
 
 ```
-
 
 * **순환 참조 방지:** DB 쿼리보다는 **메모리 상에서 전체 트리를 로드한 후 검사**하는 것이 구현 난이도가 낮고 성능상(데이터가 1만 건 이하라면) 큰 문제가 없습니다.

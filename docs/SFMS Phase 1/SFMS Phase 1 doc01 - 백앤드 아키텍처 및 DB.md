@@ -1,8 +1,8 @@
 # 📘 SFMS Phase 1: 통합 설계서 (Foundation & Security)
 
 * **프로젝트명:** SFMS (Sewage Facility Management System)
-* **작성일:** 2026-02-16
-* **작성자:** Chief Architect (Min-su)
+* **작성일:** 2026-02-18
+* **작성자:** Chief Architect (오빠야~)
 * **단계:** Phase 1 (기반 구축 및 보안)
 * **기술 스택:**
 * **Backend:** Python 3.12+, FastAPI, SQLAlchemy (Async), Pydantic v2
@@ -42,7 +42,13 @@ sfms-backend/
 
 ## 2. 🗄️ 데이터베이스 스키마 (ERD & Schema)
 
-### 2.1 Entity Relationship Diagram (Mermaid)
+### 2.1 공통 설계 원칙
+
+* Soft Delete: 모든 주요 엔티티(User, Facility 등)는 is_deleted (Boolean) 또는 deleted_at (Timestamp) 컬럼을 보유하여 물리적 삭제를 방지한다.
+
+* Naming: Table(snake_case), Column(snake_case), PK(id BigInt).
+
+### 2.2 ERD 예시
 
 ```mermaid
 erDiagram
@@ -91,9 +97,14 @@ erDiagram
 
 ### 2.2 상세 스키마 정의 (PostgreSQL + PGroonga)
 
-#### A. ADT_AuditLog (감사 로그)
+#### 2.2.1. ADT_AuditLog (감사 로그)
 
 시스템의 모든 변경 사항을 추적하는 블랙박스입니다.
+
+**제약 사항:**
+1. **Log Level:** 사용자의 행위만 기록한다.
+2. **Scope:** LOGIN, LOGOUT, CREATE, UPDATE, DELETE 행위만 기록.(설정, 기준정보, 사용자 행위만 기록)
+3. **Partitioning:** 월 단위(Month) 파티셔닝을 적용하여 1년 지난 로그는 아카이빙한다.
 
 * **Index Strategy:** `snapshot` 컬럼에 PGroonga 인덱스를 적용하여 JSON 내부 검색 가속.
 
@@ -102,10 +113,12 @@ erDiagram
 | `id` | `BigInteger` | NO | PK (Auto Increment) |
 | `trace_id` | `UUID` | NO | 요청 추적 ID (Middleware 생성) |
 | `actor_id` | `BigInteger` | YES | 수행자 ID (User ID) |
-| `action` | `Varchar(20)` | NO | `CREATE`, `UPDATE`, `DELETE`, `LOGIN` |
+| `ip_address` | `Inet` | YES | 요청자 IP (보안 감사 필수 항목 추가) |
+| `user_agent` | `Text` | YES | 요청 브라우저/기기 정보 (추가) |
 | `target_domain` | `Varchar(50)` | NO | 예: `FAC`, `USR` |
 | `target_id` | `Varchar(100)` | NO | 대상 레코드 PK |
-| `snapshot` | `JSONB` | YES | **핵심:** 변경 이력 스냅샷 |
+| `action` | `Varchar(20)` | NO | `CREATE`, `UPDATE`, `DELETE`, `LOGIN` |
+| `snapshot` | `JSONB` | YES | 변경 전/후 데이터 (PGroonga Index) |
 | `created_at` | `DateTime` | NO | 생성 일시 (Default: Now) |
 
 **`snapshot` JSON 구조 예시:**
@@ -120,15 +133,17 @@ erDiagram
 
 ```
 
-#### B. IAM_Role (역할 및 권한)
+#### 2.2.2. IAM_Role (역할 및 권한)
 
 * **Key Concept:** 메뉴별 권한을 JSONB로 관리하여 스키마 변경 없이 권한 체계를 수정 가능하게 함.
+* RBAC(Role-Based)와 **데이터 접근 범위(Scope)**를 분리하여 설계한다.
+* **IAM_Role (permissions):** "할 수 있는 행위" (What)
+* **USR_User (access_scope):** "접근 가능한 데이터" (Where)
 
-| Field | Type | Nullable | Description |
+| Table | Field | Type | Description |
 | --- | --- | --- | --- |
-| `id` | `BigInteger` | NO | PK |
-| `name` | `Varchar(50)` | NO | 역할명 (시스템 관리자 등) |
-| `permissions` | `JSONB` | NO | 권한 매트릭스 |
+| IAM_Role | permissions | JSONB | * 메뉴/기능별 권한 매트릭스 <br>예: {"fac": ["read", "write"], "sys": ["read"]} |
+| USR_User | access_scope | JSONB | * 데이터 접근 범위<br>예: {"facility_ids": [101, 102], "dept_code": "MAIN"} |
 
 **`permissions` JSON 구조 예시:**
 
@@ -141,13 +156,44 @@ erDiagram
 
 ```
 
+### 2.2.3. CMM_File (파일 메타데이터)
+
+NewMinIO 객체와 DB 간의 정합성을 보장하기 위한 메타데이터 테이블.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| id | UUID | PK (MinIO Object Name과 동일하게 사용 권장) |
+| original_name | Varchar | 업로드 원본 파일명 |
+| file_size | BigInt | 파일 크기 (Byte) |
+| mime_type | Varchar | MIME Type |
+| bucket_name | Varchar | MinIO Bucket 이름 |
+| ref_domain | Varchar | 연결된 도메인 (예: FAC) |
+| ref_id | BigInt | 연결된 레코드 ID |
+
 ---
 
 ## 3. 📡 API 명세서 (Interface Specification)
 
 ### 3.1 공통 응답 포맷 (Envelope Pattern)
 
-모든 API 응답은 아래 포맷을 준수합니다.
+프론트엔드 타입 추론을 위해 아래 제네릭 모델을 준수한다.
+
+* **backend**
+
+```python
+
+# Pseudo Code
+class APIResponse[T](BaseModel):
+    success: bool
+    code: int
+    message: str
+    data: T | None  # 실제 데이터 타입이 여기에 들어감
+    meta: dict | None
+```
+
+### 3.2 성공 응답 포멧 예제
+
+* **frontend 예제**
 
 ```json
 {
@@ -164,7 +210,7 @@ erDiagram
 
 ```
 
-### 3.2 에러 응답 포맷
+### 3.2 에러 응답 포맷 예제
 
 ```json
 {
@@ -184,75 +230,62 @@ erDiagram
 
 | Method | URL | Description |
 | --- | --- | --- |
-| `POST` | `/api/v1/auth/login` | 로그인 (JWT 발급) |
-| `GET` | `/api/v1/users` | 사용자 목록 조회 |
-| `POST` | `/api/v1/users` | 사용자 생성 |
-| `GET` | `/api/v1/users/{id}` | 사용자 상세 조회 |
-| `PATCH` | `/api/v1/users/{id}` | 사용자 정보 일부 수정 |
-| `GET` | `/api/v1/fac/facilities` | 시설 트리 조회 |
+| `POST` | `/auth/login` | 로그인 (Access Token 발급, Refresh Token Redis 저장) |
+| `POST` | `/auth/refresh` | 토큰 갱신 (Redis 내 Refresh Token 유효성 검증) |
+| `POST` | `/auth/logout` | 로그아웃 (Access Token Redis Blacklist 등록) |
+| `GET` | `/adt/logs` | 감시 로그 조회 (PGroonga JSON 검색 활용) |
+| `GET` | `/users` | 사용자 목록 조회 |
+| `POST` | `/users` | 사용자 생성 |
+| `GET` | `/users/{id}` | 사용자 상세 조회 |
+| `PATCH` | `/users/{id}` | 사용자 정보 일부 수정 |
+| `GET` | `/fac/facilities` | 시설 트리 조회 |
 
 ---
 
 ## 4. 🔄 핵심 로직 시퀀스 (Sequence Diagram)
 
-### 4.1 ADT 자동 감사 로깅 (Audit Logging)
-
-`@audit_logging` 데코레이터 또는 미들웨어에서 처리되는 로직입니다.
+### 4.1 로그인 및 세션관리(Radis 활용)
 
 ```mermaid
 sequenceDiagram
     participant Client
-    participant Middleware as AuditMiddleware
-    participant Service as DomainService
-    participant DB
-    participant ADT as ADT_Service
+    participant API as Auth API
+    participant DB as PostgreSQL
+    participant Redis
 
-    Client->>Middleware: [PUT] /api/v1/fac/pumps/1 (Update)
-    Middleware->>DB: Target ID로 변경 전 데이터 조회 (Before)
-    DB-->>Middleware: Return {status: "STOP"}
-    
-    Middleware->>Service: 비즈니스 로직 실행
-    Service->>DB: UPDATE 쿼리 수행 (Commit)
-    
-    Middleware->>DB: 변경 후 데이터 조회 (After)
-    DB-->>Middleware: Return {status: "RUN"}
-    
-    Middleware->>ADT: Diff 계산 및 로그 저장 요청
-    Note right of ADT: JSONB {before:..., after:...}
-    ADT->>DB: INSERT into adt_audit_logs
-    
-    Middleware-->>Client: 200 OK Response
+    Client->>API: Login (ID/PW)
+    API->>DB: 사용자 검증 (Hash Check)
+    DB-->>API: User Info + Scope
 
+    API->>API: Access Token(JWT) 생성
+    API->>API: Refresh Token(Random String) 생성
+    
+    API->>Redis: SET refresh:{user_id} {token} (TTL: 7일)
+    
+    API-->>Client: 200 OK (Access + Refresh)
 ```
 
-### 4.2 IAM 인증 및 인가 (Authentication & Authorization)
+### 4.2 데이터 변경 및 감사 로깅 (Audit + Scope Check)
 
 ```mermaid
 sequenceDiagram
     participant Client
-    participant Guard as AuthGuard(Dep)
-    participant JWT as JWTHandler
+    participant Guard as PermissionGuard
+    participant Service as FacService
     participant DB
-    participant API as API_Endpoint
+    participant ADT as AuditService
 
-    Client->>Guard: Request + Header [Bearer Token]
+    Client->>Guard: [PUT] /fac/facilities/101 (Update)
     
-    Guard->>JWT: 토큰 유효성 검증 (Decode)
-    alt Invalid Token
-        JWT-->>Client: 401 Unauthorized
-    end
+    Guard->>Guard: 1. Role Check (수정 권한?) -> OK
+    Guard->>Guard: 2. Scope Check (시설 101번 담당?) -> OK
     
-    JWT->>Guard: user_id, role 반환
-    Guard->>DB: (Optional) 최신 권한 조회
+    Guard->>Service: Request Forward
+    Service->>DB: 기존 데이터 조회 (Snapshot Before)
+    Service->>DB: 데이터 업데이트 (Commit)
     
-    Guard->>Guard: Role & Permission Check
-    alt No Permission
-        Guard-->>Client: 403 Forbidden
-    end
-    
-    Guard->>API: Inject Current User
-    API-->>Client: Response
-
+    Service->>ADT: Async Task 요청 (비동기)
+    ADT->>DB: [INSERT] adt_audit_logs (IP, Agent, Diff 포함)
 ```
 
 ---
@@ -276,23 +309,19 @@ sequenceDiagram
 
 ### 1주차: 환경 설정 및 공통 모듈
 
-* [ ] Docker Compose 구성 (PostgreSQL + PGroonga, Redis)
-* [ ] FastAPI 프로젝트 스캐폴딩 (폴더 구조)
-* [ ] SQLAlchemy Base 및 DB 연결 설정 (`app/core/database.py`)
-* [ ] 공통 Response/Exception 핸들러 구현
+* [ ] Docker Compose: PGroonga, Redis, MinIO 컨테이너 구성 및 연동 확인.
+* [ ] FastAPI Setup: Generic[T] 기반 응답 모델 및 예외 처리 핸들러 구현.
+* [ ] Database: SQLAlchemy Async Engine 설정, Alembic 환경 구성.
 
-### 2주차: ADT & IAM (최우선 순위)
+### 2주차: 보안(IAM) 및 감사(ADT)
 
-* [ ] `adt_audit_logs` 모델링 및 마이그레이션
-* [ ] `usr_users`, `iam_roles` 모델링
-* [ ] JWT 발급 및 검증 로직 구현 (`login` API)
-* [ ] **Audit Logging 미들웨어/데코레이터 구현** (핵심)
+* [ ] Redis 연동: JWT Refresh Token 저장소 및 Blacklist 기능 구현.
+* [ ] ADT 모델: Partitioning이 적용된 Audit Log 테이블 생성.
+* [ ] Middleware: Request Context에서 IP/User-Agent 추출 및 로깅 로직 구현.
 
-### 3주차: USR & FAC 기초
+### 3주차: 사용자(USR) 및 공통(CMM)
 
-* [ ] 사용자 CRUD API 구현
-* [ ] 시설(Facility) 계층형(Self-referencing) 모델 구현
-* [ ] PGroonga 기반 시설명 검색 API 구현 (`LIKE` vs `&@~`)
-* [ ] React Admin(AntD Pro) 초기 세팅 및 로그인 연동
+* [ ] Scope Logic: 사용자별 access_scope JSON 처리 로직 구현.
+* [ ] File Mgmt: MinIO 업로드 유틸리티 및 CMM_File 메타데이터 저장 로직.
 
 ---
