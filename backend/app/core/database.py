@@ -1,53 +1,46 @@
-"""SFMS 데이터베이스 설정 및 세션 관리 모듈.
+"""비동기 데이터베이스 연결 및 세션을 관리하는 모듈입니다."""
 
-SQLAlchemy 엔진을 생성하고 FastAPI 요청 생명주기에 맞춘
-세션 제너레이터(get_db)를 제공합니다.
-"""
+from typing import AsyncGenerator
 
-import os
-from collections.abc import Generator
-from pathlib import Path
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import DeclarativeBase
 
-from dotenv import load_dotenv
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Session, sessionmaker
+from app.core.config import settings
 
-# 1. .env 파일 로드
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
-env_path = BASE_DIR / ".env"
+engine = create_async_engine(
+    settings.DATABASE_URL,
+    echo=True,  # 개발 환경용 SQL 로깅 활성화
+    future=True,
+)
 
-# override=True: 시스템 환경변수보다 .env를 우선시함
-is_loaded = load_dotenv(dotenv_path=env_path, override=True)
-
-# 실제 로드된 키 확인 (SQL로 시작하는 변수가 있는지?)
-env_vars = {k: v for k, v in os.environ.items() if k.startswith("SQLALCHEMY")}
-
-# 3. 환경 변수 가져오기
-SQLALCHEMY_DATABASE_URL = os.getenv("SQLALCHEMY_DATABASE_URL")
-
-if not SQLALCHEMY_DATABASE_URL:
-    msg = "SQLALCHEMY_DATABASE_URL이 설정되지 않았습니다. .env 파일을 확인해주세요."
-    raise ValueError(msg)
-
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
-#  autocommit/autoflush 설정을 명시적으로 관리
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-Base = declarative_base()
+AsyncSessionLocal = async_sessionmaker(
+    bind=engine,
+    class_=AsyncSession,
+    autocommit=False,
+    autoflush=False,
+    expire_on_commit=False,
+)
 
 
-def get_db() -> Generator[Session]:
-    """데이터베이스 세션을 생성하고 관리하는 의존성 주입용 함수.
+class Base(DeclarativeBase):
+    """SQLAlchemy ORM 모델의 최상위 베이스 클래스입니다."""
 
-    FastAPI의 Depends와 함께 사용되어 요청마다 세션을 할당하고,
-    작업이 완료되면 자동으로 세션을 종료(close)합니다.
+    pass
 
-    Yields:
-        Session: SQLAlchemy 데이터베이스 세션 객체.
+
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    비동기 데이터베이스 세션을 생성하고 반환합니다.
+
+    FastAPI의 의존성 주입(Dependency Injection)을 통해 라우터에서 사용됩니다.
+    요청이 끝나면 자동으로 세션을 닫습니다.
+    """
+    async with AsyncSessionLocal() as session:  # 비동기 세션 생성
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()  # 세션 안전하게 종료

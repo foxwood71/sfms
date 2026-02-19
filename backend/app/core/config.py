@@ -1,29 +1,20 @@
-"""SFMS Database and MinIO configuration.
+"""애플리케이션 전역 환경 설정을 관리하는 모듈입니다."""
 
-Provides Pydantic Settings for SQLAlchemy database and MinIO S3-compatible storage.
-Used in FastAPI dependency injection and configuration management.
-"""
-
-import os
-
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """SFMS application configuration using Pydantic.
+    """
+    환경 변수에서 설정을 불러오는 클래스입니다.
 
-    Loads environment variables with sensible defaults for development.
-    Supports .env override for production deployment.
-
-    Attributes:
-        MINIO_ENDPOINT: MinIO 서버 주소 (기본: localhost:9000).
-        MINIO_ACCESS_KEY: MinIO 액세스 키 (기본: sfms_storage_admin).
-        MINIO_SECRET_KEY: MinIO 시크릿 키 (기본: minio_storage_password).
-        MINIO_BUCKET: MinIO 버킷 이름 (기본: sfms-attachments).
-
+    .env 파일의 내용을 읽어 속성에 매핑합니다.
     """
 
-    MINIO_ENDPOINT: str = os.getenv("MINIO_ENDPOINT", "localhost:9000")
-    MINIO_ACCESS_KEY: str = os.getenv("MINIO_ACCESS_KEY", "sfms_storage_admin")
-    MINIO_SECRET_KEY: str = os.getenv("MINIO_SECRET_KEY", "minio_storage_password")
-    MINIO_BUCKET: str = "sfms-attachments"
+    PROJECT_NAME: str = "SFMS Backend"
+    API_V1_STR: str = "/api/v1"
+    DATABASE_URL: str
+
+    model_config = SettingsConfigDict(env_file=".env", env_ignore_empty=True)
+
+
+settings = Settings()

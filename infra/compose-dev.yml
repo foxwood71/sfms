@@ -12,6 +12,8 @@ services:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
       TZ: Asia/Seoul
+    ports:
+      - "5432:5432"  # WSL에서 localhost:5432로 접근 가능
     volumes:
       - ./data/pgsql:/var/lib/postgresql/data
       - ./pgsql/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -23,11 +25,13 @@ services:
       timeout: 5s
       retries: 5
 
-  # 1-1. Cache & Session Store (Redis)  # 설계에 맞춰 새로 추가된 부분
+  # 2. Cache & Session Store (Redis)
   redis:
     image: redis:7-alpine
     container_name: sfms-redis
     restart: always
+    ports:
+      - "6379:6379"  # WSL에서 localhost:6379로 접근 가능
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-password123!}
     volumes:
       - ./data/redis:/data
@@ -39,7 +43,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # 2. S3 Compatible Storage (MinIO)
+  # 3. Object Storage (MinIO)
   minio:
     image: minio/minio:latest
     container_name: sfms-minio
@@ -49,71 +53,15 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
       TZ: Asia/Seoul
+    ports:
+      - "9000:9000"  # S3 API 포트 (localhost:9000)
+      - "9001:9001"  # 관리자 웹 콘솔 (localhost:9001)
     volumes:
       - ./data/minio:/data
-    ports:
-      - "9000:9000"  # S3 API 포트 (백엔드 연동)
-      - "9001:9001"  # MinIO 관리자 웹 콘솔
-    networks:
-      - sfms-net
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 20s
-      retries: 3
-
-  # 3. Backend (FastAPI)
-  backend:
-    build: ../backend
-    container_name: sfms-backend
-    restart: always
-    environment:
-      # 비동기 드라이버(asyncpg) 명시
-      DATABASE_URL: postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
-      REDIS_URL: redis://:${REDIS_PASSWORD:-password123!}@redis:6379/0
-      S3_ENDPOINT: http://minio:9000
-      TZ: Asia/Seoul
-    volumes:
-      - ../backend:/app
-      - ./data/logs/backend:/app/logs
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
     networks:
       - sfms-net
 
-  # 4. Frontend (React + Vite)
-  frontend:
-    build: ../frontend
-    container_name: sfms-frontend
-    restart: always
-    volumes:
-      - ../frontend:/app
-      - /app/node_modules
-    networks:
-      - sfms-net
-
-  # 5. Gateway (Nginx)
-  nginx:
-    image: nginx:alpine
-    container_name: sfms-nginx
-    restart: always
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-    depends_on:
-      - frontend
-      - backend
-    networks:
-      - sfms-net
-
-  # 6. Database Admin (PgAdmin)
+  # 4. Database Admin (PgAdmin)
   pgadmin:
     image: dpage/pgadmin4
     container_name: sfms-pgadmin
@@ -123,13 +71,13 @@ services:
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
       TZ: Asia/Seoul
     ports:
-      - "5050:80"  # 관리자 접속을 위한 포트 추가
+      - "5050:80"    # 웹 브라우저 접속용 (localhost:5050)
     volumes:
       - ./data/pgadm:/var/lib/pgadmin
     networks:
       - sfms-net
 
-  # 7. Offline Version Control (Gitea)
+  # 5. Offline Version Control (Gitea)
   gitea:
     image: gitea/gitea:latest
     container_name: sfms-gitea
@@ -143,8 +91,8 @@ services:
       - USER=${DB_USER}
       - PASSWD=${GITEA_DB_PASSWORD}
     ports:
-      - "3000:3000"  # Gitea 웹 UI 접속 포트 추가
-      - "222:22"     # Gitea SSH 접속 포트 추가
+      - "3000:3000"  # Gitea 웹 UI (localhost:3000)
+      - "222:22"
     volumes:
       - ./data/gitea:/data
       - /etc/timezone:/etc/timezone:ro
@@ -155,14 +103,13 @@ services:
     networks:
       - sfms-net
 
-  # 8. Container Management (Portainer)
-  # 개발 및 운영 편의를 위해 Portainer 추가 (선택 사항)
+  # 6. Container Management (Portainer)
   portainer:
     image: portainer/portainer-ce:latest
     container_name: sfms-portainer
     restart: always
     ports:
-      - "9002:9000"  # MinIO(9000)와 충돌을 피해 호스트 포트를 9002로 변경
+      - "9002:9000"  # Portainer 웹 UI (localhost:9002)
       - "8000:8000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
