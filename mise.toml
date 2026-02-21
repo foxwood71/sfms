@@ -1,3 +1,9 @@
 [tools]
 node = "24"
 python = "3.13"
+pnpm = "latest"
+ruff = "latest"
+biome = "latest"
+
+[hooks]
+postinstall = "corepack enable pnpm"  # React/Vite용

@@ -3,10 +3,12 @@
 ## 0. wsl에 Rock Linx9 설치
 
 1. [Rocky Linux 공식 미러 사이트](https://download.rockylinux.org/pub/rocky/9/images/x86_64/) 에 접속 Rocky-9-WSL-Base.latest.x86_64.wsl 이 파일을 다운로드
-2. 윈도우 wsl 버전을 최신버전으로 업데이트 
+2. 윈도우 wsl 버전을 최신버전으로 업데이트
+
    ```powershell
     wsl -update
     ```
+
 3. Rocky-9-WSL-Base.latest.x86_64.wsl 이 파일의 아이콘이 팽귄으로 변경되면 더블 클릭하여 설치 및 재부팅 
 4. wsl 에서 설치된 리눅스 목록 확인후 실행
 
@@ -39,7 +41,15 @@
 sudo dnf update -y
 
 # 필수 패키지 설치 (wget, git, curl, zsh util-linux-user)
-sudo dnf install wget git curl zsh util-linux-user -y
+sudo dnf install wget git curl zsh util-linux-user vim -y
+
+# 개발자툴 패키지 설치
+sudo dnf groupinstall 'Development Tools' -y
+
+# 방화벽 활성화(wsl 환경에서는 불필요)
+sudo dnf install firewalld -y
+sudo systemctl start firewalld && sudo systemctl enable firewalld
+sudo firewall-cmd --state
 ```
 
 ## 2. Zsh 설치 및 기본 쉘 설정
@@ -69,9 +79,6 @@ wget https://github.com/robbyrussell/oh-my-zsh/raw/master/tools/install.sh -O - 
 ## 4. 설정 적용 및 테마 변경
 
 ```bash
-# 설정 파일 로드
-source ~/.zshrc
-
 # 테마 변경 (vim 또는 nano 사용)
 vim ~/.zshrc
 ```
@@ -80,6 +87,11 @@ vim ~/.zshrc
 
 ```zsh
 ZSH_THEME="robbyrussell"  # 원하는 테마로 변경 (agnoster, powerlevel10k 등)
+```
+
+```bash
+# 설정 파일 로드
+source ~/.zshrc
 ```
 
 테마 목록: [Oh My Zsh Themes](https://github.com/ohmyzsh/ohmyzsh/wiki/Themes) [gist.github](https://gist.github.com/ebell451/f4eca64951a1585a6d0b65a293d328a4)
@@ -114,7 +126,7 @@ plugins=(
 ## 6. 다중라인 쉘 프롬프트(선택사항)
 
 ```bash
-vi ~/.oh-my-zsh/themes/agnoster.zsh-theme
+vim ~/.oh-my-zsh/themes/agnoster.zsh-theme
 ```
 
 ```bash
@@ -177,7 +189,7 @@ enabled=true
 appendWindowsPath=true
 ```
 
-중요: 설정을 적용하려면 윈도우 파워셸에서 **wsl --terminate Rocky**를 입력해 완전히 껐다 켜야 합니다.
+중요: 설정을 적용하려면 윈도우 파워셸에서 **wsl --shutdown**를 입력해 완전히 껐다 켜야 합니다.
 
 ## 문제 해결
 

@@ -26,17 +26,25 @@ SFMS의 **mise + uv + Ruff + Biome + Docker + PostgreSQL** 풀스택에 최적�
       "source.organizeImports.ruff": "explicit"
     }
   },
+  "[jupyter]": {
+    "editor.formatOnSave": true
+  },
+  "python.terminal.activateEnvironment": true,
   "python.defaultInterpreterPath": "./backend/.venv/bin/python",
   "python.languageServer": "Pylance",
   "python.analysis.typeCheckingMode": "basic",
+  "ruff.enableExperimentalCodeActions": true,
 
   // ========== JAVASCRIPT/TS (Frontend) ==========
-  "[javascript][typescript][javascriptreact][typescriptreact][json][jsonc][yaml]": {
+  "[javascript][javascriptreact][typescript][typescriptreact][json][jsonc][yaml][css]": {
+    "editor.tabSize": 2,
     "editor.defaultFormatter": "biomejs.biome",
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
-      "source.fixAll": "explicit",
-      "source.organizeImports": "explicit"
+      "source.fixAll.biome": "explicit",
+      "source.organizeImports": "explicit",
+      "source.organizeImports.biome": "explicit",
+      "source.addMissingImports": "explicit"
     }
   },
 
@@ -59,6 +67,8 @@ SFMS의 **mise + uv + Ruff + Biome + Docker + PostgreSQL** 풀스택에 최적�
   // ========== Ruff/Biome 최적화 ==========
   "ruff.enableExperimentalCodeActions": true,
   "biome.enabled": true
+  "biome.formatOnSave": true, 
+
 }
 ```
 

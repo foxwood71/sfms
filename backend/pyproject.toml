@@ -47,7 +47,8 @@ build-backend = "hatchling.build" # uv 호환 강화
 requires = ["hatchling"] 
 
 [tool.ruff]
-line-length = 88
+line-length = 120
+indent-width = 4
 target-version = "py313"
 
 [tool.ruff.format]
@@ -57,6 +58,7 @@ exclude = [
   "__pypackages__",
 ]
 quote-style = "double"
+indent-style = "space"
 skip-magic-trailing-comma = false
 
 [tool.ruff.lint]

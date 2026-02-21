@@ -8,9 +8,12 @@
 
 ```toml
 [tools]
-node = "22"
-"npm:pnpm" = "9"
+node = "24"
+python = "3.13"
+pnpm = "latest"
+ruff = "latest"
 biome = "latest"
+
 
 [hooks]
 postinstall = "corepack enable pnpm"

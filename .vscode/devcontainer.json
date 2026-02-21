@@ -1,0 +1,23 @@
+{
+  "name": "SFMS Fullstack",
+  "dockerComposeFile": "../infra/docker-compose.yml",
+  "service": "backend",
+  "workspaceFolder": "/workspace",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker": {},
+    "ghcr.io/devcontainers/features/postgres": {}
+  },
+  "forwardPorts": [3000, 8000, 5432, 9000],
+  "postCreateCommand": "mise trust && uv sync --dev && cd ../frontend && pnpm install",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "charliermarsh.ruff",
+        "biomejs.biome",
+        "ms-azuretools.vscode-docker",
+        "ms-ossdata.vscode-pgsql"
+      ]
+    }
+  }
+}
