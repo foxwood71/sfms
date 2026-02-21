@@ -23,15 +23,30 @@ services:
             - "5432:5432"  # 로컬 개발 환경에서 직접 접속하기 위해 개방
         volumes:
             # 실제 데이터 파일이 저장되는 경로입니다. (권한 관리를 위해 미리 생성 권장)
-            - ./data/pgsql:/var/lib/postgresql/data
-            # [수정] 00, 10, 20번 파일은 Dockerfile 내부에서 COPY하므로 볼륨 설정에서 제외합니다.
+            - ./data/pgsql:/var/lib/postgresql/data  # Bind Mount: 로컬 폴더를 직접 마운트하여 데이터 영구 보존 및 호스트에서 직접 접근 가능
+            # - pgsql-data:/var/lib/postgresql/data  # Named Volume: Docker 볼륨을 사용하여 데이터 영구 보존 (로컬 폴더 대신 볼륨 사용 시)
         networks:
             - sfms-net
         # 00_configure_system.sh 스크립트가 참조하는 SSL 키를 컨테이너 내부로 전달합니다.
         # /run/secrets/pgsql-key 경로로 자동 마운트됩니다.
         secrets:
+            # secrets를 마운트할 때 권한 설정
+            #
+            #- source: pgsql-key
+            #  target: /run/secrets/pgsql-key
+            #  uid: "999"   # <-- 999에서 1000으로 변경
+            #  gid: "999"
+            #  mode: 0400    # <-- 이게 핵심입니다 (읽기 권한 보장)
+            #
+            #- source: pgsql-cert
+            #  target: /run/secrets/pgsql-cert
+            #  uid: "999"
+            #  gid: "999"
+            #  mode: 0444
+            - pgsql-password
             - pgsql-key
             - pgsql-cert
+    
         healthcheck:
             # -q(quiet) 옵션을 추가하면 로그가 더 깔끔해집니다.
             test: ["CMD-SHELL", "pg_isready -q -d ${DB_NAME} -U ${DB_USER}"]
@@ -287,43 +302,89 @@ services:
         entrypoint: ["/bin/sh", "/usr/local/bin/entrypoint-wrapper.sh"]
 
 # ====================================================================
-# Secrets 정의가 반드시 필요합니다.
-# ====================================================================
-secrets:
-    pgsql-key:
-        file: ./pgsql/certs/pgsql.key
-    pgsql-cert:
-        file: ./pgsql/certs/pgsql.crt
-    pgadm-key:
-        file: ./pgadm/certs/pgadm.key
-    pgadm-cert:
-        file: ./pgadm/certs/pgadm.crt
-    gitea-key:
-        file: ./gitea/certs/gitea.key
-    gitea-cert:
-        file: ./gitea/certs/gitea.crt
-#     redis-key:
-#         file: ./redis/certs/redis.key
-#     redis-cert:
-#         file: ./redis/certs/redis.crt
-#     minio-key:
-#         file: ./minio/certs/minio.key
-#     minio-cert:
-#         file: ./minio/certs/minio.crt
-#     nginx-key:
-#         file: ./nginx/certs/nginx.key
-#     nginx-cert:
-#         file: ./nginx/certs/nginx.crt
-#     portainer-key:
-#         file: ./portainer/certs/portainer.key
-#     portainer-cert:
-#         file: ./portainer/certs/portainer.crt
-
-
-# ====================================================================
 # [컨테이너들이 서로를 컨테이너 이름(예: 'db', 'redis')으로
 # 찾을 수 있게 해주는 가상 네트워크
 # ==================================================================== 
 networks:
     sfms-net:
         driver: bridge
+        # external: false   
+
+# ====================================================================
+# Secrets 정의
+# ====================================================================
+secrets:
+    pgsql-password:
+        file: ${PWD}/pgsql/pass.txt
+    pgsql-key:
+        file: ${PWD}/pgsql/certs/pgsql.key
+    pgsql-cert:
+        file: ${PWD}/pgsql/certs/pgsql.crt
+    pgadm-password:
+        file: ${PWD}/pgadm/pass.txt
+    pgadm-key:
+        file: ${PWD}/pgadm/certs/pgadm.key
+    pgadm-cert:
+        file: ${PWD}/pgadm/certs/pgadm.crt
+    gitea-password:
+        file: ${PWD}/gitea/pass.txt
+    gitea-key:
+        file: ${PWD}/gitea/certs/gitea.key
+    gitea-cert:
+        file: ${PWD}/gitea/certs/gitea.crt
+#     redis-password:
+#        file: ${PWD}/redis/pass.txt
+#     redis-key:
+#         file: ${PWD}/redis/certs/redis.key
+#     redis-cert:
+#         file: ${PWD}/redis/certs/redis.crt
+#     minio-password:
+#        file: ${PWD}/minio/pass.txt
+#     minio-key:
+#         file: ${PWD}/minio/certs/minio.key
+#     minio-cert:
+#         file: ${PWD}/minio/certs/minio.crt
+#     nginx-password:
+#        file: ${PWD}/nginx/pass.txt
+#     nginx-key:
+#         file: ${PWD}/nginx/certs/nginx.key
+#     nginx-cert:
+#         file: ${PWD}/nginx/certs/nginx.crt
+#     portainer-password:
+#        file: ${PWD}/portainer/pass.txt
+#     portainer-key:
+#         file: ${PWD}/portainer/certs/portainer.key
+#     portainer-cert:
+#         file: ${PWD}/portainer/certs/portainer.crt
+
+# ====================================================================
+# volumes 정의
+# ====================================================================
+# volumes:
+#     pgsql-data:
+#         driver: local
+#         driver_opts:
+#         type: none
+#         o: bind
+#         device: ${PWD}/data/pgsql
+
+#     pgadm-data:
+#         driver: local
+#         driver_opts:
+#         type: none
+#         o: bind
+#         device: ${PWD}/data/pgadm
+
+#     gitea-data:
+#         driver: local
+#         driver_opts:
+#         type: none
+#         o: bind
+#         device: ${PWD}/data/gitea/data
+
+#     gitea-config:
+#         driver: local
+#         driver_opts:
+#         type: none
+#         o: bind
+#         device: ${PWD}/data/gitea/etc
