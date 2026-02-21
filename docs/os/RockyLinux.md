@@ -2,9 +2,13 @@
 
 ## 0. wsl에 Rock Linx9 설치
 
-1. [Rocky Linux 공식 미러 사이트](https://download.rockylinux.org/pub/rocky/9/images/x86_64/) 에 접속
-2. Rocky-9-WSL-Base.latest.x86_64.wsl 이 파일을 다운로드후 더블클릭으로 설치
-3. wsl 에서 설치된 리눅스 목록 확인후 실행
+1. [Rocky Linux 공식 미러 사이트](https://download.rockylinux.org/pub/rocky/9/images/x86_64/) 에 접속 Rocky-9-WSL-Base.latest.x86_64.wsl 이 파일을 다운로드
+2. 윈도우 wsl 버전을 최신버전으로 업데이트 
+   ```powershell
+    wsl -update
+    ```
+3. Rocky-9-WSL-Base.latest.x86_64.wsl 이 파일의 아이콘이 팽귄으로 변경되면 더블 클릭하여 설치 및 재부팅 
+4. wsl 에서 설치된 리눅스 목록 확인후 실행
 
     ```powershell
     # 설치된 리눅스 목록 확인
@@ -14,7 +18,7 @@
     wsl -d Rocky9
     ```
 
-4. 사용자 생성후 아래의 명령으로 패스워드 생성
+5. 사용자 생성후 아래의 명령으로 패스워드 생성
 
     ```bash
     sudo passwd username
