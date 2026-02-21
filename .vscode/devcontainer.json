@@ -1,23 +1,67 @@
 {
-  "name": "SFMS Fullstack",
-  "dockerComposeFile": "../infra/docker-compose.yml",
-  "service": "backend",
-  "workspaceFolder": "/workspace",
-  "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker": {},
-    "ghcr.io/devcontainers/features/postgres": {}
-  },
-  "forwardPorts": [3000, 8000, 5432, 9000],
-  "postCreateCommand": "mise trust && uv sync --dev && cd ../frontend && pnpm install",
-  "customizations": {
-    "vscode": {
-      "extensions": [
-        "ms-python.python",
-        "charliermarsh.ruff",
-        "biomejs.biome",
-        "ms-azuretools.vscode-docker",
-        "ms-ossdata.vscode-pgsql"
-      ]
-    }
-  }
+	"name": "Rocky Linux Podman Env",
+	// 1. 베이스 이미지 (Python & Node.js 포함된 범용 이미지)
+	"image": "mcr.microsoft.com/devcontainers/python:3.11-bullseye",
+
+	// 2. Podman 실행 시 필요한 보안/네트워크 설정
+	"runArgs": [
+		"--userns=keep-id", // 호스트 사용자의 권한 유지
+		"--security-opt",
+		"label=disable" // SELinux 이슈 방지
+	],
+
+	// 3. VS Code 확장 프로그램 자동 설치
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				// UI 및 공통
+				"pkief.material-icon-theme",
+				"oderwat.indent-rainbow",
+				"christian-kohler.path-intellisense",
+				"remy-beone.comment-anchors",
+				"usernamehw.errorlens",
+				"eamodio.gitlens",
+				"mhutchie.git-graph",
+				"donjayamanne.githistory",
+
+				// 언어 및 도구
+				"ms-python.python",
+				"charliermarsh.ruff",
+				"biomejs.biome",
+				"mikestead.dotenv",
+				"tamasfe.even-better-toml",
+				"humao.rest-client",
+				"ms-ossdata.vscode-pgsql",
+
+				// 쉘 스크립트
+				"timonwong.shellcheck",
+				"foxundermoon.shell-format",
+				"mads-hartmann.bash-ide-vscode"
+			],
+			"settings": {
+				// 컨테이너 내부에서도 저장 시 자동 포맷팅 적용
+				"editor.formatOnSave": true,
+				"editor.codeActionsOnSave": {
+					"source.fixAll": "always",
+					"source.organizeImports": "always"
+				},
+				"[python]": {
+					"editor.defaultFormatter": "charliermarsh.ruff",
+					"editor.codeActionsOnSave": {
+						"source.fixAll.ruff": "always",
+						"source.organizeImports.ruff": "always"
+					}
+				},
+				"[javascript]": { "editor.defaultFormatter": "biomejs.biome" },
+				"[typescript]": { "editor.defaultFormatter": "biomejs.biome" },
+				"python.testing.pytestEnabled": true
+			}
+		}
+	},
+
+	// 4. 컨테이너 생성 후 실행할 명령어 (필요한 패키지 설치)
+	"postCreateCommand": "sudo apt-get update && sudo apt-get install -y shellcheck",
+
+	// 5. 원격 사용자 설정
+	"remoteUser": "vscode"
 }

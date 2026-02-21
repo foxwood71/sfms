@@ -34,7 +34,7 @@ uv run uvicorn app.main:app --reload  # 테스트 실행
 cd ../frontend
 mise trust          # 서브디렉토리 mise.toml 신뢰 (필요시)
 pnpm install        # package.json deps 설치 (pnpm 빠름)
-pnpm dev            # http://localhost:5173 실행
+pnpm run dev        # http://localhost:5173 실행
 ```
 - Tailwind/Vite/TS 최적화 가정.
 

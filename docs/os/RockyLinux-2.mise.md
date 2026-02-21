@@ -43,6 +43,7 @@ source ~/.bashrc
 ## 5. 설치 확인
 
 ```bash
+mise trust  # mise가 실행되는 폴더에 mise.toml이 있으면 실행  (선택사항)
 mise --version
 mise doctor  # 환경 진단
 ```

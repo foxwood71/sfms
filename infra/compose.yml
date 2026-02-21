@@ -1,175 +1,329 @@
-version: "3.8"
+version: "3.8"  # Podman 및 Docker Compose의 호환성이 가장 좋은 3.8 버전을 사용합니다.
 
 services:
-  # 1. Database (PostgreSQL 16 + PGroonga)
-  db:
-    image: groonga/pgroonga:3.1.7-alpine-16
-    container_name: sfms-db
-    restart: always
-    environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
-      TZ: Asia/Seoul
-    volumes:
-      - ./data/pgsql:/var/lib/postgresql/data
-      - ./pgsql/init.sql:/docker-entrypoint-initdb.d/init.sql
-    networks:
-      - sfms-net
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    # ====================================================================
+    # 1. Database (PostgreSQL 16 + PGroonga)
+    # SFMS의 모든 메인 데이터가 저장되는 핵심 관계형 데이터베이스입니다.
+    # ====================================================================
+    # 1. Database (PostgreSQL 16 + Custom PGroonga & pg_cron)
+    # 한글 검색 최적화 및 스케줄러가 포함된 커스텀 이미지를 빌드하여 실행합니다.
+    db:
+        # infra/pgsql 폴더에 있는 Dockerfile을 읽어 직접 이미지를 생성합니다.
+        build: ./pgsql
+        container_name: sfms-db
+        restart: always
+        environment:
+            - POSTGRES_USER=${DB_USER}
+            - POSTGRES_PASSWORD=${DB_PASSWORD}
+            - POSTGRES_DB=${DB_NAME}
+            # scram-sha-256 인증 방식을 강제하여 보안을 강화합니다.
+            - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256  
+            - TZ=Asia/Seoul
+        ports:
+            - "5432:5432"  # 로컬 개발 환경에서 직접 접속하기 위해 개방
+        volumes:
+            # 실제 데이터 파일이 저장되는 경로입니다. (권한 관리를 위해 미리 생성 권장)
+            - ./data/pgsql:/var/lib/postgresql/data
+            # [수정] 00, 10, 20번 파일은 Dockerfile 내부에서 COPY하므로 볼륨 설정에서 제외합니다.
+        networks:
+            - sfms-net
+        # 00_configure_system.sh 스크립트가 참조하는 SSL 키를 컨테이너 내부로 전달합니다.
+        # /run/secrets/pgsql-key 경로로 자동 마운트됩니다.
+        secrets:
+            - pgsql-key
+            - pgsql-cert
+        healthcheck:
+            # -q(quiet) 옵션을 추가하면 로그가 더 깔끔해집니다.
+            test: ["CMD-SHELL", "pg_isready -q -d ${DB_NAME} -U ${DB_USER}"]
+            # 10초마다 상태 확인
+            interval: 10s
+            # 5초 안에 응답 없으면 실패로 간주
+            timeout: 5s
+            # 5번 연속 실패 시 'unhealthy' 상태로 변경  
+            retries: 5
+            # 컨테이너 시작 후 초기화 스크립트가 실행될 시간을 줍니다.
+            # 이 시간 동안은 실패해도 'unhealthy'로 간주하지 않습니다.
+            start_period: 30s
 
-  # 1-1. Cache & Session Store (Redis)  # 설계에 맞춰 새로 추가된 부분
-  redis:
-    image: redis:7-alpine
-    container_name: sfms-redis
-    restart: always
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-password123!}
-    volumes:
-      - ./data/redis:/data
-    networks:
-      - sfms-net
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-password123!}", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    # ====================================================================
+    # 1-1. Cache & Session Store (Redis)
+    # 잦은 DB 조회를 줄이고 API 응답 속도를 높이기 위한 인메모리 캐시입니다.
+    # ====================================================================
+    redis:
+        image: redis:7-alpine
+        container_name: sfms-redis
+        restart: always
+        # 데이터를 메모리에만 두지 않고 디스크에도 주기적으로 저장(--appendonly yes)하고, 비밀번호 설정
+        command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-password123!}
+        environment:
+            - TZ=Asia/Seoul
+        ports:
+            # [중요] 로컬 개발용 포트 개방!
+            # 로컬 PC에서 실행할 FastAPI 백엔드가 Redis에 직접 캐시를 넣고 뺄 수 있도록 포트 개방
+            - "6379:6379"
+        volumes:
+            # 설정 파일 및 래퍼 스크립트 매핑
+            - ./redis/conf/redis.conf:/usr/local/etc/redis/redis.conf:ro
+            - ./redis/scripts/entrypoint-wrapper.sh:/usr/local/bin/entrypoint-wrapper.sh:ro
+            # 캐시 데이터 영구 보존용 로컬 폴더
+            - ./data/redis:/data
+            - /etc/timezone:/etc/timezone:ro
+            - /etc/localtime:/etc/localtime:ro
+        networks:
+            - sfms-net
+        # 나중에 인증서를 넣을 경우를 대비해 미리 정의 가능 (파일이 없으면 에러나니 주의)
+        # secrets:
+        #     - redis-key
+        #     - redis-cert
+        entrypoint: ["/bin/sh", "/usr/local/bin/entrypoint-wrapper.sh"]
+        healthcheck:
+            test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-password123!}", "ping"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
 
-  # 2. S3 Compatible Storage (MinIO)
-  minio:
-    image: minio/minio:latest
-    container_name: sfms-minio
-    restart: always
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-      TZ: Asia/Seoul
-    volumes:
-      - ./data/minio:/data
-    ports:
-      - "9000:9000"  # S3 API 포트 (백엔드 연동)
-      - "9001:9001"  # MinIO 관리자 웹 콘솔
-    networks:
-      - sfms-net
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 20s
-      retries: 3
+    # ====================================================================
+    # 2. S3 Compatible Storage (MinIO)
+    # 도면, 보고서, 현장 이미지 등 대용량 파일을 아마존 S3와 동일한 방식으로 저장합니다.
+    # ====================================================================
+    minio:
+        image: minio/minio:latest
+        container_name: sfms-minio
+        restart: always
+        command: server /data --console-address ":9001"  # 관리자용 웹 콘솔 주소 지정
+        environment:
+            - MINIO_ROOT_USER=${MINIO_ROOT_USER}  # 최고 관리자 계정 아이디
+            - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}  # 최고 관리자 비밀번호
+            - TZ=Asia/Seoul
+        ports:
+            # S3 API 포트: 로컬 백엔드에서 파일 업로드/다운로드 테스트를 위해 개방
+            - "9000:9000"
+            # MinIO 관리자 웹 콘솔: 브라우저에서 버킷(폴더)을 관리하기 위해 개방
+            - "9001:9001"
+        volumes:
+            - ./minio/scripts/entrypoint-wrapper.sh:/usr/local/bin/entrypoint-wrapper.sh:ro
+            - ./data/minio:/data
+            - /etc/timezone:/etc/timezone:ro
+            - /etc/localtime:/etc/localtime:ro
+        networks:
+            - sfms-net
+        # SSL 인증서 사용 시 아래 주석 해제
+        # secrets:
+        #     - minio-key
+        #     - minio-cert
+        entrypoint: ["/bin/bash", "/usr/local/bin/entrypoint-wrapper.sh"]
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+            interval: 30s
+            timeout: 20s
+            retries: 3
 
-  # 3. Backend (FastAPI)
-  backend:
-    build: ../backend
-    container_name: sfms-backend
-    restart: always
-    environment:
-      # 비동기 드라이버(asyncpg) 명시
-      DATABASE_URL: postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
-      REDIS_URL: redis://:${REDIS_PASSWORD:-password123!}@redis:6379/0
-      S3_ENDPOINT: http://minio:9000
-      TZ: Asia/Seoul
-    volumes:
-      - ../backend:/app
-      - ./data/logs/backend:/app/logs
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
-    networks:
-      - sfms-net
+    # ====================================================================
+    # 3. Backend (FastAPI)
+    # 비즈니스 로직을 처리하고 프론트엔드와 DB 사이의 통신을 담당하는 
+    # API 서버입니다.
+    # ====================================================================
+    backend:
+        build: ../backend
+        container_name: sfms-backend
+        restart: always
+        environment:
+            - DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+            - REDIS_URL=redis://:${REDIS_PASSWORD:-password123!}@redis:6379/0
+            - S3_ENDPOINT=http://minio:9000
+            - TZ=Asia/Seoul
+        volumes:
+            - ../backend:/app
+            - ./data/logs/backend:/app/logs
+            - /etc/timezone:/etc/timezone:ro
+            - /etc/localtime:/etc/localtime:ro
+        depends_on:
+            db:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+            minio:
+                condition: service_healthy
+        networks:
+            - sfms-net
+            
+    # ====================================================================
+    # 4. Frontend (React + Vite)
+    # 사용자에게 제공되는 웹 UI 화면을 구성하는 프론트엔드 서버입니다.
+    # ====================================================================
+    frontend:
+        build: ../frontend
+        container_name: sfms-frontend
+        restart: always
+        environment:
+            - TZ=Asia/Seoul
+        volumes:
+            - ../frontend:/app
+            - /app/node_modules
+        networks:
+            - sfms-net
 
-  # 4. Frontend (React + Vite)
-  frontend:
-    build: ../frontend
-    container_name: sfms-frontend
-    restart: always
-    volumes:
-      - ../frontend:/app
-      - /app/node_modules
-    networks:
-      - sfms-net
+    # ====================================================================
+    # 5. Gateway (Nginx)
+    # 외부의 트래픽을 받아 프론트엔드나 백엔드로 알맞게 분배해주는 리버스
+    # 프록시 서버입니다.
+    # ====================================================================
+    nginx:
+        image: nginx:alpine
+        container_name: sfms-nginx
+        restart: always
+        environment:
+            - TZ=Asia/Seoul
+        ports:
+            - "80:80"  # HTTP 기본 포트
+            - "443:443"  # HTTPS 보안 포트
+        volumes:
+            - ./nginx/scripts/entrypoint-wrapper.sh:/usr/local/bin/entrypoint-wrapper.sh:ro
+            # 로그 저장을 위한 볼륨 매핑
+            - ./data/logs/nginx:/var/log/nginx
+            - ./nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf:ro
+            - /etc/timezone:/etc/timezone:ro
+            - /etc/localtime:/etc/localtime:ro            
+        depends_on:
+            - frontend
+            - backend
+        networks:
+            - sfms-net
+        # SSL 인증서 사용 시 활성화
+        # secrets:
+        #     - nginx-key
+        #     - nginx-cert
+        entrypoint: ["/bin/sh", "/usr/local/bin/entrypoint-wrapper.sh"]
 
-  # 5. Gateway (Nginx)
-  nginx:
-    image: nginx:alpine
-    container_name: sfms-nginx
-    restart: always
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-    depends_on:
-      - frontend
-      - backend
-    networks:
-      - sfms-net
+    # ====================================================================
+    # 6. Database Admin (PgAdmin)
+    # 브라우저에서 접속하여 엑셀처럼 DB 테이블을 조회하고 SQL을 날릴 수 있는 관리자 도구입니다.
+    # ====================================================================
+    pgadmin:
+        image: dpage/pgadmin4
+        container_name: sfms-pgadmin
+        restart: always
+        environment:
+            - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL}  # 로그인에 사용할 이메일 아이디
+            - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD}  # 로그인 비밀번호
+            - TZ=Asia/Seoul
+        ports:
+            - "5050:80"  # 로컬 브라우저에서 localhost:5050 으로 접속하기 위해 매핑
+        volumes:
+            - ./pgadm/scripts/entrypoint-wrapper.sh:/usr/local/bin/entrypoint-wrapper.sh:ro
+            - ./data/pgadm:/var/lib/pgadmin  # 계정 설정 및 쿼리 기록 저장용 로컬 폴더
+            - /etc/timezone:/etc/timezone:ro
+            - /etc/localtime:/etc/localtime:ro
+        entrypoint: ["/bin/bash", "/usr/local/bin/entrypoint-wrapper.sh"]
+        networks:
+            - sfms-net
+        secrets:
+            - pgadm-key
+            - pgadm-cert
 
-  # 6. Database Admin (PgAdmin)
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: sfms-pgadmin
-    restart: always
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
-      TZ: Asia/Seoul
-    ports:
-      - "5050:80"  # 관리자 접속을 위한 포트 추가
-    volumes:
-      - ./data/pgadm:/var/lib/pgadmin
-    networks:
-      - sfms-net
+    # ====================================================================
+    # 7. Offline Version Control (Gitea)
+    # 사내망(오프라인)에서도 소스 코드를 안전하게 관리하기 위한 경량화 로컬 Git 서버입니다.
+    # ====================================================================
+    gitea:
+        image: gitea/gitea:latest
+        container_name: sfms-gitea
+        restart: always
+        environment:
+            - USER_UID=1000  # Podman Rootless 환경에서 권한 꼬임을 방지하기 위한 호스트 유저 매핑
+            - USER_GID=1000
+            - DB_TYPE=postgres  # Gitea의 데이터도 우리가 띄운 메인 PostgreSQL DB에 저장합니다.
+            - HOST=db:5432
+            - NAME=${DB_NAME}
+            - USER=${DB_USER}
+            - PASSWD=${GITEA_DB_PASSWORD}
+            - TZ=Asia/Seoul
+        ports:
+            - "3000:3000"  # 로컬 브라우저에서 Gitea 웹 화면 접속 포트
+            - "222:22"  # SSH를 통한 Git Clone 등을 위한 포트
+        volumes:
+            - ./gitea/scripts/entrypoint-wrapper.sh:/usr/local/bin/entrypoint-wrapper.sh:ro
+            - ./data/gitea:/data  # 소스 코드 저장소(레포지토리) 실제 저장 위치
+            - /etc/timezone:/etc/timezone:ro
+            - /etc/localtime:/etc/localtime:ro
+        entrypoint: ["/bin/bash", "/usr/local/bin/entrypoint-wrapper.sh"]
+        depends_on:
+            db:
+                condition: service_healthy  # DB가 먼저 완전히 켜진 후에 Gitea를 실행합니다.
+        networks:
+            - sfms-net
+        secrets:
+            - gitea-key
+            - gitea-cert
+            
+    # ====================================================================
+    # 8. Container Management (Portainer)
+    # 브라우저에서 실행 중인 컨테이너 상태를 모니터링하고 클릭으로 끄고 켤 수 있는 도구입니다.
+    # ====================================================================
+    portainer:
+        image: portainer/portainer-ce:latest
+        container_name: sfms-portainer
+        restart: always
+        ports:
+            - "9443:9443"
+            - "9002:9000"  # MinIO의 9000 포트와 겹치지 않게 호스트에서는 9002로 접속합니다.
+            - "8000:8000"
+        environment:
+            - TZ=Asia/Seoul
+        volumes:
+            # [중요] Podman 소켓 연결 (Rootless 환경에서는 경로 확인 필요)
+            - /run/user/1000/podman/podman.sock:/var/run/docker.sock:ro
+            # 래퍼 스크립트 매핑
+            - ./portainer/scripts/entrypoint-wrapper.sh:/usr/local/bin/entrypoint-wrapper.sh:ro
+            - ./data/portainer:/data  # 포테이너 환경 설정 데이터 저장
+            - /etc/timezone:/etc/timezone:ro
+            - /etc/localtime:/etc/localtime:ro
+        networks:
+            - sfms-net
+        # SSL 인증서 사용 시 아래 주석 해제
+        # secrets:
+        #     - portainer-key
+        #     - portainer-cert
+        entrypoint: ["/bin/sh", "/usr/local/bin/entrypoint-wrapper.sh"]
 
-  # 7. Offline Version Control (Gitea)
-  gitea:
-    image: gitea/gitea:latest
-    container_name: sfms-gitea
-    restart: always
-    environment:
-      - USER_UID=1000
-      - USER_GID=1000
-      - DB_TYPE=postgres
-      - HOST=db:5432
-      - NAME=${DB_NAME}
-      - USER=${DB_USER}
-      - PASSWD=${GITEA_DB_PASSWORD}
-    ports:
-      - "3000:3000"  # Gitea 웹 UI 접속 포트 추가
-      - "222:22"     # Gitea SSH 접속 포트 추가
-    volumes:
-      - ./data/gitea:/data
-      - /etc/timezone:/etc/timezone:ro
-      - /etc/localtime:/etc/localtime:ro
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - sfms-net
+# ====================================================================
+# Secrets 정의가 반드시 필요합니다.
+# ====================================================================
+secrets:
+    pgsql-key:
+        file: ./pgsql/certs/pgsql.key
+    pgsql-cert:
+        file: ./pgsql/certs/pgsql.crt
+    pgadm-key:
+        file: ./pgadm/certs/pgadm.key
+    pgadm-cert:
+        file: ./pgadm/certs/pgadm.crt
+    gitea-key:
+        file: ./gitea/certs/gitea.key
+    gitea-cert:
+        file: ./gitea/certs/gitea.crt
+#     redis-key:
+#         file: ./redis/certs/redis.key
+#     redis-cert:
+#         file: ./redis/certs/redis.crt
+#     minio-key:
+#         file: ./minio/certs/minio.key
+#     minio-cert:
+#         file: ./minio/certs/minio.crt
+#     nginx-key:
+#         file: ./nginx/certs/nginx.key
+#     nginx-cert:
+#         file: ./nginx/certs/nginx.crt
+#     portainer-key:
+#         file: ./portainer/certs/portainer.key
+#     portainer-cert:
+#         file: ./portainer/certs/portainer.crt
 
-  # 8. Container Management (Portainer)
-  # 개발 및 운영 편의를 위해 Portainer 추가 (선택 사항)
-  portainer:
-    image: portainer/portainer-ce:latest
-    container_name: sfms-portainer
-    restart: always
-    ports:
-      - "9002:9000"  # MinIO(9000)와 충돌을 피해 호스트 포트를 9002로 변경
-      - "8000:8000"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./data/portainer:/data
-    networks:
-      - sfms-net
 
+# ====================================================================
+# [컨테이너들이 서로를 컨테이너 이름(예: 'db', 'redis')으로
+# 찾을 수 있게 해주는 가상 네트워크
+# ==================================================================== 
 networks:
-  sfms-net:
-    driver: bridge
+    sfms-net:
+        driver: bridge

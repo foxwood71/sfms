@@ -1,37 +1,37 @@
 [project]
 dependencies = [
-  "annotated-doc==0.0.4",
-  "annotated-types==0.7.0",
-  "anyio==4.12.1",
-  "boto3==1.42.46",
-  "botocore==1.42.46",
-  "click==8.3.1",
-  "fastapi==0.128.7",
-  "greenlet==3.3.1",
-  "h11==0.16.0",
-  "idna==3.11",
-  "jmespath==1.1.0",
-  "mccabe==0.7.0",
-  "pip==26.0.1",
-  "psycopg2-binary==2.9.11",
-  "pycodestyle==2.14.0",
-  "pydantic==2.12.5",
-  "pydantic-core==2.41.5",
-  "pydantic-settings>=2.12.0",
-  "pyflakes==3.4.0",
-  "python-dateutil==2.9.0.post0",
-  "python-dotenv>=1.2.1",
-  "python-multipart==0.0.22",
-  "s3transfer==0.16.0",
-  "six==1.17.0",
-  "sqlalchemy==2.0.46",
-  "starlette==0.52.1",
-  "typing-extensions==4.15.0",
-  "typing-inspection==0.4.2",
-  "urllib3==2.6.3",
-  "uvicorn==0.40.0",
+    "annotated-doc==0.0.4",
+    "annotated-types==0.7.0",
+    "anyio==4.12.1",
+    "boto3==1.42.46",
+    "botocore==1.42.46",
+    "click==8.3.1",
+    "fastapi==0.128.7",
+    "greenlet==3.3.1",
+    "h11==0.16.0",
+    "idna==3.11",
+    "jmespath==1.1.0",
+    "mccabe==0.7.0",
+    "pip==26.0.1",
+    "psycopg2-binary==2.9.11",
+    "pycodestyle==2.14.0",
+    "pydantic==2.12.5",
+    "pydantic-core==2.41.5",
+    "pydantic-settings>=2.12.0",
+    "pyflakes==3.4.0",
+    "python-dateutil==2.9.0.post0",
+    "python-dotenv>=1.2.1",
+    "python-multipart==0.0.22",
+    "s3transfer==0.16.0",
+    "six==1.17.0",
+    "sqlalchemy==2.0.46",
+    "starlette==0.52.1",
+    "typing-extensions==4.15.0",
+    "typing-inspection==0.4.2",
+    "urllib3==2.6.3",
+    "uvicorn==0.40.0",
 ]
-description = "Add your description here"
+description = "SFMS Backend Project"
 name = "backend"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -39,35 +39,54 @@ version = "0.1.0"
 
 [dependency-groups]
 dev = [
-  "ruff>=0.15.1",
+    "ruff>=0.15.1",
 ]
 
 [build-system]
-build-backend = "hatchling.build" # uv 호환 강화
+build-backend = "hatchling.build"
 requires = ["hatchling"] 
 
+# -------------------------------------------------------------
+# Ruff 통합 설정 (Flake8 + Black 완벽 대체)
+# -------------------------------------------------------------
 [tool.ruff]
 line-length = 120
 indent-width = 4
 target-version = "py313"
 
 [tool.ruff.format]
-exclude = [
-  ".git",
-  ".venv",
-  "__pypackages__",
-]
+# Formatter 설정 (Black의 역할)
 quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
+docstring-code-format = true  # Docstring 내부의 코드 예시도 포매팅 적용
+exclude = [
+    ".git",
+    ".venv",
+    "__pypackages__",
+]
 
 [tool.ruff.lint]
-fixable = ["ALL"] # 자동 수정 가능 규칙 우선
-ignore = ["E501", "ERA001"] # line too long 무시, 주석 처리된 코드 무시
-select = ["ALL"] # 모든 규칙 (Ruff-specific 포함, E501 자동 제외)
+# Linter 설정 (Flake8의 역할)
+select = [
+    "E",   # pycodestyle Error (Flake8 핵심: 인라인 주석 스페이스 등 확인)
+    "W",   # pycodestyle Warning (Flake8 핵심)
+    "F",   # Pyflakes (Flake8 핵심: 미사용 변수, 잘못된 문법 확인)
+    "C90", # mccabe (Flake8 핵심: 코드 복잡도 제한)
+    "I",   # isort (import 순서 자동 정렬)
+    "B",   # flake8-bugbear (흔한 버그 및 위험한 패턴 방지)
+    "UP",  # pyupgrade (최신 파이썬 문법으로 자동 변환)
+]
+
+ignore = [
+    "E501", # 줄 길이 초과 (Formatter가 처리하므로 Linter에서는 무시)
+]
+
+fixable = ["ALL"] # 자동 수정이 가능한 모든 규칙을 활성화
 
 [tool.ruff.lint.per-file-ignores]
-"__init__.py" = ["F401", "F403"] # unused import 강화
+# 파일별 예외 규칙
+"__init__.py" = ["F401", "F403"] # init 파일에서는 안 쓰는 import 허용
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]

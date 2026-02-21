@@ -1,141 +1,138 @@
 {
-  // -------------------------------------------------------------
-  // 1. 공통 에디터 설정
-  // -------------------------------------------------------------
-  "editor.insertSpaces": true,
-  "editor.formatOnSave": true,
+	// -------------------------------------------------------------
+	// 1. 공통 에디터 설정
+	// -------------------------------------------------------------
+	"editor.insertSpaces": true,
+	"editor.tabSize": 4, // 모든 파일의 들여쓰기를 4칸으로 통일
+	"editor.formatOnSave": true,
 
-  // 탐색기에서 숨길 파일들
-  "files.exclude": {
-    "**/.git": true,
-    "**/.DS_Store": true,
-    "**/node_modules": true,    // JS 라이브러리 숨기기
-    "**/__pycache__": true,     // Python 캐시 숨기기
-    "**/.venv": true,           // 가상환경 숨기기
-    "**/dist": true,            // 빌드 결과물 숨기기
-    "**/.uv": true,             // uv 관련 폴더 숨기기
-    "**/.mypy_cache": true,
-    "**/.pytest_cache": true
-  },
+	// 탐색기에서 불필요한 파일/폴더 숨기기 (작업 환경 최적화)
+	"files.exclude": {
+		"**/.git": true,
+		"**/.DS_Store": true,
+		"**/node_modules": true, // JS 패키지 폴더
+		"**/__pycache__": true, // Python 캐시
+		"**/.venv": true, // Python 가상환경
+		"**/dist": true, // 빌드 결과물
+		"**/.uv": true, // uv 패키지 매니저 캐시
+		"**/.mypy_cache": true,
+		"**/.pytest_cache": true
+	},
 
-  // 2. Explorer: File Nesting 설정 (관련 파일 묶기)
-  "explorer.fileNesting.enabled": true,
-  "explorer.fileNesting.expand": false,
-  "explorer.fileNesting.patterns": {
-    // Frontend 관련: package.json을 기준으로 설정 파일들을 묶음
-    "package.json": "pnpm-lock.yaml, .npmrc, biome.json, tsconfig.*, vite.config.*, .env.local",
-    
-    // Backend 관련: pyproject.toml을 기준으로 Python 설정들을 묶음
-    "pyproject.toml": "uv.lock, .python-version, .flake8, .env, .env.dev, .env.prod",
-    
-    // 기타 공통 설정
-    ".env": ".env.*, .gitignore, .dockerignore",
-    "README.md": "LICENSE, CONTRIBUTING.md, CHANGELOG.md",
-    
-    // 컴포넌트 구조 정리 (선택 사항: .tsx 파일 아래 .css 등을 묶음)
-    "*.tsx": "$(capture).css, $(capture).scss, $(capture).test.tsx, $(capture).stories.tsx"
-  },
+	// 2. Explorer: File Nesting (연관된 설정 파일을 부모 파일 아래로 묶어 깔끔하게 표시)
+	"explorer.fileNesting.enabled": true,
+	"explorer.fileNesting.expand": false,
+	"explorer.fileNesting.patterns": {
+		// Frontend: package.json 밑에 프론트엔드 설정 파일들을 그룹화
+		"package.json": "pnpm-lock.yaml, .npmrc, biome.json, tsconfig.*, vite.config.*, .env.local",
 
-  // -------------------------------------------------------------
-  // 2. Python 설정 (Backend - Ruff)
-  // -------------------------------------------------------------
-  // [Python 파일 전용 설정]
-  "[python]": {
-    "editor.defaultFormatter": "charliermarsh.ruff",
-    "editor.formatOnSave": true,
-    "editor.codeActionsOnSave": {
-      "source.fixAll.ruff": "explicit",
-      "source.organizeImports.ruff": "explicit"
-    }
-  },
-  "[jupyter]": {
-    "editor.formatOnSave": true
-  },
-  // 가상환경 경로 (uv 사용 시 backend/.venv)
-  "python.terminal.activateEnvironment": true,
-  "python.defaultInterpreterPath": "./backend/.venv/bin/python",
-  "python.languageServer": "Pylance",
-  "python.analysis.typeCheckingMode": "basic",
-  "ruff.enableExperimentalCodeActions": true,
+		// Backend: pyproject.toml 밑에 백엔드 설정 파일들을 그룹화
+		"pyproject.toml": "uv.lock, .python-version, .flake8, .env, .env.dev, .env.prod",
 
-  // -------------------------------------------------------------
-  // 3. Frontend 설정 (React/TS - Biome)
-  // -------------------------------------------------------------
-  // pnpm + 하위 폴더 구조일 때 경로 명시
-  // 만약 VS Code를 'sfms' 폴더에서 열었다면:
-  "biome.lsp.bin": "./frontend/node_modules/.pnpm/@biomejs+cli-linux-x64@2.3.15/node_modules/@biomejs/cli-linux-x64/biome",
-  // Biome을 기본 포매터로 지정하는 언어들
-  "[javascript][javascriptreact][typescript][typescriptreact][json][jsonc][yaml][css]": {
-    "editor.tabSize": 2,
-    "editor.defaultFormatter": "biomejs.biome",
-    "editor.codeActionsOnSave": {
-      "source.fixAll.biome": "explicit",
-      "source.organizeImports": "explicit",
-      "source.organizeImports.biome": "explicit",
-      "source.addMissingImports": "explicit"
-    },
-  },
-  "biome.enabled": true,
-  "biome.formatOnSave": true, 
+		// 공통 환경 변수 및 문서 파일 그룹화
+		".env": ".env.*, .gitignore, .dockerignore",
+		"README.md": "LICENSE, CONTRIBUTING.md, CHANGELOG.md",
 
-  // -------------------------------------------------------------
-  // 4. SQL (PostgreSQL)
-  // -------------------------------------------------------------
+		// React 컴포넌트 구조 정리 (.tsx 파일 아래 연관 파일들)
+		"*.tsx": "$(capture).css, $(capture).scss, $(capture).test.tsx, $(capture).stories.tsx"
+	},
 
- "[sql]": {
-    "editor.formatOnSave": true
-  },
-  "pgsql.connectionTimeout": 30,
-  "pgsql.showStartNotification": false,
-  
-  // -------------------------------------------------------------
-  // 5. MD 설정
-  // -------------------------------------------------------------
-  "markdownlint.config": {
-    "MD033": { "allowed_elements": ["br", "div", "details"] },
-    "MD032": false
-  },
+	// -------------------------------------------------------------
+	// 2. Python 설정 (Backend - Ruff & Flake8 호환)
+	// -------------------------------------------------------------
+	"[python]": {
+		"editor.defaultFormatter": "charliermarsh.ruff",
+		"editor.formatOnSave": true,
+		"editor.codeActionsOnSave": {
+			"source.fixAll.ruff": "explicit", // 저장 시 Ruff를 통한 자동 수정
+			"source.organizeImports.ruff": "explicit" // 저장 시 import 순서 자동 정렬
+		}
+	},
+	"[jupyter]": {
+		"editor.formatOnSave": true
+	},
 
-  // -------------------------------------------------------------
-  // 6.Docker 설정
-  // -------------------------------------------------------------
- "docker.showStartNotification": false,
+	// 워크스페이스(SFMS 폴더) 기준으로 백엔드 가상환경을 동적으로 찾도록 설정
+	"python.terminal.activateEnvironment": true,
+	"python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
+	"python.languageServer": "Pylance",
+	"python.analysis.typeCheckingMode": "basic",
+	"ruff.enableExperimentalCodeActions": true,
 
-  // -------------------------------------------------------------
-  // 7.ICON 설정
-  // -------------------------------------------------------------
-  // 아이콘 설정: Material Icon Theme
-  "material-icon-theme.files.associations": {
-    "pgsql": "sql"
-  },
+	// -------------------------------------------------------------
+	// 3. Frontend 설정 (React/TS - Biome)
+	// -------------------------------------------------------------
+	// OS나 버전에 종속되지 않도록 프로젝트 로컬 bin 폴더를 참조
+	"biome.lsp.bin": "./frontend/node_modules/.bin/biome",
+	"biome.enabled": true,
+	"biome.formatOnSave": true,
 
-  // 아이콘 설정: VSCode Icons
-  "vsicons.associations.files": [
-    {
-      "icon": "sql",
-      "extensions": ["pgsql"],
-      "format": "svg"
-    }
-  ],
+	// Biome을 기본 포매터로 지정 및 탭 4칸 강제 적용
+	"[javascript][javascriptreact][typescript][typescriptreact][json][jsonc][yaml][css]": {
+		"editor.tabSize": 4,
+		"editor.defaultFormatter": "biomejs.biome",
+		"editor.codeActionsOnSave": {
+			"source.fixAll.biome": "explicit",
+			"source.organizeImports": "explicit",
+			"source.organizeImports.biome": "explicit",
+			"source.addMissingImports": "explicit"
+		}
+	},
 
-  // -------------------------------------------------------------
-  // 7. 터미널 프로필 설정 (Docker 컨테이너 내부로 바로 접속)
-  // -------------------------------------------------------------
-  "terminal.integrated.profiles.linux": {
-    "SFMS Backend": {
-      "path": "mise",
-      "args": ["exec", "--", "uv", "run", "bash"],
-      "cwd": "${workspaceFolder}/backend"
-    },
-    "SFMS Frontend": {
-      "path": "mise",
-      "args": ["exec", "--", "pnpm", "exec", "bash"],
-      "cwd": "${workspaceFolder}/frontend"
-    },
-    "PostgreSQL": {
-      "path": "psql",
-      "args": ["-h", "localhost", "-U", "sfms_user", "sfms"]
-    }
-  }
+	// -------------------------------------------------------------
+	// 4. SQL (PostgreSQL)
+	// -------------------------------------------------------------
+	"[sql]": {
+		"editor.formatOnSave": true
+	},
+	"pgsql.connectionTimeout": 30,
+	"pgsql.showStartNotification": false,
+
+	// -------------------------------------------------------------
+	// 5. Markdown 설정
+	// -------------------------------------------------------------
+	"markdownlint.config": {
+		"MD033": { "allowed_elements": ["br", "div", "details"] }, // HTML 태그 일부 허용
+		"MD032": false
+	},
+
+	// -------------------------------------------------------------
+	// 6. Docker 설정
+	// -------------------------------------------------------------
+	"docker.showStartNotification": false,
+
+	// -------------------------------------------------------------
+	// 7. 아이콘 설정
+	// -------------------------------------------------------------
+	// Material Icon Theme 및 VSCode Icons에서 pgsql 확장자를 일반 sql 아이콘으로 매핑
+	"material-icon-theme.files.associations": {
+		"pgsql": "sql"
+	},
+	"vsicons.associations.files": [
+		{
+			"icon": "sql",
+			"extensions": ["pgsql"],
+			"format": "svg"
+		}
+	],
+
+	// -------------------------------------------------------------
+	// 8. 터미널 프로필 설정 (SFMS 프로젝트 맞춤형)
+	// -------------------------------------------------------------
+	"terminal.integrated.profiles.linux": {
+		"SFMS Backend": {
+			"path": "mise",
+			"args": ["exec", "--", "uv", "run", "bash"],
+			"cwd": "${workspaceFolder}/backend"
+		},
+		"SFMS Frontend": {
+			"path": "mise",
+			"args": ["exec", "--", "pnpm", "exec", "bash"],
+			"cwd": "${workspaceFolder}/frontend"
+		},
+		"PostgreSQL": {
+			"path": "psql",
+			"args": ["-h", "localhost", "-U", "sfms_user", "sfms"]
+		}
+	}
 }
-

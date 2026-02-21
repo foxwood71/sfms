@@ -9,7 +9,7 @@
     wsl -update
     ```
 
-3. Rocky-9-WSL-Base.latest.x86_64.wsl 이 파일의 아이콘이 팽귄으로 변경되면 더블 클릭하여 설치 및 재부팅 
+3. Rocky-9-WSL-Base.latest.x86_64.wsl 이 파일의 아이콘이 팽귄으로 변경되면 더블 클릭하여 설치 및 재부팅
 4. wsl 에서 설치된 리눅스 목록 확인후 실행
 
     ```powershell
@@ -41,15 +41,40 @@
 sudo dnf update -y
 
 # 필수 패키지 설치 (wget, git, curl, zsh util-linux-user)
-sudo dnf install wget git curl zsh util-linux-user vim -y
+sudo dnf install wget git curl zsh util-linux-user vim mc -y
 
-# 개발자툴 패키지 설치
+# 개발자툴 패키지 설치(선택사양)
 sudo dnf groupinstall 'Development Tools' -y
 
 # 방화벽 활성화(wsl 환경에서는 불필요)
 sudo dnf install firewalld -y
 sudo systemctl start firewalld && sudo systemctl enable firewalld
 sudo firewall-cmd --state
+```
+
+OpenSSH 서버 설치 및 실행
+
+```bash
+# OpenSSH 서버 설치 및 서버키 생성(선택사항)
+sudo dnf install -y openssh-server 
+sudo ssh-keygen -A
+```
+
+/etc/ssh/sshd_config 파일 수정
+    *root SSH 로그인 차단
+    *일반 사용자(user)만 허용
+    *비밀번호 인증 허용
+
+```text
+PermitRootLogin no
+PasswordAuthentication yes
+```
+
+```bash
+# OpenSSH 서버 실행
+sudo systemctl enable sshd
+sudo systemctl start sshd
+sudo systemctl status sshd
 ```
 
 ## 2. Zsh 설치 및 기본 쉘 설정
@@ -76,27 +101,7 @@ sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/too
 wget https://github.com/robbyrussell/oh-my-zsh/raw/master/tools/install.sh -O - | zsh
 ```
 
-## 4. 설정 적용 및 테마 변경
-
-```bash
-# 테마 변경 (vim 또는 nano 사용)
-vim ~/.zshrc
-```
-
-`~/.zshrc` 파일에서 다음 줄 수정:
-
-```zsh
-ZSH_THEME="robbyrussell"  # 원하는 테마로 변경 (agnoster, powerlevel10k 등)
-```
-
-```bash
-# 설정 파일 로드
-source ~/.zshrc
-```
-
-테마 목록: [Oh My Zsh Themes](https://github.com/ohmyzsh/ohmyzsh/wiki/Themes) [gist.github](https://gist.github.com/ebell451/f4eca64951a1585a6d0b65a293d328a4)
-
-## 5. 플러그인 추가 (선택사항)
+## 4. 플러그인 추가 (선택사항)
 
 터미널 사용 경험을 비약적으로 상승시켜주는 두 가지 플러그인을 추가합니다.
 
@@ -111,17 +116,34 @@ git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-m
 # 구문 강조 플러그인
 git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
 
-# plugins 항목에 추가
+
+## 5. 설정 적용 및 테마 변경
+
+```bash
+# 테마 변경 (vim 또는 nano 사용)
 vim ~/.zshrc
 ```
 
+`~/.zshrc` 파일에서 다음 줄 수정:
+
 ```bash
+# 테마 변경
+ZSH_THEME="robbyrussell"  # 원하는 테마로 변경 (agnoster, powerlevel10k 등)
+
+# plugins 항목에 추가
 plugins=(
   git 
   zsh-autosuggestions 
   zsh-syntax-highlighting
 )
 ```
+
+```bash
+# 설정 파일 로드
+source ~/.zshrc
+```
+
+테마 목록: [Oh My Zsh Themes](https://github.com/ohmyzsh/ohmyzsh/wiki/Themes) [gist.github](https://gist.github.com/ebell451/f4eca64951a1585a6d0b65a293d328a4)
 
 ## 6. 다중라인 쉘 프롬프트(선택사항)
 
@@ -169,7 +191,7 @@ source ~/.zshrc
 
 Rocky Linux 터미널에서 아래 명령어를 입력해 설정 파일을 확인합니다.
 
-```Bash
+```bash
 cat /proc/sys/fs/binfmt_misc/WSLInterop
 ```
 
@@ -177,8 +199,8 @@ cat /proc/sys/fs/binfmt_misc/WSLInterop
 
 /etc/wsl.conf 파일을 수정합니다 (없으면 생성).
 
-```Bash
-sudo vi /etc/wsl.conf
+```bash
+sudo vim /etc/wsl.conf
 ```
 
 아래 내용을 추가하고 저장합니다.
