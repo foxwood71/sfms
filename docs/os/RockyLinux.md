@@ -16,6 +16,14 @@
 
     # Rocky9 실행
     wsl -d Rocky9
+
+    rocky 시작하는 중...
+    Failed to get unit file state for cloud-init.service: No such file or directory
+    Please create a default user account. The username does not need to match your Windows username.
+    For more information visit: https://aka.ms/wslusers
+    Enter new UNIX username: blue
+    Your user has been created, is included in the wheel group, and can use sudo without a password.
+    To set a password for your user, run 'sudo passwd blue'
     ```
 
 5. 사용자 생성후 아래의 명령으로 패스워드 생성
