@@ -116,6 +116,9 @@ git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-m
 # 구문 강조 플러그인
 git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
 
+# fuzzy finder로 파일/히스토리 검색 (최고 효율)
+git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
+~/.fzf/install
 
 ## 5. 설정 적용 및 테마 변경
 
@@ -132,9 +135,12 @@ ZSH_THEME="robbyrussell"  # 원하는 테마로 변경 (agnoster, powerlevel10k 
 
 # plugins 항목에 추가
 plugins=(
-  git 
-  zsh-autosuggestions 
+  git                     # 내장
+  zsh-autosuggestions
   zsh-syntax-highlighting
+  podman                  # 내장
+  sudo                    # 내장
+  fzf
 )
 ```
 
