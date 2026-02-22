@@ -109,6 +109,8 @@ wget https://github.com/robbyrussell/oh-my-zsh/raw/master/tools/install.sh -O - 
 
 * zsh-syntax-highlighting: 명령어 오타를 색상으로 구별해 줍니다.
 
+* fzf: fuzzy finder로 파일/히스토리 검색
+ 
 ```bash
 # 자동 완성 플러그인
 git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
@@ -116,7 +118,7 @@ git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-m
 # 구문 강조 플러그인
 git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
 
-# fuzzy finder로 파일/히스토리 검색 (최고 효율)
+# fuzzy finder로 파일/히스토리 검색
 git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
 ~/.fzf/install
 
