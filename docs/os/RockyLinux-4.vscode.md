@@ -6,35 +6,37 @@ SFMS의 **mise + uv + Ruff + Biome + Docker + PostgreSQL** 풀스택에 최적�
 
 | 확장명 | ID | 역할 |
 | -------- | ---- | ------ |
-| **WSL** | `ms-vscode-remote.remote-wsl` |WSL 원격 연결(필요시) | 
+| **WSL** | `ms-vscode-remote.remote-wsl` | WSL 원격 연결(필요시) |
 | **Material Icon** | `Themepkief.material-icon-theme` | 파일/폴더 아이콘 |
-| **Indent-Rainbow** | `oderwat.indent-rainbow`	| 들여쓰기 색상화 |
-| **Path Intellisense**	| `christian-kohler.path-intellisense` | 경로 자동 완성 |
-| **Comment Anchors**	| `remy-beone.comment-anchors` | 주석 북마크 |
+| **Indent-Rainbow** | `oderwat.indent-rainbow` | 들여쓰기 색상화 |
+| **Path Intellisense** | `christian-kohler.path-intellisense` | 경로 자동 완성 |
+| **Comment Anchors** | `remy-beone.comment-anchors` | 주석 북마크 |
 | **GitLens** | `eamodio.gitlens` | Git 내역 시각화 |
-| **Git Graph** |	`mhutchie.git-graph` | 커밋 히스토리 시각화 | 
-| **Git History** |	`donjayamanne.githistory` |	파일 단위 이력 추적 |
+| **Git Graph** | `mhutchie.git-graph` | 커밋 히스토리 시각화 |
+| **Git History** | `donjayamanne.githistory` | 파일 단위 이력 추적 |
 | **Error Lens** | `usernamehw.errorlens` | 인라인 에러 표시 |
-| **DotENV** | `mikestead.dotenv` | .env 파일|
-| **Markdown** | `yzhang.markdown-all-in-one` | Markdown All in One |	
+| **DotENV** | `mikestead.dotenv` | .env 파일 |
+| **Markdown** | `yzhang.markdown-all-in-one` | Markdown All in One |
+| **markdownlint** | `davidAnson.vscode-markdownlint` | linting(스타일 검사, 자동 수정) |
 | **TOML** | `tamasfe.even-better-toml` | Even Better TOML |
-| **INI** |	`rogalmic.vscode-ini` | Ini for VS Code |
+| **INI** | `davidWang.ini-for-vscode` | Ini for VS Code |
 | **Python** | `ms-python.python` | Pylance + 디버깅 |
 | **Ruff** | `charliermarsh.ruff` | Python 린트/포맷 |
 | **Biome** | `biomejs.biome` | JS/TS 린트/포맷 |
 | **Database Client** | `cweijan.vscode-database-client2` | PostgreSQL, Redis 등을 통합 관리하는 GUI 클라이언트 |
 | **REST Clien** | `thumao.rest-client` | API 테스트 |
-| **NGINX Config** | `william-melo.nginx-conf` | default.conf 등 설정 파일의 문법 강조 및 자동 완성 지원 |
-| **MinIO**	| `minio.minio`	| MinIO 버킷 생성 및 파일 업로드/관리 공식 도구 |
+| **NGINX Configuration Language Support** | `ahmadalli.vscode-nginx-conf` | default.conf 등 설정 파일의 문법 강조 및 자동 완성 지원 |
+| **MinIO** | `seriousbenentertainment.minio` | MinIO 버킷 생성 및 파일 업로드/관리 도구 |
 | **Docker** | `ms-azuretools.vscode-docker` | Docker 관리 |
-| **Pod Manager** | `dreamcatcher45.podmanager`	| Podman 전용 관리 UI	|
+| **Pod Manager** | `dreamcatcher45.podmanager` | Podman 전용 관리 UI |
 | **Dev Containers** | `ms-vscode-remote.remote-containers` | 컨테이너 안에서 개발 |
-| **Container Tools** |	`ms-azuretools.vscode-containers`	| 컨테이너 종합 관리 |
+| **Container Tools** | `ms-azuretools.vscode-containers` | 컨테이너 종합 관리 |
 | **ShellCheck** | `timonwong.shellcheck` | 필수 중의 필수 |
 | **shell-format** | `foxundermoon.shell-format` | 포맷터 |
 | **Bash IDE** | `mads-hartmann.bash-ide-vscode` | 인텔리센스 |
 
 ## 🎯 필수 확장 설치 shell script
+
 아래 내용을 복사하여 install_extensions.sh 파일로 저장하거나, 터미널에 그대로 붙여넣으세요.
 
 ```bash
@@ -54,22 +56,23 @@ EXTENSIONS=(
     "pkief.material-icon-theme"
     "oderwat.indent-rainbow"
     "christian-kohler.path-intellisense"
-    "remy-beone.comment-anchors"
+    "exodiusStudios.comment-anchors"
     "usernamehw.errorlens"
     "eamodio.gitlens"
     "mhutchie.git-graph"
     "donjayamanne.githistory"
     "mikestead.dotenv"
     "yzhang.markdown-all-in-one"
+    "davidAnson.vscode-markdownlint"
     "tamasfe.even-better-toml"
-    "rogalmic.vscode-ini"
+    "davidWang.ini-for-vscode"
     "ms-python.python"
     "charliermarsh.ruff"
     "biomejs.biome"
     "cweijan.vscode-database-client2"  # PostgreSQL/Redis 관리용
     "humao.rest-client"
-    "william-melo.nginx-conf"  # Nginx 설정 지원
-    "minio.minio"  # MinIO 관리 공식 도구
+    "ahmadalli.vscode-nginx-conf"  # Nginx 설정 지원
+    "seriousbenentertainment.minio"  # MinIO 관리 도구
     "ms-azuretools.vscode-docker"  # 컨테이너 시각화
     "dreamcatcher45.podmanager"
     "ms-vscode-remote.remote-containers"

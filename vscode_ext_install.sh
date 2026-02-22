@@ -14,22 +14,23 @@ EXTENSIONS=(
     "pkief.material-icon-theme"
     "oderwat.indent-rainbow"
     "christian-kohler.path-intellisense"
-    "remy-beone.comment-anchors"
+    "exodiusStudios.comment-anchors"
     "usernamehw.errorlens"
     "eamodio.gitlens"
     "mhutchie.git-graph"
     "donjayamanne.githistory"
     "mikestead.dotenv"
     "yzhang.markdown-all-in-one"
+    "davidAnson.vscode-markdownlint"
     "tamasfe.even-better-toml"
-    "rogalmic.vscode-ini"
+    "davidWang.ini-for-vscode"
     "ms-python.python"
     "charliermarsh.ruff"
     "biomejs.biome"
     "cweijan.vscode-database-client2"  # PostgreSQL/Redis 관리용
     "humao.rest-client"
-    "william-melo.nginx-conf"  # Nginx 설정 지원
-    "minio.minio"  # MinIO 관리 공식 도구
+    "ahmadalli.vscode-nginx-conf"  # Nginx 설정 지원
+    "seriousbenentertainment.minio"  # MinIO 관리 도구
     "ms-azuretools.vscode-docker"  # 컨테이너 시각화
     "dreamcatcher45.podmanager"
     "ms-vscode-remote.remote-containers"
