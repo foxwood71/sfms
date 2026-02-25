@@ -307,17 +307,19 @@ services:
         image: dpage/pgadmin4
         container_name: pgadm
         restart: always
+        user: "5050:5050"
         entrypoint: [ "/bin/bash", "/usr/local/bin/entrypoint-wrapper.sh" ]
         environment:
             - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL} # 로그인에 사용할 이메일 아이디
             - PGADMIN_DEFAULT_PASSWORD_FILE=/run/secrets/pgadm-password # 로그인 비밀번호 (시크릿 파일 사용)
-            - PGADMIN_CONFIG_SSL_CRT_FILE='/var/lib/pgadmin/certs/server.crt'
-            - PGADMIN_CONFIG_SSL_KEY_FILE='/var/lib/pgadmin/certs/server.key'
+            - PGADMIN_CONFIG_SSL_CRT_FILE="'/var/lib/pgadmin/certs/server.crt'"
+            - PGADMIN_CONFIG_SSL_KEY_FILE="'/var/lib/pgadmin/certs/server.key'"
+            - PGADMIN_LISTEN_PORT=443
             - TZ=Asia/Seoul
         # 로컬 개발 환경에서 직접 접속하기 위해 개방
         ports:
             - "5080:80"
-            - "5433:433"
+            - "5443:443"
         volumes:
             - ./pgadm/scripts/entrypoint-wrapper.sh:/usr/local/bin/entrypoint-wrapper.sh:ro
             - ./data/pgadm:/var/lib/pgadmin # 계정 설정 및 쿼리 기록 저장용 로컬 폴더

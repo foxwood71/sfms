@@ -24,9 +24,9 @@ if [ -f "/run/secrets/pgadm-key" ] && [ -f "/run/secrets/pgadm-cert" ]; then
     chmod 0600 "$CERT_DIR/server.key"
 
     # SSL Cert 복사 및 권한 설정 (0644: 일반적인 읽기 권한) 
-    cp /run/secrets/pgadm-cert "$CERT_DIR/server.cert"
+    cp /run/secrets/pgadm-cert "$CERT_DIR/server.crt"
     # chown 5050:5050 "$CERT_DIR/server.cert"
-    chmod 0644 "$CERT_DIR/server.cert"
+    chmod 0644 "$CERT_DIR/server.key"
 else
     echo "⚠️ [Info] SSL 인증서가 발견되지 않았습니다. 일반 모드로 준비합니다."
 fi
@@ -37,10 +37,13 @@ if [ -f "/run/secrets/sfms-pgadmin-password" ]; then
     echo "🔐 [Auth] 관리자 비밀번호 시크릿이 로드되었습니다."
 fi
 
+# 4. Gunicorn 서버에 HTTPS 강제 적용 (가장 확실한 방법)
+export GUNICORN_CMD_ARGS="--certfile=$CERT_DIR/server.crt --keyfile=$CERT_DIR/server.key"
+
 # # root 권한을 버리고 pgadmin(5050) 유저로 전환하여 원래의 엔트리포인트를 실행합니다. 
 # # exec를 사용하여 프로세스 ID(PID 1)를 그대로 승계합니다.
 # exec su -s /bin/sh pgadmin -c "/entrypoint.sh"
 
-# 원래의 엔트리포인트 실행
+# 5. 원래의 엔트리포인트 실행
 echo "<pgadm entrypoint.sh 실행...>"
 exec /entrypoint.sh "$@"
