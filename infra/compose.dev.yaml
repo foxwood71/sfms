@@ -316,7 +316,8 @@ services:
             - TZ=Asia/Seoul
         # 로컬 개발 환경에서 직접 접속하기 위해 개방
         ports:
-            - "5050:80"
+            - "5080:80"
+            - "5433:433"
         volumes:
             - ./pgadm/scripts/entrypoint-wrapper.sh:/usr/local/bin/entrypoint-wrapper.sh:ro
             - ./data/pgadm:/var/lib/pgadmin # 계정 설정 및 쿼리 기록 저장용 로컬 폴더
