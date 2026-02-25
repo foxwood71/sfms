@@ -1,0 +1,20 @@
+# [Data & Infrastructure]
+infra/certs/*
+infra/data/*
+infra/logs/*
+infra/.env
+infra/**/certs
+infra/**/secrets
+infra/**/data
+infra/**/logs
+infra/**/.env*
+
+# [Backend]
+**/__pycache__/
+**/.pytest_cache/
+**/.venv/
+# ./backend/.env
+
+# [Frontend]
+**/node_modules/
+**/dist/

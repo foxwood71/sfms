@@ -1,0 +1,17 @@
+nvm install 24
+nvm use 24
+node -v  # v24.x.x 가 출력되어야 합니다.
+
+# 프로젝트 전용 버전 고정 (.nvmrc)
+cd frontend
+echo "24" > .nvmrc
+
+자동 전환: 이제 해당 폴더에서 nvm use만 입력하면 파일의 내용을 읽어 자동으로 24 버전으로 전환됩니다.
+
+
+#  Vite 프로젝트 생성 (React + TypeScript)
+npm create vite@latest . -- --template react-ts
+
+#  필수 모듈 설치 (Ant Design 및 전역 상태 관리 등)
+npm install antd @ant-design/pro-components @ant-design/icons
+npm install @tanstack/react-query axios

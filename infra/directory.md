@@ -1,0 +1,210 @@
+# Podman Rootless 환경 **권한(Permission)** 설정
+
+일반 도커(Rootful)와 달리, Podman Rootless는 **사용자 네임스페이스(User Namespace)** 기술을 사용해요. 그래서 호스트에서의 유저와 컨테이너 내부의 유저가 겉보기엔 달라도 실제로는 매핑되어야 하거든요.
+
+SFMS 인프라의 `data` 폴더 권한을 깔끔하게 해결하는 방법을 정리해 드릴게요.
+
+---
+
+## 1. 핵심 개념: `podman unshare`
+
+Rootless 모드에서 컨테이너 내부의 `root`(UID 0)는 실제 호스트의 `계정`(UID 1000)과 매핑됩니다. 하지만 서비스마다 내부적으로 사용하는 UID가 달라요.
+
+* **PostgreSQL:** 내부 UID `999` 사용
+* **Gitea:** 내부 UID `1000` 사용 (설정한 `USER_UID` 기준)
+* **Redis/MinIO:** 보통 `root` 또는 전용 계정 사용
+
+이걸 호스트에서 일일이 계산해서 `chown` 하기는 너무 복잡해요. 그래서 **`podman unshare`** 명령어를 사용하면 컨테이너의 시각으로 호스트 폴더의 소유권을 변경할 수 있습니다.
+
+---
+
+## 2. 서비스별 권한 설정 가이드
+
+가장 확실한 방법은 컨테이너를 띄우기 전에 호스트에서 아래 명령어들을 실행해 주는 거예요.
+
+### ① PostgreSQL (`data/pgsql`, `data/logs/pgsql`)
+
+Postgres는 권한에 아주 예민해서 소유자가 UID `999`가 아니면 실행조차 안 됩니다.
+
+```bash
+podman unshare chown -R 999:999 ./data/pgsql
+podman unshare chown -R 999:999 ./data/logs/pgsql
+
+```
+
+### ② Gitea (`data/gitea`)
+
+오빠가 `USER_UID=1000`으로 설정했으므로, 컨테이너 내부의 `1000`번 유저에게 권한을 줍니다.
+
+```bash
+podman unshare chown -R 1000:1000 ./data/gitea
+
+```
+
+### ③ Redis / MinIO / Nginx / PgAdmin
+
+이 친구들은 보통 실행 권한이 유연하지만, 안전하게 `root`(매핑된 오빠 계정) 소유로 두면 됩니다.
+
+```bash
+podman unshare chown -R 0:0 ./data/redis
+podman unshare chown -R 0:0 ./data/minio
+podman unshare chown -R 0:0 ./data/pgadm
+podman unshare chown -R 0:0 ./data/logs/nginx
+podman unshare chown -R 0:0 ./data/logs/backend
+
+```
+
+---
+
+## 3. [추천] 한 번에 해결하는 자동화 스크립트
+
+매번 치기 귀찮으니까, `infra/scripts/setup-permissions.sh` 파일을 하나 만들어서 관리하는 게 오빠 스타일에도 맞을 것 같아요.
+
+* SFMS 인프라 디렉토리 구조 생성 및 권한 설정 스크립트
+  
+```bash
+#!/bin/bash
+
+echo "🚀 SFMS 인프라 디렉토리 구조 생성 및 권한 설정을 시작합니다... (개발/운영 환경 포함)"
+
+# ====================================================================
+# 1. 인프라 디렉토리 및 필수 파일 생성
+# ====================================================================
+echo "📁 폴더 및 파일을 생성 중입니다..."
+
+# 운영 환경에 필요한 backend, frontend를 포함하여 모든 서비스 폴더 일괄 생성
+for service in backend frontend gitea minio nginx pgadm pgsql portainer redis; do
+    mkdir -p ${service}/{certs,scripts,secrets}
+    # 각 서비스의 secrets 폴더 안에 빈 password.txt 파일 미리 생성
+    # 기존에 파일이 있으면 touch 명령어를 아예 실행하지 않고 건너뜁니다.
+    if [ ! -f ${service}/secrets/password.txt ]; then
+        touch ${service}/secrets/password.txt
+    fi
+done
+
+# 서비스별 특수 폴더 추가 생성
+mkdir -p minio/conf
+mkdir -p nginx/conf.d
+mkdir -p pgsql/sql
+mkdir -p redis/conf
+
+# Data 및 하위 로그 폴더 생성 (운영 환경 전용인 nginx, portainer 포함)
+mkdir -p data/{minio,pgadm,pgsql,portainer,redis,backups}
+mkdir -p data/gitea/{conf,data}
+mkdir -p data/logs/{backend,nginx,pgsql}
+
+echo "✅ 디렉토리 생성이 완료되었습니다."
+
+# ====================================================================
+# 2. Podman Rootless 권한(Ownership) 설정
+# ====================================================================
+echo "🔐 Rootless Podman을 위한 Data 폴더 권한 설정을 진행합니다..."
+
+# PostgreSQL (컨테이너 내부 UID 999 사용)
+podman unshare chown -R 999:999 ./data/pgsql
+podman unshare chown -R 999:999 ./data/logs/pgsql
+
+# Gitea (컨테이너 내부 UID 1000 사용)
+podman unshare chown -R 1000:1000 ./data/gitea
+
+# [운영 환경 전용] Nginx, Backend 로그 및 Portainer 데이터 (컨테이너 내부 root 사용)
+podman unshare chown -R 0:0 ./data/logs/nginx
+podman unshare chown -R 0:0 ./data/logs/backend
+podman unshare chown -R 0:0 ./data/portainer
+
+# [공통 환경] 나머지 서비스 데이터 (컨테이너 내부 root 사용)
+podman unshare chown -R 0:0 ./data/redis
+podman unshare chown -R 0:0 ./data/minio
+podman unshare chown -R 0:0 ./data/pgadm
+podman unshare chown -R 0:0 ./data/backups
+
+# 디렉토리 기본 권한 부여
+chmod -R 755 ./data
+
+echo "🎉 개발 및 운영 환경을 위한 모든 초기 세팅이 완벽하게 끝났습니다! 👍"
+
+```
+
+* 인증서(certs) 및 민감 정보(secrets) 보안 권한 설정 setup-infra- crital.sh
+
+```bash
+# ====================================================================
+# 인증서(certs) 및 민감 정보(secrets) 보안 권한 설정
+# ====================================================================
+echo "🔒 인증서 및 비밀번호 파일의 보안 권한(600/644)을 잠급니다..."
+
+# 1. 비밀번호 파일 (오직 소유자만 읽기/쓰기 가능: 600)
+find ./*/secrets -type f -name "password.txt" -exec chmod 600 {} \; 2>/dev/null
+
+# 2. 비공개 키 파일 (.key) (오직 소유자만 읽기/쓰기 가능: 600)
+find ./*/certs -type f -name "*.key" -exec chmod 600 {} \; 2>/dev/null
+
+# 3. 공개 인증서 파일 (.crt) (소유자 외에는 읽기만 가능: 644)
+find ./*/certs -type f -name "*.crt" -exec chmod 644 {} \; 2>/dev/null
+
+echo "✅ 모든 보안 파일의 권한 설정이 완료되었습니다!"
+```
+
+---
+
+## 4. Direactory 구조
+
+```text
+infra/
+├── .env                # 모든 인프라 비밀번호 마스터 키
+├── compose.yaml        # 인프라 설계도
+├── gitea/              # gitea git 서버 설정 및 데이터
+│   ├── certs/          # gitea 인증서
+│   ├── scripts/        # gitea 초기화 스크립트
+│   └── secrets/        # gitea password.txt 등 민감 정보
+├── minio/              # minio 오브젝트 스토리지 관련 설정
+│   ├── certs/          # minio 인증서
+│   ├── conf/           # minio 설정
+│   ├── scripts/        # minio 초기화 스크립트
+│   └── secrets/        # minio password.txt 등 민감 정보
+├── nginx/              # nginx 리버스 프록시 설정 및 SSL 인증서
+│   ├── certs/          # nginx 인증서
+│   ├── conf.d/         # nginx default.conf 등 세부 설정
+│   ├── scripts/        # nginx 초기화 스크립트
+│   └── secrets/        # nginx password.txt 등 민감 정보
+├── pgadm/              # pgadmin 관리 설정
+│   ├── certs/          # pgadmin 인증서
+│   ├── scripts/        # pgadmin 초기화 스크립트
+│   └── secrets/        # pgadmin password.txt 등 민감 정보
+├── pgsql/              # pgsql DB 초기화 스크립트 (init.sql)
+│   ├── certs/          # pgsql 인증서
+│   ├── scripts/        # pgsql 초기화 스크립트
+│   ├── secrets/        # pgsql password.txt 등 민감 정보
+│   └── sql/            # pgsql 초기화 sql 스크립트
+├── portainer/          # portainer 컨테이너 관리 도구
+│   ├── certs/          # portainer 인증
+│   ├── scripts/        # portainer 초기화 스크립트
+│   └── secrets/        # portainer password.txt 등 민감 정보
+├── redis/              # redis 설정
+│   ├── certs/          # redis 인증서
+│   ├── conf/           # redis 설정
+│   ├── scripts/        # redis 초기화 스크립트
+│   └── secrets/        # redis password.txt 등 민감 정보
+└── data/
+    ├── gitea/          # gitea git 레포지토리 및 환경 설정 저장
+    │  ├── conf/        # gitea 설정저장
+    │  └── data/        # gitea data저장
+    ├── minio/          # 업로드한 이미지, 도면 파일 저장
+    ├── pgadm/          # 관리자 계정 설정 및 기록 저장
+    ├── pgsql/          # DB의 실제 데이터 파일 저장
+    ├── portainer/      # portainer 컨테이너 관리 도구 데이터 저장
+    ├── redis/          # redis data 저장
+    ├── backups/        # [추가 추천] DB 덤프 등 백업 파일 저장소
+    └── logs/
+        ├── backend/    # FastAPI 서버 로그 저장
+        ├── nginx/      # Nginx 서버 로그 저장
+        └── pgsql/      # [추가 추천] DB 에러 로그 추적용
+```
+
+### 4. 주의사항 (WSL 환경)
+
+WSL에서 `/mnt/c/` 처럼 윈도우 드라이브에 폴더를 만들면 이 권한 설정이 제대로 안 먹힐 수 있어요. 반드시 **WSL 내부 파일 시스템(예: `/home/유저명/projects/...`)**에서 작업하시는 걸 강력히 추천합니다!
+
+이제 권한 문제까지 해결되면 인프라가 아주 부드럽게 뜰 거예요.
+
+혹시 이 **설정 스크립트를 실제로 만들어서 실행**해 보실 건가요? 아니면 이제 **각 서비스의 `secrets/password.txt` 파일에 들어갈 내용**을 정해 볼까요? 🫡
