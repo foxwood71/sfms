@@ -3,22 +3,30 @@
 -- 전역 설정 및 관리용 DB(postgres) 초기화
 -- ====================================================================
 
+-- 0. 관리용 DB인 postgres로 접속을 전환합니다.
+\c postgres
+
 -- 1. 관리용 확장 프로그램 설치 (postgres DB)
 CREATE EXTENSION IF NOT EXISTS pg_cron;
+
 COMMENT ON EXTENSION pg_cron IS 'PostgreSQL용 간단한 cron 기반 스케줄러';
 
 CREATE EXTENSION IF NOT EXISTS pgroonga;
+
 COMMENT ON EXTENSION pgroonga IS 'PostgreSQL용 고속全文검색 엔진';
 
 -- 2. pg_cron 상세 설정
 -- ALTER SYSTEM은 postgresql.auto.conf를 수정하여 영속성을 가집니다.
-ALTER SYSTEM SET cron.database_name = 'postgres';
-ALTER SYSTEM SET cron.timezone = 'Asia/Seoul';
+-- ALTER SYSTEM SET cron.database_name = 'postgres'; -> Containerfile로 이동 사전에 설정이 필요
+-- ALTER SYSTEM SET cron.timezone = 'Asia/Seoul'; -> Containerfile로 이동 사전에 설정이 필요
 
 -- 3. 성능 및 보안 설정 (전역 적용)
 ALTER SYSTEM SET wal_level = 'replica';
+
 ALTER SYSTEM SET synchronous_commit = 'on';
+
 ALTER SYSTEM SET checkpoint_timeout = '5min';
+
 ALTER SYSTEM SET max_wal_size = '1GB';
 
 -- 4. SSL 설정 (Secrets 또는 Copy로 배치된 경로 기준)
@@ -28,4 +36,7 @@ ALTER SYSTEM SET max_wal_size = '1GB';
 -- ALTER SYSTEM SET ssl_cert_file = '/var/lib/postgresql/data/certs/server.cert';
 
 -- 5. 설정 적용 (리로드)
-SELECT pg_reload_conf();
+-- SELECT pg_reload_conf (); -> 서버를 재부팅 해서 설정불요
+
+-- [선택] 다시 앱 DB로 돌아가고 싶다면 (필요시 주석 해제)
+-- \c ${DB_NAME}

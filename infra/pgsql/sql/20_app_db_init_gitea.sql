@@ -1,16 +1,19 @@
 -- ====================================================================
--- 20_init_gitea.sql
+-- 20_app_db_init_gitea.sql
 -- Gitea 서비스용 유저/DB 생성 및 확장 설치
 -- ====================================================================
 
+-- 0. 관리용 DB인 postgres로 접속을 전환합니다.
+\c postgres
 -- 1. 서비스용 유저 생성 (Gitea)
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_catalog.pg_user WHERE usename = 'gitea') THEN
         CREATE USER gitea WITH ENCRYPTED PASSWORD 'gitea';
-    END IF;
-END
-$$;
+
+END IF;
+
+END $$;
 
 -- 2. 권한 부여
 ALTER USER gitea WITH SUPERUSER;
@@ -27,4 +30,8 @@ GRANT ALL PRIVILEGES ON DATABASE gitea TO gitea;
 \c gitea
 
 CREATE EXTENSION IF NOT EXISTS pgroonga;
+
 COMMENT ON EXTENSION pgroonga IS 'Gitea 검색용 PGroonga 확장';
+
+-- [선택] 다시 앱 DB로 돌아가고 싶다면 (필요시 주석 해제)
+-- \c ${DB_NAME}

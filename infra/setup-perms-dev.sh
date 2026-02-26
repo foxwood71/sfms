@@ -13,7 +13,7 @@ podman unshare chmod 444 ./pgsql/certs/*.crt 2>/dev/null
 
 # --- 2. Redis (UID: 999, GID: 1000) ---
 echo "📦 설정 중: redis"
-podman unshare chown -R 999:1000 ./redis/secrets ./redis/certs
+podman unshare chown -R 999:999 ./redis/secrets ./redis/certs
 podman unshare chmod 400 ./redis/secrets/password.txt
 podman unshare chmod 400 ./redis/certs/*.key 2>/dev/null
 podman unshare chmod 444 ./redis/certs/*.crt 2>/dev/null

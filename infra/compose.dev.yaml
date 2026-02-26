@@ -43,12 +43,17 @@ services:
             #   gid: "999"
             #   mode: 400
             - source: pgsql-key
-              target: /run/secrets/pgsql-key
+              target: /run/secrets/server.key
             #   uid: "999"
             #   gid: "999"
             #   mode: 400
             - source: pgsql-cert
-              target: /run/secrets/pgsql-cert
+              target: /run/secrets/server.cert
+            #   uid: "999"
+            #   gid: "999"
+            #   mode: 444
+            - source: pgsql-ca
+              target: /run/secrets/ca.cert
             #   uid: "999"
             #   gid: "999"
             #   mode: 444
@@ -97,20 +102,26 @@ services:
             - source: redis-password
               target: /run/secrets/redis-password
             #   uid: "999" # alpine 기반 redis 유저
-            #   gid: "1000" # alpine 기반 redis 그룹
+            #   gid: "999" # alpine 기반 redis 그룹
             #   mode: 400
             - source: redis-key
-              target: /run/secrets/redis-key
+              target: /certs/server.key
             #   uid: "999" # alpine 기반 redis 유저
-            #   gid: "1000" # alpine 기반 redis 그룹
+            #   gid: "999" # alpine 기반 redis 그룹
             #   mode: 400
             - source: redis-cert
-              target: /run/secrets/redis-cert
+              target: /certs/server.cert
             #   uid: "999" # alpine 기반 redis 유저
-            #   gid: "1000" # alpine 기반 redis 그룹
+            #   gid: "999" # alpine 기반 redis 그룹
+            #   mode: 444
+            - source: redis-ca
+              target: /certs/ca.cert
+            #   uid: "999" # 기본적으로 root 유저
+            #   gid: "999" # 기본적으로 root 그룹
             #   mode: 444
         healthcheck:
-            test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-password123!}", "ping" ]
+            # test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-password123!}", "ping" ]
+            test: [ "CMD", "redis-cli", "--tls", "--cacert", "/certs/ca.cert", "--cert", "/certs/server.cert", "--key", "/certs/server.key", "-a", "${REDIS_PASSWORD}", "ping" ]
             interval: 10s
             timeout: 5s
             retries: 5
@@ -149,17 +160,22 @@ services:
             #   gid: "0" # 기본적으로 root 그룹
             #   mode: 400
             - source: minio-key
-              target: /run/secrets/minio-key
+              target: /root/.minio/certs/private.key
             #   uid: "0" # 기본적으로 root 유저
             #   gid: "0" # 기본적으로 root 그룹
             #   mode: 400
             - source: minio-cert
-              target: /run/secrets/minio-cert
+              target: /root/.minio/certs/public.crt
+            #   uid: "0" # 기본적으로 root 유저
+            #   gid: "0" # 기본적으로 root 그룹
+            #   mode: 444
+            - source: minio-ca
+              target: /root/.minio/certs/CAs/public.crt
             #   uid: "0" # 기본적으로 root 유저
             #   gid: "0" # 기본적으로 root 그룹
             #   mode: 444
         healthcheck:
-            test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+            test: [ "CMD", "curl", "-fk", "https://localhost:9000/minio/health/live" ]
             interval: 30s
             timeout: 20s
             retries: 3
@@ -312,13 +328,12 @@ services:
         environment:
             - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL} # 로그인에 사용할 이메일 아이디
             - PGADMIN_DEFAULT_PASSWORD_FILE=/run/secrets/pgadm-password # 로그인 비밀번호 (시크릿 파일 사용)
-            - PGADMIN_CONFIG_SSL_CRT_FILE="'/var/lib/pgadmin/certs/server.crt'"
-            - PGADMIN_CONFIG_SSL_KEY_FILE="'/var/lib/pgadmin/certs/server.key'"
             - PGADMIN_LISTEN_PORT=443
+            - PGADMIN_ENABLE_TLS=True
             - TZ=Asia/Seoul
         # 로컬 개발 환경에서 직접 접속하기 위해 개방
         ports:
-            - "5080:80"
+            # - "5080:80"   # - PGADMIN_LISTEN_PORT=443 설정에 의해 한개의 포트만 열어놓고 있어 설정의 의미가 없음
             - "5443:443"
         volumes:
             - ./pgadm/scripts/entrypoint-wrapper.sh:/usr/local/bin/entrypoint-wrapper.sh:ro
@@ -335,12 +350,13 @@ services:
             #   gid: "5050" # 기본적으로 root 그룹
             #   mode: 400
             - source: pgadm-key
-              target: /run/secrets/pgadm-key
+              target: /certs/server.key
+            #  target: /run/secrets/pgadm-key
             #   uid: "5050" # 기본적으로 root 유저
             #   gid: "5050" # 기본적으로 root 그룹
             #   mode: 400
             - source: pgadm-cert
-              target: /run/secrets/pgadm-cert
+              target: /certs/server.cert
             #   uid: "5050" # 기본적으로 root 유저
             #   gid: "5050" # 기본적으로 root 그룹
             #   mode: 444
@@ -360,12 +376,50 @@ services:
         environment:
             - USER_UID=1000 # Podman Rootless 환경에서 권한 꼬임을 방지하기 위한 호스트 유저 매핑
             - USER_GID=1000
-            - DB_TYPE=postgres # Gitea의 데이터도 우리가 띄운 메인 PostgreSQL DB에 저장합니다.
-            - HOST=db:5432
-            - NAME=${DB_NAME}
-            - USER=${DB_USER}
-            - PASSWD=${GITEA_DB_PASSWORD}
             - TZ=Asia/Seoul
+
+            # app.ini 설정 
+            # [database]
+            - GITEA__database__DB_TYPE=postgres
+            - GITEA__database__HOST=pgsql:5432
+            - GITEA__database__NAME=${DB_NAME} # 환경 변수 연동
+            - GITEA__database__USER=${DB_USER}
+            - GITEA__database__PASSWD_FILE=/run/secrets/gitea-password # <-- Secret password 파일위치
+            # 사설 인증서이므로 검증을 건너뛰거나(skip-verify), prefer 모드 사용
+            # 주의: 사설 인증서 사용 시 'verify-full'을 쓰려면 CA 인증서를 Gitea 컨테이너에도 넣어야 합니다.
+            # 일단 접속이 안 된다면 'disable'로 테스트 후 'require'로 올리세요.
+            - GITEA__database__SSL_MODE=require # verify-full, require, disable
+            # - GITEA__database__SSL_CA_CERT=/certs/ca.crt
+
+            # [server]
+            # - GITEA__server__DOMAIN=localhost         # 기본값은 미설정
+            # - GITEA__server__SSH_DOMAIN=localhost     # 기본값은 미설정
+            - GITEA__server__HTTP_PORT=3000
+            # - GITEA__server__REDIRECT_OTHER_PORT: true
+            - GITEA__server__PROTOCOL=https
+            - GITEA__server__ROOT_URL=https://localhost:3000/ # 기본값은 미설정
+
+            # COMMENT OUT LETSENCRYPT VALUES IF YOU HAVE OWN CERTS FILES!!
+            # - GITEA__server__ENABLE_ACME=true
+            # - GITEA__server__ACME_ACCEPTTOS=true
+            # - GITEA__server__ACME_DIRECTORY=https
+            # - GITEA__server__ACME_EMAIL= my@email.com
+
+            # OPTIONAL. OWN CERTS FILES IF YOU HAVE THE ONES
+            - GITEA__server__CERT_FILE=/certs/server.cert
+            - GITEA__server__KEY_FILE=/certs/server.key
+            # [security]
+            #  - GITEA__security__SECRET_KEY=[value returned by generate secret SECRET_KEY]
+            #  - GITEA__security__INTERNAL_TOKEN=[value returned by generate secret INTERNAL_TOKEN]
+            # [mailer]
+            #  - GITEA__mailer__ENABLED=true
+            #  - GITEA__mailer__FROM=${GITEA__mailer__FROM:?GITEA__mailer__FROM not set}
+            #  - GITEA__mailer__PROTOCOL=smtps
+            #  - GITEA__mailer__SMTP_ADDR=${GITEA__mailer__SMTP_ADDR:?GITEA__mailer__SMTP_ADDR not set}
+            #  - GITEA__mailer__SMTP_PORT=${GITEA__mailer__SMTP_PORT:?GITEA__mailer__SMTP_PORT not set}
+            #  - GITEA__mailer__USER=${GITEA__mailer__USER:-apikey}
+            #  - GITEA__mailer__PASSWD="""${GITEA__mailer__PASSWD:?GITEA__mailer__PASSWD not set}""""
+
         ports:
             - "3000:3000" # 로컬 브라우저에서 Gitea 웹 화면 접속 포트
             - "222:22" # SSH를 통한 Git Clone 등을 위한 포트
@@ -384,12 +438,17 @@ services:
             #   gid: "1000" # 기본적으로 root 그룹
             #   mode: 400
             - source: gitea-key
-              target: /run/secrets/gitea-key
+              target: /certs/server.key
             #   uid: "1000" # 기본적으로 root 유저
             #   gid: "1000" # 기본적으로 root 그룹
             #   mode: 400
             - source: gitea-cert
-              target: /run/secrets/gitea-cert
+              target: /certs/server.cert
+            #   uid: "1000" # 기본적으로 root 유저
+            #   gid: "1000" # 기본적으로 root 그룹
+            #   mode: 444
+            - source: gitea-ca
+              target: /certs/ca.crt
             #   uid: "1000" # 기본적으로 root 유저
             #   gid: "1000" # 기본적으로 root 그룹
             #   mode: 444
@@ -456,18 +515,24 @@ secrets:
         file: ${PWD}/pgsql/certs/pgsql.key
     pgsql-cert:
         file: ${PWD}/pgsql/certs/pgsql.crt
+    pgsql-ca:
+        file: ${PWD}/pgsql/certs/ca.crt
     redis-password:
         file: ${PWD}/redis/secrets/password.txt
     redis-key:
         file: ${PWD}/redis/certs/redis.key
     redis-cert:
         file: ${PWD}/redis/certs/redis.crt
+    redis-ca:
+        file: ${PWD}/redis/certs/ca.crt
     minio-password:
         file: ${PWD}/minio/secrets/password.txt
     minio-key:
         file: ${PWD}/minio/certs/minio.key
     minio-cert:
         file: ${PWD}/minio/certs/minio.crt
+    minio-ca:
+        file: ${PWD}/minio/certs/ca.crt
     # sfms-backend-password:
     #     file: ${PWD}/backend/secrets/password.txt
     # sfms-backend-key:
@@ -498,6 +563,8 @@ secrets:
         file: ${PWD}/gitea/certs/gitea.key
     gitea-cert:
         file: ${PWD}/gitea/certs/gitea.crt
+    gitea-ca:
+        file: ${PWD}/gitea/certs/ca.crt
     # portainer-password:
     #     file: ${PWD}/portainer/secrets/password.txt
     # portainer-key:

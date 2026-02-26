@@ -19,30 +19,31 @@ echo "<pgsql 초기 설정 스크립트 시작...>"
 # 1. SSL 키 복사 및 접속/서버 보안 강화 (스마트 모드)
 echo "<pgsql SSL 인증서 점검 중...>"
 
-if [ -f "/run/secrets/pgsql-key" ] && [ -f "/run/secrets/pgsql-cert" ]; then
+if [ -f "/run/secrets/server.key" ] && [ -f "/run/secrets/server.cert" ]; then
     echo "✅ SSL 인증서 발견! 복사 및 권한 설정을 진행합니다."
     mkdir -p "$CERT_DIR"
     chmod 700 "$CERT_DIR"
 
-    cp /run/secrets/pgsql-key "$CERT_DIR/server.key"
+    cp /run/secrets/server.key "$CERT_DIR/server.key"
     chown postgres:postgres "$CERT_DIR/server.key"
     chmod 0600 "$CERT_DIR/server.key"
 
-    cp /run/secrets/pgsql-cert "$CERT_DIR/server.cert"
+    cp /run/secrets/server.cert "$CERT_DIR/server.cert"
     chown postgres:postgres "$CERT_DIR/server.cert"
     chmod 0644 "$CERT_DIR/server.cert"
 
+    # CA 인증서도 있으면 복사 (verify-full 등을 위해)
+    [ -f "/run/secrets/ca.cert" ] && cp /run/secrets/ca.cert "$CERT_DIR/ca.cert"
+
     # [추가됨] postgresql.conf 수정: SSL 기능 활성화
     if [ -f "$PG_CONF" ]; then
-        # echo "🔒 postgresql.conf: SSL 옵션을 활성화합니다."
-        # echo "ssl = on" >> "$PG_CONF"
-        # echo "ssl_cert_file = '$CERT_DIR/server.cert'" >> "$PG_CONF"
-        # echo "ssl_key_file = '$CERT_DIR/server.key'" >> "$PG_CONF"
         echo "🔒 postgresql.conf: SSL 옵션을 활성화합니다."
         {
+            echo "" # 👈 안전하게 한 줄 띄워주기 (중요!)
             echo "ssl = on"
             echo "ssl_cert_file = '$CERT_DIR/server.cert'"
             echo "ssl_key_file = '$CERT_DIR/server.key'"
+            echo "ssl_ca_file = '$CERT_DIR/ca.cert'"
         } >> "$PG_CONF"
     fi
 

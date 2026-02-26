@@ -33,13 +33,18 @@ RUN apt-get update && apt-get install -y -V \
 # scripts 및 sql 서브 폴더에서 파일을 가져옵니다.
 COPY scripts/00_configure_system.sh /docker-entrypoint-initdb.d/00_configure_system.sh
 COPY sql/10_global_init.sql /docker-entrypoint-initdb.d/10_global_init.sql
-COPY sql/20_app_gitea.sql /docker-entrypoint-initdb.d/20_app_gitea.sql
+COPY sql/20_app_db_init_gitea.sql /docker-entrypoint-initdb.d/20_app_db_init_gitea.sql
+COPY sql/30_app_db_init_sfms.sql /docker-entrypoint-initdb.d/30_app_db_init_sfms.sql
 
 #### 파일 권한 변경
 RUN chown postgres:postgres /docker-entrypoint-initdb.d/00_configure_system.sh \
     && chmod +x /docker-entrypoint-initdb.d/00_configure_system.sh \
     && chown postgres:postgres /docker-entrypoint-initdb.d/10_global_init.sql \
-    && chown postgres:postgres /docker-entrypoint-initdb.d/20_app_gitea.sql
+    && chown postgres:postgres /docker-entrypoint-initdb.d/20_app_db_init_gitea.sql \
+    && chown postgres:postgres /docker-entrypoint-initdb.d/30_app_db_init_sfms.sql
 
 #### 컨테이너 실행 설정
-CMD ["postgres", "-c", "shared_preload_libraries=pg_cron,pgroonga", "-c", "cron.database_name=postgres"]
+CMD ["postgres", \
+    "-c", "shared_preload_libraries=pg_cron,pgroonga", \
+    "-c", "cron.database_name=postgres", \
+    "-c", "cron.timezone=Asia/Seoul"]

@@ -42,4 +42,8 @@ RUN chown postgres:postgres /docker-entrypoint-initdb.d/00_configure_system.sh \
     && chown postgres:postgres /docker-entrypoint-initdb.d/20_app_gitea.sql
 
 #### 컨테이너 실행 설정
-CMD ["postgres", "-c", "shared_preload_libraries=pg_cron,pgroonga", "-c", "cron.database_name=postgres"]
+CMD ["postgres", \
+    "-c", "shared_preload_libraries=pg_cron,pgroonga", \
+    "-c", "cron.database_name=postgres", \
+    "-c", "cron.timezone=Asia/Seoul", \
+    "-c", "listen_addresses=*"]
