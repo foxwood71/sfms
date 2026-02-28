@@ -1,0 +1,44 @@
+services:
+    gitea:
+        environment:
+            # [database]
+            - GITEA__database__SSL_MODE=verify-full # verify-full, require, disable
+            - GITEA__database__SSL_CA_CERT=/certs/ca.crt
+
+            # [server]
+            - GITEA__server__HTTP_PORT=3000
+            - GITEA__server__PROTOCOL=https
+            - GITEA__server__ROOT_URL=https://localhost:3000/ # 기본값은 미설정
+
+            - GITEA__server__CERT_FILE=/certs/server.crt
+            - GITEA__server__KEY_FILE=/certs/server.key
+
+        ports:
+            - "3000:3000" # 로컬 브라우저에서 Gitea 웹 화면 접속 포트
+            - "222:22" # SSH를 통한 Git Clone 등을 위한 포트
+        networks:
+            - sfms-net
+        secrets:
+            - source: gitea-key
+              target: /certs/server.key
+            #   uid: "1000" # 기본적으로 root 유저
+            #   gid: "1000" # 기본적으로 root 그룹
+            #   mode: 400
+            - source: gitea-crt
+              target: /certs/server.crt
+            #   uid: "1000" # 기본적으로 root 유저
+            #   gid: "1000" # 기본적으로 root 그룹
+            #   mode: 444
+            - source: gitea-ca-crt
+              target: /certs/ca.crt
+            #   uid: "1000" # 기본적으로 root 유저
+            #   gid: "1000" # 기본적으로 root 그룹
+            #   mode: 444
+
+secrets:
+    gitea-key:
+        file: ${PWD}/gitea/certs/gitea.key
+    gitea-crt:
+        file: ${PWD}/gitea/certs/gitea.crt
+    gitea-ca-crt:
+        file: ${PWD}/gitea/certs/ca.crt

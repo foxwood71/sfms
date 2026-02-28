@@ -32,6 +32,3 @@ GRANT ALL PRIVILEGES ON DATABASE gitea TO gitea;
 CREATE EXTENSION IF NOT EXISTS pgroonga;
 
 COMMENT ON EXTENSION pgroonga IS 'Gitea 검색용 PGroonga 확장';
-
--- [선택] 다시 앱 DB로 돌아가고 싶다면 (필요시 주석 해제)
--- \c ${DB_NAME}

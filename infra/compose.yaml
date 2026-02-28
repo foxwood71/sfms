@@ -1,0 +1,31 @@
+version: "3.8" # Podman 및 Docker Compose의 호환성이 가장 좋은 3.8 버전을 사용합니다.
+
+name: "sfms"
+
+include:
+  - ./compose/00_core.yaml
+  - ./compose/01_pgsql.${SFMS_ENV}.yaml
+  - ./compose/02_redis.${SFMS_ENV}.yaml
+  - ./compose/03_minio.${SFMS_ENV}.yaml
+  # - compose/04_backend.${SFMS_ENV}.yaml
+  # - compose/05_nginx.${SFMS_ENV}.yaml
+  - compose/06_pgadm.${SFMS_ENV}.yaml
+  - compose/07_gitea.${SFMS_ENV}.yaml
+  # - compose/08_portainer.${SFMS_ENV}.yaml -> # 인증서가 없어도 인증서를 자체적으로 만들어서 구분할 필요가 없음
+
+services:
+  # dummy / infra용 작은 서비스 하나
+  _meta:
+    profiles: [ "", "dev", "prod", "meta" ] # 프로파일 설정
+    image: busybox
+    command: [ "sh", "-c", "echo app && sleep 3600" ]
+  # 기본 up에서는 안 쓰고 싶으면 프로파일로 빼두기
+
+  # ====================================================================
+  # 컨테이너들이 서로를 컨테이너 이름(예: 'pgsql', 'redis')으로
+  # 찾을 수 있게 해주는 가상 네트워크
+  # ==================================================================== 
+networks:
+  sfms-net:
+    driver: bridge
+    # external: false   

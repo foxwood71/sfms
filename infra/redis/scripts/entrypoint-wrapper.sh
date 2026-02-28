@@ -16,44 +16,40 @@ fi
 
 # 2. 인증서 스마트 적용 및 SSL 자동 활성화 (조건부)
 echo "🔍 [Security] Redis SSL 인증서 점검 중..."
-REDIS_CONF="/usr/local/etc/redis/redis.conf"
-TLS_OPT=""
 
-# if [ -f "/run/secrets/redis-key" ] && [ -f "/run/secrets/redis-cert" ]; then
-#     echo "✅ SSL 인증서 발견! 복사 및 권한 설정, TLS 활성화를 진행합니다."
-    
-#     # 인증서 폴더 준비 (Alpine 기반 redis 이미지의 기본 유저는 uid 999, gid 1000)
-#     mkdir -p /certs
-#     chown 999:1000 /certs
-#     chmod 700 /certs
+if [ -f "/certs/server.key" ] && [ -f "/certs/server.cert" ]; then
+    echo "✅ SSL 인증서 발견!, TLS 활성화를 진행합니다."
 
-#     # 키 파일 복사 및 권한 부여
-#     cp /run/secrets/redis-key /certs/server.key
-#     chown 999:1000 /certs/server.key
-#     chmod 0600 /certs/server.key
-
-#     # 인증서 파일 복사 및 권한 부여
-#     cp /run/secrets/redis-cert /certs/server.cert
-#     chown 999:1000 /certs/server.cert
-#     chmod 0644 /certs/server.cert
-
-#     # redis.conf 파일에 TLS(SSL) 설정 자동 추가
-#     if [ -f "$REDIS_CONF" ]; then
-#         echo "🔒 redis.conf: TLS(SSL) 옵션을 활성화합니다."
-#         {
-#             echo "tls-port 6379"
-#             echo "port 0"  # 평문 접속(기본 포트) 차단을 원할 경우 활성화
-#             echo "tls-cert-file /certs/server.cert"
-#             echo "tls-key-file /certs/server.key"
-#             echo "tls-ca-cert-file /certs/ca.cert"
-#             echo "tls-auth-clients yes"
-#         } >> "$REDIS_CONF"
-#     fi
-# else
-#     echo "⚠️ SSL 인증서 없음! 개발 모드로 판단하여 인증서 복사 및 TLS 설정을 스킵합니다."
-# fi
+    # # redis.conf 파일에 TLS(SSL) 설정 자동 추가
+    # REDIS_CONF="/usr/local/etc/redis/redis.conf"
+    # if [ -f "$REDIS_CONF" ]; then
+    #     echo "🔒 redis.conf: TLS(SSL) 옵션을 활성화합니다."
+    #     {
+    #         echo "tls-port 6379"
+    #         echo "port 0"  # 평문 접속(기본 포트) 차단을 원할 경우 활성화
+    #         echo "tls-cert-file /certs/server.cert"
+    #         echo "tls-key-file /certs/server.key"
+    #         echo "tls-ca-cert-file /certs/ca.cert"
+    #         echo "tls-auth-clients yes"
+    #     } >> "$REDIS_CONF"
+    # fi
+    # # 핵심: redis.conf를 수정하지 않고 실행 인자로 TLS 설정을 덮어씌웁니다.
+    # # port 0 은 기존 6379 일반 포트를 닫아버리는 역할을 합니다.
+    set -- \
+        "--port" "0" \
+        "--tls-port" "6379" \
+        "--tls-cert-file" "/certs/server.cert" \
+        "--tls-key-file" "/certs/server.key" \
+        "--tls-ca-cert-file" "/certs/ca.cert" \
+        "--tls-auth-clients" "yes"
+else
+    echo "⚠️ SSL 인증서 없음! 개발 모드로 판단하여 인증서 복사 및 TLS 설정을 스킵합니다."
+    # 인증서가 없으면 인자를 텅 비워버립니다.
+    set --
+fi
 
 echo "🚀 <redis 설정 적용 및 서버 실행...>"
 
-# 3. 설정 파일과 비밀번호 환경변수를 적용하여 Redis 서버 최종 실행!
-exec redis-server "$REDIS_CONF" --requirepass "${REDIS_PASSWORD}"
+# 3. 비밀번호와 (존재한다면) TLS 옵션을 모두 합쳐서 서버 최종 실행!
+# "$@" 를 사용하여 위에서 세팅한 인자들 호출
+exec redis-server /usr/local/etc/redis/redis.conf --requirepass "${REDIS_PASSWORD}" "$@"

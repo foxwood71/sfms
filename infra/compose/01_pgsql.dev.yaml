@@ -1,0 +1,7 @@
+services:
+    pgsql:
+        ports:
+            - "5432:5432"
+        volumes:
+            # 개발 환경에서만 Gitea DB 생성 스크립트
+            - ${PWD}/pgsql/sql/20_app_db_init_gitea.sql:/docker-entrypoint-initdb.d/20_app_db_init_gitea.sql:ro

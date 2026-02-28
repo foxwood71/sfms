@@ -1,0 +1,28 @@
+services:
+    redis:
+        ports:
+            - "6379:6379"
+        secrets:
+            - source: redis-key
+              target: /certs/server.key
+            #   uid: "999" # alpine 기반 redis 유저
+            #   gid: "999" # alpine 기반 redis 그룹
+            #   mode: 400
+            - source: redis-crt
+              target: /certs/server.crt
+            #   uid: "999" # alpine 기반 redis 유저
+            #   gid: "999" # alpine 기반 redis 그룹
+            #   mode: 444
+            - source: redis-ca-crt
+              target: /certs/ca.crt
+            #   uid: "999" # 기본적으로 root 유저
+            #   gid: "999" # 기본적으로 root 그룹
+            #   mode: 444
+
+secrets:
+    redis-key:
+        file: ${PWD}/redis/certs/redis.key
+    redis-crt:
+        file: ${PWD}/redis/certs/redis.crt
+    redis-ca-crt:
+        file: ${PWD}/redis/certs/ca.crt

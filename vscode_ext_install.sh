@@ -22,6 +22,7 @@ EXTENSIONS=(
     "mikestead.dotenv"
     "yzhang.markdown-all-in-one"
     "davidAnson.vscode-markdownlint"
+    "redhat.vscode-yaml"
     "tamasfe.even-better-toml"
     "davidWang.ini-for-vscode"
     "ms-python.python"

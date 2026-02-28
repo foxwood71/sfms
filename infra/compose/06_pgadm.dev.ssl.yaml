@@ -1,0 +1,32 @@
+services:
+    pgadm:
+        environment:
+            - PGADMIN_LISTEN_PORT=443
+            - PGADMIN_ENABLE_TLS=True
+        ports:
+            - "5443:443"
+        secrets:
+            - source: pgadm-key
+              target: /certs/server.key
+            #  target: /run/secrets/pgadm-key
+            #   uid: "5050" # 기본적으로 root 유저
+            #   gid: "5050" # 기본적으로 root 그룹
+            #   mode: 400
+            - source: pgadm-crt
+              target: /certs/server.cert # 설정기본값이라 동일하게 적용
+            #   uid: "5050" # 기본적으로 root 유저
+            #   gid: "5050" # 기본적으로 root 그룹
+            #   mode: 444
+            - source: pgadm-ca-crt
+              target: /certs/ca.cert # 설정기본값이라 동일하게 적용
+            #   uid: "5050" # 기본적으로 root 유저
+            #   gid: "5050" # 기본적으로 root 그룹
+            #   mode: 444
+
+secrets:
+    pgadm-key:
+        file: ${PWD}/pgadm/certs/pgadm.key
+    pgadm-crt:
+        file: ${PWD}/pgadm/certs/pgadm.crt
+    pgadm-ca-crt:
+        file: ${PWD}/pgadm/certs/ca.crt

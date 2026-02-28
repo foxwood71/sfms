@@ -37,6 +37,3 @@ ALTER SYSTEM SET max_wal_size = '1GB';
 
 -- 5. 설정 적용 (리로드)
 -- SELECT pg_reload_conf (); -> 서버를 재부팅 해서 설정불요
-
--- [선택] 다시 앱 DB로 돌아가고 싶다면 (필요시 주석 해제)
--- \c ${DB_NAME}

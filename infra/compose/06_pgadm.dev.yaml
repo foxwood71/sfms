@@ -1,0 +1,7 @@
+services:
+    pgadm:
+        environment:
+            - PGADMIN_LISTEN_PORT=80
+        # 로컬 개발 환경에서 직접 접속하기 위해 개방
+        ports:
+            - "5080:80"

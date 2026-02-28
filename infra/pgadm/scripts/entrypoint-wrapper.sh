@@ -15,27 +15,20 @@ echo "<pgadm Wrapper Script 시작...>"
 
 # 2. SSL 인증서 처리 (스마트 체크) 
 # 비밀(Secrets) 폴더에 인증서가 존재할 때만 안전하게 복사합니다.
-if [ -f "/run/secrets/pgadm-key" ] && [ -f "/run/secrets/pgadm-cert" ]; then
-    echo "✅ [Security] pgAdmin SSL 인증서 발견! 보안 설정을 진행합니다."
-
-    # # SSL Key 복사 및 권한 설정 (0600: 소유자만 읽기 가능) 
-    # cp /run/secrets/pgadm-key "$CERT_DIR/server.key"
-    # # chown 5050:5050 "$CERT_DIR/server.key"
-    # chmod 0600 "$CERT_DIR/server.key"
-
-    # # SSL Cert 복사 및 권한 설정 (0644: 일반적인 읽기 권한) 
-    # cp /run/secrets/pgadm-cert "$CERT_DIR/server.crt"
-    # # chown 5050:5050 "$CERT_DIR/server.cert"
-    # chmod 0644 "$CERT_DIR/server.key"
+if [ -f "/certs/server.key" ] && [ -f "/certs/server.cert" ]; then
+    echo "✅ [Security] SSL 인증서 발견! 보안 설정을 진행합니다."
+    if [ -f "/certs/ca.cert" ]; then
+        echo "🔐 [Security] CA 인증서 발견! SSL 인증서가 추가로 로딩됩니다."
+    fi
 else
     echo "⚠️ [Info] SSL 인증서가 발견되지 않았습니다. 일반 모드로 준비합니다."
 fi
 
 # 3. 추가 환경 변수 확인 (선택 사항)
-# 만약 비밀번호 파일이 존재한다면 로그로 알려줍니다. 
-if [ -f "/run/secrets/sfms-pgadmin-password" ]; then
-    echo "🔐 [Auth] 관리자 비밀번호 시크릿이 로드되었습니다."
-fi
+# # 만약 비밀번호 파일이 존재한다면 로그로 알려줍니다. 
+# if [ -f "/run/secrets/sfms-pgadmin-password" ]; then
+#     echo "🔐 [Auth] 관리자 비밀번호 시크릿이 로드되었습니다."
+# fi
 
 # 4. Gunicorn 서버에 HTTPS 강제 적용 (가장 확실한 방법)
 # environment: 에 설정

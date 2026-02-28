@@ -1,0 +1,11 @@
+services:
+    gitea:
+        environment:
+            # [database]
+            - GITEA__database__SSL_MODE=require # verify-full, require, disable
+
+        ports:
+            - "3000:3000" # 로컬 브라우저에서 Gitea 웹 화면 접속 포트
+            - "222:22" # SSH를 통한 Git Clone 등을 위한 포트
+        networks:
+            - sfms-net

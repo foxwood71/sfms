@@ -1,0 +1,32 @@
+services:
+    minio:
+        # 로컬 개발 환경에서 직접 접속하기 위해 개방
+        ports:
+            # S3 API 포트: 로컬 백엔드에서 파일 업로드/다운로드 테스트를 위해 개방
+            - "9000:9000"
+            # MinIO 관리자 웹 콘솔: 브라우저에서 버킷(폴더)을 관리하기 위해 개방
+            - "9001:9001"
+        secrets:
+            - source: minio-key
+              target: /root/.minio/certs/private.key
+            #   uid: "0" # 기본적으로 root 유저
+            #   gid: "0" # 기본적으로 root 그룹
+            #   mode: 400
+            - source: minio-crt
+              target: /root/.minio/certs/public.crt
+            #   uid: "0" # 기본적으로 root 유저
+            #   gid: "0" # 기본적으로 root 그룹
+            #   mode: 444
+            - source: minio-ca-crt
+              target: /root/.minio/certs/CAs/public.crt
+            #   uid: "0" # 기본적으로 root 유저
+            #   gid: "0" # 기본적으로 root 그룹
+            #   mode: 444
+
+secrets:
+    minio-key:
+        file: ${PWD}/minio/certs/minio.key
+    minio-crt:
+        file: ${PWD}/minio/certs/minio.crt
+    minio-ca-crt:
+        file: ${PWD}/minio/certs/ca.crt

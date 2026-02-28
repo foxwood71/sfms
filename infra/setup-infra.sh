@@ -28,32 +28,7 @@ mkdir -p data/{minio,pgadm,pgsql,portainer,redis,backups}
 mkdir -p data/gitea/{conf,data}
 mkdir -p data/logs/{backend,nginx,pgsql}
 
-echo "✅ 디렉토리 생성이 완료되었습니다."
-
-# ====================================================================
-# 2. Podman Rootless 권한(Ownership) 설정
-# ====================================================================
-echo "🔐 Rootless Podman을 위한 Data 폴더 권한 설정을 진행합니다..."
-
-# PostgreSQL (컨테이너 내부 UID 999 사용)
-podman unshare chown -R 999:999 ./data/pgsql
-podman unshare chown -R 999:999 ./data/logs/pgsql
-
-# Gitea (컨테이너 내부 UID 1000 사용)
-podman unshare chown -R 1000:1000 ./data/gitea
-
-# [운영 환경 전용] Nginx, Backend 로그 및 Portainer 데이터 (컨테이너 내부 root 사용)
-podman unshare chown -R 0:0 ./data/logs/nginx
-podman unshare chown -R 0:0 ./data/logs/backend
-podman unshare chown -R 0:0 ./data/portainer
-
-# [공통 환경] 나머지 서비스 데이터 (컨테이너 내부 root 사용)
-podman unshare chown -R 0:0 ./data/redis
-podman unshare chown -R 0:0 ./data/minio
-podman unshare chown -R 0:0 ./data/pgadm
-podman unshare chown -R 0:0 ./data/backups
-
 # 디렉토리 기본 권한 부여
 chmod -R 755 ./data
 
-echo "🎉 개발 및 운영 환경을 위한 모든 초기 세팅이 완벽하게 끝났습니다! 👍"
+echo "🎉 개발 및 운영 환경을 위한 디렉토리 생성이 완료되었습니다! 👍"
