@@ -29,6 +29,7 @@ EXTENSIONS=(
     "charliermarsh.ruff"
     "biomejs.biome"
     "cweijan.vscode-database-client2"  # PostgreSQL/Redis 관리용
+    "sqlfluff.vscode-sqlfluff"
     "humao.rest-client"
     "ahmadalli.vscode-nginx-conf"  # Nginx 설정 지원
     "seriousbenentertainment.minio"  # MinIO 관리 도구

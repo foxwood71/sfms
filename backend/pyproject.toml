@@ -40,6 +40,7 @@ version = "0.1.0"
 [dependency-groups]
 dev = [
     "ruff>=0.15.1",
+    "sqlfluff>=4.0.4",
 ]
 
 [build-system]

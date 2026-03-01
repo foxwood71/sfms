@@ -100,12 +100,15 @@
 		// -------------------------------------------------------------
 		// 4. SQL (PostgreSQL)
 		// -------------------------------------------------------------
+		"sqlfluff.executablePath": "/home/blue/projects/sfms/backend/.venv/bin/sqlfluff",
+		"sqlfluff.dialect": "postgres",
+		"sqlfluff.linter.run": "onSave",
 		"[sql]": {
+			"editor.defaultFormatter": "sqlfluff.vscode-sqlfluff",
 			"editor.formatOnSave": true
 		},
 		"pgsql.connectionTimeout": 30,
 		"pgsql.showStartNotification": false,
-
 		// -------------------------------------------------------------
 		// 5. Markdown 설정
 		// -------------------------------------------------------------
