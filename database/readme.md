@@ -71,7 +71,7 @@ psql -h localhost -U sfms_admin -d sfms_db -f deplou.pgsql
 정상적인 쿼리 실행 결과와 에러 메시지를 시간 순서대로 한 곳에서 확인하고 싶을 때 사용합니다. 명령어 끝에 `> 파일명 2>&1`을 추가합니다.
 
 ```bash
-psql -h localhost -U sfms_admin -d sfms_db -f deploy.pgsql > execute_result.log 2>&1
+psql -h localhost -U sfms_admin -d sfms_db -f 00_deploy.pgsql > execute_result.log 2>&1
 
 ```
 
@@ -85,7 +85,7 @@ psql -h localhost -U sfms_admin -d sfms_db -f deploy.pgsql > execute_result.log 
 정상 처리된 로그와 에러 로그를 구분해서 관리해야 할 때 유용합니다.
 
 ```bash
-psql -h localhost -U sfms_admin -d sfms_db -f deplou.pgsql > result.log 2> error.log
+psql -h localhost -U sfms_admin -d sfms_db -f 00_deploy.pgsql > result.log 2> error.log
 
 ```
 
@@ -102,7 +102,7 @@ psql -h localhost -U sfms_admin -d sfms_db -f deplou.pgsql > result.log 2> error
 이때는 `-v ON_ERROR_STOP=1` 옵션을 추가하는 것을 권장합니다.
 
 ```bash
-psql -h localhost -U sfms_admin -d sfms_db -v ON_ERROR_STOP=1 -f deplou.pgsql > execute_result.log 2>&1
+psql -h localhost -U sfms_admin -d sfms_db -v ON_ERROR_STOP=1 -f 00_deploy.pgsql > execute_result.log 2>&1
 
 ```
 

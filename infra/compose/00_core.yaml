@@ -10,8 +10,10 @@ services:
     pgsql:
         # infra/pgsql 폴더에 있는 Dockerfile을 읽어 직접 이미지를 생성합니다.
         # profiles: ["", "dev", "prod"]
-        build: ${PWD}/pgsql
+        # build: ${PWD}/pgsql
+        image: groonga/pgroonga:latest-debian-16
         container_name: pgsql
+        shm_size: '1gb'
         restart: always
         # entrypoint/command 는 컨테이너를 만들때 적용해서 필요없음
         environment:
@@ -22,16 +24,16 @@ services:
             - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256 --data-checksums
             - TZ=Asia/Seoul
         volumes:
-            # Bind Mount: 로컬 폴더를 직접 마운트하여 데이터 영구 보존 및 호스트에서 직접 접근 가능
             # 초기화 스크립트
             - ${PWD}/pgsql/sql/10_global_init.sql:/docker-entrypoint-initdb.d/10_global_init.sql:ro
             - ${PWD}/pgsql/sql/30_app_db_init_sfms.sql:/docker-entrypoint-initdb.d/30_app_db_init_sfms.sql:ro
             # 데이터파일
-            - ${PWD}/data/pgsql:/var/lib/postgresql/data
+            # Bind Mount: 로컬 폴더를 직접 마운트하여 데이터 영구 보존 및 호스트에서 직접 접근 가능
+            - ${PWD}/data/pgsql:/var/lib/postgresql/data:Z
+            # Named Volume: Docker 볼륨을 사용하여 데이터 영구 보존 (로컬 폴더 대신 볼륨 사용 시)
+            # - pgsql-data:/var/lib/postgresql/data:Z
             # 로그파일
             - ${PWD}/data/logs/pgsql:/var/log/postgresql
-            # Named Volume: Docker 볼륨을 사용하여 데이터 영구 보존 (로컬 폴더 대신 볼륨 사용 시)
-            # - pgsql-data:/var/lib/postgresql/data
 
         networks:
             - sfms-net
@@ -453,9 +455,9 @@ secrets:
 #     pgsql-data:
 #         driver: local
 #         driver_opts:
-#         type: none
-#         o: bind
-#         device: ${PWD}/data/pgsql
+#             type: none
+#             o: bind
+#             device: ${PWD}/data/pgsql
 #     redis-data:
 #         driver: local
 #         driver_opts:

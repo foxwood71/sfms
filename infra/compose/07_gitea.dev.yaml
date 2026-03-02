@@ -6,6 +6,6 @@ services:
 
         ports:
             - "3000:3000" # 로컬 브라우저에서 Gitea 웹 화면 접속 포트
-            - "222:22" # SSH를 통한 Git Clone 등을 위한 포트
+            - "3022:22" # SSH를 통한 Git Clone 등을 위한 포트
         networks:
             - sfms-net

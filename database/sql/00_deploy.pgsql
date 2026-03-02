@@ -44,6 +44,6 @@ COMMENT ON FUNCTION cmm.trg_set_updated_at IS '레코드 수정 시 updated_at �
 -- ==========================================
 -- 3. 기초 데이터 (Seed)
 -- ==========================================
-\i '93_cmm/03_cmm_seed.pgsql'
+\i '93_cmm_seed.pgsql'
 
 SELECT 'SFMS Database Deployment Completed!' AS status;

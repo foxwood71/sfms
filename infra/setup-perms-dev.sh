@@ -41,7 +41,7 @@ podman unshare chmod 400 ./gitea/certs/*.key 2>/dev/null
 podman unshare chmod 444 ./gitea/certs/*.crt 2>/dev/null
 
 # --- 6. portainer (UID: 0, GID: 0) ---
-echo "📦 설정 중: gitea"
+echo "📦 설정 중: portainer"
 podman unshare chown -R 0:0 ./data/portainer ./portainer/secrets ./portainer/certs
 podman unshare chmod 400 ./portainer/secrets/password.txt
 podman unshare chmod 400 ./portainer/certs/*.key 2>/dev/null

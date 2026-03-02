@@ -14,7 +14,7 @@ podman images -q | xargs -r podman rmi  # 이미지가 없을 때 에러 나는 
 
 # 4. 마운트된 로컬 데이터 폴더 초기화 (권한 문제 방지를 위해 sudo 유지)\
 echo "🗑️ 기존 데이터 폴더 삭제 중..."
-podman unshare rm -rf ./data/pgsql ./data/redis ./data/minio ./data/pgadm ./data/gitea ./data/portainer
+podman unshare rm -rf ./data/pgsql ./data/redis ./data/minio ./data/pgadm ./data/gitea ./data/portainer ./data/logs
 
 # 5. 깨끗한 상태로 폴더 다시 생성
 echo "📁 폴더 다시 생성 중..."
@@ -25,11 +25,14 @@ podman unshare mkdir -p ./data/minio/config
 podman unshare mkdir -p ./data/pgadm
 podman unshare mkdir -p ./data/gitea/data ./data/gitea/conf
 podman unshare mkdir -p ./data/portainer
+podman unshare mkdir -p ./data/logs/backend
+podman unshare mkdir -p ./data/logs/nginx
+podman unshare mkdir -p ./data/logs/pgsql
 
 # 6. 각 서비스별 UID에 맞춰 소유권 즉시 재할당
 echo "🔑 소유권 재설정 중..."
 # pgsql (999)
-podman unshare chown -R 999:999 ./data/pgsql
+podman unshare chown -R 999:999 ./data/pgsql ./data/logs/pgsql
 # Redis (999)
 podman unshare chown -R 999:999 ./data/redis
 # MinIO (0 - Root)
