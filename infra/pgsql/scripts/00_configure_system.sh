@@ -16,6 +16,17 @@ CERT_DIR="$PG_DATA/certs"
 
 echo "<pgsql 초기 설정 스크립트 시작...>"
 
+echo ">>> PostgreSQL 설정 파일(postgresql.conf) 업데이트 중..."
+
+cat <<EOF >> "PG_CONF"
+# Custom Extensions Configuration
+shared_preload_libraries = 'pgroonga,pg_cron'
+cron.database_name = 'postgres'
+cron.timezone = 'Asia/Seoul'
+EOF
+
+echo ">>> 설정 완료!"
+
 # 1. SSL 키 복사 및 접속/서버 보안 강화 (스마트 모드)
 echo "<pgsql SSL 인증서 점검 중...>"
 

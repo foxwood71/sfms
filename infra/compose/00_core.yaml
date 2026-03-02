@@ -10,8 +10,8 @@ services:
     pgsql:
         # infra/pgsql 폴더에 있는 Dockerfile을 읽어 직접 이미지를 생성합니다.
         # profiles: ["", "dev", "prod"]
-        # build: ${PWD}/pgsql
-        image: groonga/pgroonga:latest-debian-16
+        build: ${PWD}/pgsql
+        # image: groonga/pgroonga:latest-debian-16
         container_name: pgsql
         shm_size: '1gb'
         restart: always
