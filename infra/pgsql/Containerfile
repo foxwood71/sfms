@@ -1,32 +1,52 @@
+# ---------------------------------------------------------
+# 1단계: 빌더 이미지 (은전한닢 사전 컴파일 전용)
+# ---------------------------------------------------------
+FROM groonga/pgroonga:latest-debian-16 AS builder
+
+# 사전을 컴파일하는 데 필요한 빌드 툴과 라이브러리 설치
+RUN apt-get update && \
+    apt-get install -y curl build-essential autoconf automake mecab libmecab-dev mecab-utils
+
+WORKDIR /tmp
+# 은전한닢 소스 다운로드 및 컴파일
+RUN curl -LO https://bitbucket.org/eunjeon/mecab-ko-dic/downloads/mecab-ko-dic-2.1.1-20180720.tar.gz && \
+    tar -zxvf mecab-ko-dic-2.1.1-20180720.tar.gz && \
+    cd mecab-ko-dic-2.1.1-20180720 && \
+    ./autogen.sh && \
+    ./configure && make && make install
+
+# ---------------------------------------------------------
+# 2단계: 최종 운영 이미지 (가벼운 상태 유지)
+# ---------------------------------------------------------
 FROM groonga/pgroonga:latest-debian-16
 
-#### [수정 1] 패키지 설치 시 임시 DB 데몬이 백그라운드에서 실행되는 것 원천 차단
-RUN echo "#!/bin/sh\nexit 101" > /usr/sbin/policy-rc.d && chmod +x /usr/sbin/policy-rc.d
-
-#### 의존성 패키지 설치
+# 실행에 필요한 최소한의 MeCab 런타임 패키지만 설치
+# MeCab 기본 설정 파일을 수정해서 한국어 사전을 기본으로 인식하도록 변경
 RUN apt-get update && \
-    apt-mark hold postgresql-16 postgresql-client-16 && \
-    apt-get install -y --no-install-recommends locales postgresql-16-cron && \
+    apt-get install -y \
+    locales \
+    tzdata \
+    postgresql-16-cron \
+    mecab \
+    groonga-tokenizer-mecab && \
     sed -i 's/# ko_KR.UTF-8 UTF-8/ko_KR.UTF-8 UTF-8/' /etc/locale.gen && \
     locale-gen ko_KR.UTF-8 && \
-    ln -sf /usr/share/zoneinfo/Asia/Seoul /etc/localtime && \
+    sed -i 's|^dicdir.*$|dicdir = /usr/local/lib/mecab/dic/mecab-ko-dic|g' /etc/mecabrc && \
+    ln -snf /usr/share/zoneinfo/Asia/Seoul /etc/localtime && \
+    echo "Asia/Seoul" > /etc/timezone && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# 3. 로케일이 정상적으로 시스템에 생성된 '이후에' 환경변수를 적용합니다.
+# 1단계(builder)에서 완성된 한국어 사전 파일들만 쏙 복사
+# --chown 옵션을 써서 복사시 소유자 설정
+COPY --from=builder --chown=postgres:postgres /usr/lib/x86_64-linux-gnu/mecab/dic/mecab-ko-dic /usr/local/lib/mecab/dic/mecab-ko-dic
+RUN chmod -R 755 /usr/local/lib/mecab/dic/mecab-ko-dic
+
+# 로케일이 정상적으로 시스템에 생성된 '이후에' 환경변수를 적용.
 ENV LANG=ko_KR.UTF-8
 ENV LC_ALL=ko_KR.UTF-8
 ENV TZ=Asia/Seoul
 
-#### [수정 2] 원인 파악을 위해 쉘 스크립트 삽입을 임시로 주석 처리 (매우 중요)
+#### 초기화 쉘 스크립트 삽입
 COPY scripts/00_configure_system.sh /docker-entrypoint-initdb.d/00_configure_system.sh
-COPY scripts/99_finalize_config.sh /docker-entrypoint-initdb.d/99_finalize_config.sh
 RUN chown postgres:postgres /docker-entrypoint-initdb.d/00_configure_system.sh && \
     chmod +x /docker-entrypoint-initdb.d/00_configure_system.sh
-RUN chown postgres:postgres /docker-entrypoint-initdb.d/99_finalize_config.sh && \
-    chmod +x /docker-entrypoint-initdb.d/99_finalize_config.sh
-
-# #### [수정 3] 컨테이너 실행 설정 (pgroonga를 무조건 먼저 로드하도록 순서 변경)
-# CMD ["postgres", \
-#     "-c", "shared_preload_libraries=pgroonga,pg_cron", \
-#     "-c", "cron.database_name=postgres", \
-#     "-c", "cron.timezone=Asia/Seoul"]

@@ -47,7 +47,7 @@ if [ -f "/run/secrets/server.key" ] && [ -f "/run/secrets/server.crt" ]; then
         } >> "$PG_CONF"
     fi
 
-    # [수정됨] pg_hba.conf 수정: 모든 외부 접속을 SSL(hostssl)로 강제
+    # pg_hba.conf 수정: 모든 외부 접속을 SSL(hostssl)로 강제
     if [ -f "$PG_HBA" ]; then
         echo "🔒 pg_hba.conf: 모든 외부 접속을 SSL(hostssl)로 강제합니다."
         sed -i "s|^host |hostssl |g" "$PG_HBA"
@@ -73,16 +73,20 @@ fi
 # fi
 
 # 1. postgresql.conf 파일에 필수 확장 모듈 주입
-echo ">>> postgresql.conf에 pgroonga, pg_cron 설정 주입 중..."
+echo ">>> postgresql.conf에 pg_cron 설정 주입 중..."
 if [ -f "$PG_CONF" ]; then
     echo "🔒 postgresql.conf: Extension을 활성화합니다."
+    # cron 상세 설정 추가
     {
         echo "" # 👈 안전하게 한 줄 띄워주기 (중요!)
-        echo "shared_preload_libraries = 'pgroonga'"
+        echo "shared_preload_libraries = 'pg_cron'"
+        echo "cron.database_name = 'postgres'"
+        echo "cron.timezone = 'Asia/Seoul'"
+        echo "cron.host = ''"   # 호스트를 비워두면 소켓 접속
     } >> "$PG_CONF"
 fi
 
-# 2. [핵심] 10_global_init.sql이 실행되기 전에 임시 서버를 재시작하여 라이브러리 적재!
+# 10_global_init.sql이 실행되기 전에 서버를 재시작하여 라이브러리 적재!
 echo ">>> 확장 모듈 로드를 위해 임시 DB 서버를 재시작합니다..."
 pg_ctl restart -D "$PG_DATA" -m fast -w
 

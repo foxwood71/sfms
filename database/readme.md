@@ -53,7 +53,7 @@ psql --version
 터미널(명령줄)에서 `psql` 명령어를 사용하여 현재 디렉토리에 있는 SQL 스크립트 파일을 바로 실행할 수 있습니다.
 
 ```bash
-psql -h localhost -U sfms_admin -d sfms_db -f deplou.pgsql
+psql -h localhost -U sfms_admin -d sfms_db -f deploy.pgsql
 
 ```
 
