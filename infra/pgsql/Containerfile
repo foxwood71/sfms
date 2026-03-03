@@ -18,9 +18,12 @@ ENV LC_ALL=ko_KR.UTF-8
 ENV TZ=Asia/Seoul
 
 #### [수정 2] 원인 파악을 위해 쉘 스크립트 삽입을 임시로 주석 처리 (매우 중요)
-# COPY scripts/00_configure_system.sh /docker-entrypoint-initdb.d/00_configure_system.sh
-# RUN chown postgres:postgres /docker-entrypoint-initdb.d/00_configure_system.sh && \
-#     chmod +x /docker-entrypoint-initdb.d/00_configure_system.sh
+COPY scripts/00_configure_system.sh /docker-entrypoint-initdb.d/00_configure_system.sh
+COPY scripts/99_finalize_config.sh /docker-entrypoint-initdb.d/99_finalize_config.sh
+RUN chown postgres:postgres /docker-entrypoint-initdb.d/00_configure_system.sh && \
+    chmod +x /docker-entrypoint-initdb.d/00_configure_system.sh
+RUN chown postgres:postgres /docker-entrypoint-initdb.d/99_finalize_config.sh && \
+    chmod +x /docker-entrypoint-initdb.d/99_finalize_config.sh
 
 # #### [수정 3] 컨테이너 실행 설정 (pgroonga를 무조건 먼저 로드하도록 순서 변경)
 # CMD ["postgres", \

@@ -7,13 +7,14 @@
 \c postgres
 
 -- 1. 관리용 확장 프로그램 설치 (postgres DB)
-CREATE EXTENSION IF NOT EXISTS pg_cron;
-
-COMMENT ON EXTENSION pg_cron IS 'PostgreSQL용 간단한 cron 기반 스케줄러';
-
 CREATE EXTENSION IF NOT EXISTS pgroonga;
 
 COMMENT ON EXTENSION pgroonga IS 'PostgreSQL용 고속全文검색 엔진';
+
+-- CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+-- COMMENT ON EXTENSION pg_cron IS 'PostgreSQL용 간단한 cron 기반 스케줄러';
+
 
 -- 2. pg_cron 상세 설정
 -- ALTER SYSTEM은 postgresql.auto.conf를 수정하여 영속성을 가집니다.

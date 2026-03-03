@@ -16,17 +16,6 @@ CERT_DIR="$PG_DATA/certs"
 
 echo "<pgsql 초기 설정 스크립트 시작...>"
 
-echo ">>> PostgreSQL 설정 파일(postgresql.conf) 업데이트 중..."
-
-cat <<EOF >> "PG_CONF"
-# Custom Extensions Configuration
-shared_preload_libraries = 'pgroonga,pg_cron'
-cron.database_name = 'postgres'
-cron.timezone = 'Asia/Seoul'
-EOF
-
-echo ">>> 설정 완료!"
-
 # 1. SSL 키 복사 및 접속/서버 보안 강화 (스마트 모드)
 echo "<pgsql SSL 인증서 점검 중...>"
 
@@ -82,5 +71,21 @@ fi
 # else
 #     echo "경고: $PG_CONF 파일을 찾을 수 없습니다. 초기화 단계에서 설정이 적용됩니다."
 # fi
+
+# 1. postgresql.conf 파일에 필수 확장 모듈 주입
+echo ">>> postgresql.conf에 pgroonga, pg_cron 설정 주입 중..."
+if [ -f "$PG_CONF" ]; then
+    echo "🔒 postgresql.conf: Extension을 활성화합니다."
+    {
+        echo "" # 👈 안전하게 한 줄 띄워주기 (중요!)
+        echo "shared_preload_libraries = 'pgroonga'"
+    } >> "$PG_CONF"
+fi
+
+# 2. [핵심] 10_global_init.sql이 실행되기 전에 임시 서버를 재시작하여 라이브러리 적재!
+echo ">>> 확장 모듈 로드를 위해 임시 DB 서버를 재시작합니다..."
+pg_ctl restart -D "$PG_DATA" -m fast -w
+
+echo ">>> [00_configure_system.sh] 설정 완료!"
 
 echo "<pgsql 초기 설정 스크립트 종료...>"

@@ -1,33 +1,37 @@
+psql:00_deploy.pgsql:7: 알림:  "cmm" 이름의 스키마(schema)가 이미 있음, 건너뜀
 CREATE SCHEMA
+psql:00_deploy.pgsql:9: 알림:  "pgroonga" 확장 모듈이 이미 있음, 건너뜀
 CREATE EXTENSION
+psql:00_deploy.pgsql:11: 알림:  "uuid-ossp" 확장 모듈이 이미 있음, 건너뜀
 CREATE EXTENSION
 CREATE FUNCTION
 COMMENT
+psql:01_usr_schema.pgsql:4: 알림:  "usr" 이름의 스키마(schema)가 이미 있음, 건너뜀
 CREATE SCHEMA
 COMMENT
-CREATE TABLE
+psql:01_usr_schema.pgsql:37: 오류:  "organizations" 이름의 릴레이션(relation)이 이미 있습니다
+psql:01_usr_schema.pgsql:40: 오류:  "idx_usr_org_parent" 이름의 릴레이션(relation)이 이미 있습니다
+psql:01_usr_schema.pgsql:45: 오류:  "trg_updated_at_organizations" 이름의 트리거가 "organizations" 테이블에 이미 있습니다
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+psql:01_usr_schema.pgsql:102: 오류:  "users" 이름의 릴레이션(relation)이 이미 있습니다
+psql:01_usr_schema.pgsql:105: 오류:  "idx_usr_users_org_id" 이름의 릴레이션(relation)이 이미 있습니다
 CREATE INDEX
-CREATE TRIGGER
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-CREATE TABLE
-CREATE INDEX
-CREATE INDEX
-CREATE INDEX
-CREATE INDEX
-CREATE TRIGGER
+psql:01_usr_schema.pgsql:107: 오류:  "idx_usr_login_id" 이름의 릴레이션(relation)이 이미 있습니다
+psql:01_usr_schema.pgsql:108: 오류:  "idx_usr_users_metadata_gin" 이름의 릴레이션(relation)이 이미 있습니다
+psql:01_usr_schema.pgsql:113: 오류:  "trg_updated_at_users" 이름의 트리거가 "users" 테이블에 이미 있습니다
 COMMENT
 COMMENT
 COMMENT
@@ -47,8 +51,10 @@ COMMENT
 COMMENT
 COMMENT
 COMMENT
-INSERT 0 1
-INSERT 0 1
+psql:01_usr_schema.pgsql:145: 오류:  중복된 키 값이 "organizations_pkey" 고유 제약 조건을 위반함
+DETAIL:  (id)=(0) 키가 이미 있습니다.
+psql:01_usr_schema.pgsql:154: 오류:  중복된 키 값이 "users_pkey" 고유 제약 조건을 위반함
+DETAIL:  (id)=(0) 키가 이미 있습니다.
  setval 
 --------
       1
@@ -59,13 +65,13 @@ INSERT 0 1
       1
 (1 row)
 
-ALTER TABLE
-ALTER TABLE
+psql:01_usr_schema.pgsql:164: 오류:  "fk_org_created_by" 제약 조건이 이미 "organizations" 릴레이션(relation)에서 사용되고 있습니다
+psql:01_usr_schema.pgsql:168: 오류:  "fk_usr_created_by" 제약 조건이 이미 "users" 릴레이션(relation)에서 사용되고 있습니다
 psql:03_cmm_schema.pgsql:4: 알림:  "cmm" 이름의 스키마(schema)가 이미 있음, 건너뜀
 CREATE SCHEMA
 COMMENT
-CREATE TABLE
-CREATE TRIGGER
+psql:03_cmm_schema.pgsql:27: 오류:  "system_domains" 이름의 릴레이션(relation)이 이미 있습니다
+psql:03_cmm_schema.pgsql:31: 오류:  "trg_updated_at_system_domains" 이름의 트리거가 "system_domains" 테이블에 이미 있습니다
 COMMENT
 COMMENT
 COMMENT
@@ -78,61 +84,61 @@ COMMENT
 COMMENT
 COMMENT
 COMMENT
-CREATE TABLE
+psql:03_cmm_schema.pgsql:67: 오류:  "code_groups" 이름의 릴레이션(relation)이 이미 있습니다
+psql:03_cmm_schema.pgsql:69: 오류:  "idx_code_groups_domain" 이름의 릴레이션(relation)이 이미 있습니다
+psql:03_cmm_schema.pgsql:73: 오류:  "trg_updated_at_code_groups" 이름의 트리거가 "code_groups" 테이블에 이미 있습니다
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+psql:03_cmm_schema.pgsql:111: 오류:  "code_details" 이름의 릴레이션(relation)이 이미 있습니다
+psql:03_cmm_schema.pgsql:113: 오류:  "idx_code_details_group" 이름의 릴레이션(relation)이 이미 있습니다
+psql:03_cmm_schema.pgsql:117: 오류:  "trg_updated_at_code_details" 이름의 트리거가 "code_details" 테이블에 이미 있습니다
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+psql:03_cmm_schema.pgsql:161: 오류:  "attachments" 이름의 릴레이션(relation)이 이미 있습니다
+psql:03_cmm_schema.pgsql:163: 오류:  "idx_attachments_ref" 이름의 릴레이션(relation)이 이미 있습니다
+psql:03_cmm_schema.pgsql:164: 오류:  "uq_attachments_active_path" 이름의 릴레이션(relation)이 이미 있습니다
+psql:03_cmm_schema.pgsql:168: 오류:  "trg_updated_at_attachments" 이름의 트리거가 "attachments" 테이블에 이미 있습니다
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+psql:03_cmm_schema.pgsql:211: 오류:  "audit_logs" 이름의 릴레이션(relation)이 이미 있습니다
+psql:03_cmm_schema.pgsql:213: 오류:  "idx_cmm_audit_target_lookup" 이름의 릴레이션(relation)이 이미 있습니다
+psql:03_cmm_schema.pgsql:214: 오류:  "idx_cmm_audit_actor" 이름의 릴레이션(relation)이 이미 있습니다
 CREATE INDEX
-CREATE TRIGGER
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-CREATE TABLE
-CREATE INDEX
-CREATE TRIGGER
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-CREATE TABLE
-CREATE INDEX
-CREATE INDEX
-CREATE TRIGGER
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-CREATE TABLE
-CREATE INDEX
-CREATE INDEX
-CREATE INDEX
 CREATE INDEX
 COMMENT
 COMMENT
@@ -146,9 +152,9 @@ COMMENT
 COMMENT
 COMMENT
 COMMENT
-CREATE TABLE
-CREATE INDEX
-CREATE TRIGGER
+psql:03_cmm_schema.pgsql:260: 오류:  "notifications" 이름의 릴레이션(relation)이 이미 있습니다
+psql:03_cmm_schema.pgsql:264: 오류:  "idx_notifications_receiver_unread" 이름의 릴레이션(relation)이 이미 있습니다
+psql:03_cmm_schema.pgsql:268: 오류:  "trg_updated_at_notifications" 이름의 트리거가 "notifications" 테이블에 이미 있습니다
 COMMENT
 COMMENT
 COMMENT
@@ -165,8 +171,8 @@ COMMENT
 COMMENT
 COMMENT
 COMMENT
-CREATE TABLE
-CREATE TRIGGER
+psql:03_cmm_schema.pgsql:313: 오류:  "sequence_rules" 이름의 릴레이션(relation)이 이미 있습니다
+psql:03_cmm_schema.pgsql:317: 오류:  "trg_updated_at_sequence_rules" 이름의 트리거가 "sequence_rules" 테이블에 이미 있습니다
 COMMENT
 COMMENT
 COMMENT
@@ -194,11 +200,12 @@ COMMENT
 COMMENT
 COMMENT
 COMMENT
+psql:02_iam_schema.pgsql:4: 알림:  "iam" 이름의 스키마(schema)가 이미 있음, 건너뜀
 CREATE SCHEMA
 COMMENT
-CREATE TABLE
-CREATE TRIGGER
-CREATE INDEX
+psql:02_iam_schema.pgsql:32: 오류:  "roles" 이름의 릴레이션(relation)이 이미 있습니다
+psql:02_iam_schema.pgsql:37: 오류:  "trg_updated_at_roles" 이름의 트리거가 "roles" 테이블에 이미 있습니다
+psql:02_iam_schema.pgsql:40: 오류:  "idx_iam_roles_permissions_gin" 이름의 릴레이션(relation)이 이미 있습니다
 COMMENT
 COMMENT
 COMMENT
@@ -210,18 +217,20 @@ COMMENT
 COMMENT
 COMMENT
 COMMENT
-CREATE TABLE
-CREATE INDEX
+psql:02_iam_schema.pgsql:68: 오류:  "user_roles" 이름의 릴레이션(relation)이 이미 있습니다
+psql:02_iam_schema.pgsql:72: 오류:  "idx_iam_user_roles_role_id" 이름의 릴레이션(relation)이 이미 있습니다
 COMMENT
 COMMENT
 COMMENT
 COMMENT
 COMMENT
-INSERT 0 2
+psql:02_iam_schema.pgsql:87: 오류:  중복된 키 값이 "roles_code_key" 고유 제약 조건을 위반함
+DETAIL:  (code)=(SUPER_ADMIN) 키가 이미 있습니다.
+psql:04_fac_schema.pgsql:4: 알림:  "fac" 이름의 스키마(schema)가 이미 있음, 건너뜀
 CREATE SCHEMA
 COMMENT
-CREATE TABLE
-CREATE TRIGGER
+psql:04_fac_schema.pgsql:26: 오류:  "facility_categories" 이름의 릴레이션(relation)이 이미 있습니다
+psql:04_fac_schema.pgsql:31: 오류:  "trg_updated_at_facility_categories" 이름의 트리거가 "facility_categories" 테이블에 이미 있습니다
 COMMENT
 COMMENT
 COMMENT
@@ -232,8 +241,8 @@ COMMENT
 COMMENT
 COMMENT
 COMMENT
-CREATE TABLE
-CREATE TRIGGER
+psql:04_fac_schema.pgsql:59: 오류:  "space_types" 이름의 릴레이션(relation)이 이미 있습니다
+psql:04_fac_schema.pgsql:64: 오류:  "trg_updated_at_space_types" 이름의 트리거가 "space_types" 테이블에 이미 있습니다
 COMMENT
 COMMENT
 COMMENT
@@ -243,8 +252,8 @@ COMMENT
 COMMENT
 COMMENT
 COMMENT
-CREATE TABLE
-CREATE TRIGGER
+psql:04_fac_schema.pgsql:91: 오류:  "space_functions" 이름의 릴레이션(relation)이 이미 있습니다
+psql:04_fac_schema.pgsql:96: 오류:  "trg_updated_at_space_functions" 이름의 트리거가 "space_functions" 테이블에 이미 있습니다
 COMMENT
 COMMENT
 COMMENT
@@ -254,31 +263,31 @@ COMMENT
 COMMENT
 COMMENT
 COMMENT
-CREATE TABLE
-CREATE TRIGGER
+psql:04_fac_schema.pgsql:137: 오류:  "facilities" 이름의 릴레이션(relation)이 이미 있습니다
+psql:04_fac_schema.pgsql:142: 오류:  "trg_updated_at_facilities" 이름의 트리거가 "facilities" 테이블에 이미 있습니다
+CREATE INDEX
+psql:04_fac_schema.pgsql:146: 오류:  "idx_fac_meta_gin" 이름의 릴레이션(relation)이 이미 있습니다
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+psql:04_fac_schema.pgsql:205: 오류:  "spaces" 이름의 릴레이션(relation)이 이미 있습니다
+psql:04_fac_schema.pgsql:210: 오류:  "trg_updated_at_spaces" 이름의 트리거가 "spaces" 테이블에 이미 있습니다
 CREATE INDEX
 CREATE INDEX
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-COMMENT
-CREATE TABLE
-CREATE TRIGGER
-CREATE INDEX
-CREATE INDEX
-CREATE INDEX
-CREATE INDEX
+psql:04_fac_schema.pgsql:215: 오류:  "idx_fac_spaces_meta_gin" 이름의 릴레이션(relation)이 이미 있습니다
+psql:04_fac_schema.pgsql:216: 오류:  "idx_fac_spaces_hierarchy" 이름의 릴레이션(relation)이 이미 있습니다
 COMMENT
 COMMENT
 COMMENT
@@ -299,11 +308,15 @@ COMMENT
 COMMENT
 COMMENT
 COMMENT
-ALTER TABLE
-INSERT 0 6
-INSERT 0 3
-INSERT 0 8
-INSERT 0 3
+psql:90_constraints.pgsql:14: 오류:  "fk_usr_profile_image" 제약 조건이 이미 "users" 릴레이션(relation)에서 사용되고 있습니다
+psql:93_cmm_seed.pgsql:14: 오류:  중복된 키 값이 "system_domains_domain_code_key" 고유 제약 조건을 위반함
+DETAIL:  (domain_code)=(CMM) 키가 이미 있습니다.
+psql:93_cmm_seed.pgsql:21: 오류:  중복된 키 값이 "code_groups_group_code_key" 고유 제약 조건을 위반함
+DETAIL:  (group_code)=(SYS_USE_YN) 키가 이미 있습니다.
+psql:93_cmm_seed.pgsql:38: 오류:  중복된 키 값이 "uq_code_details_group_detail" 고유 제약 조건을 위반함
+DETAIL:  (group_code, detail_code)=(SYS_USE_YN, Y) 키가 이미 있습니다.
+psql:93_cmm_seed.pgsql:45: 오류:  중복된 키 값이 "uq_sequence_rules_domain_prefix" 고유 제약 조건을 위반함
+DETAIL:  (domain_code, prefix)=(FAC, FAC) 키가 이미 있습니다.
                status                
 -------------------------------------
  SFMS Database Deployment Completed!
