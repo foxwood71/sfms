@@ -68,7 +68,7 @@ src/
 │   ├── stores/             # 전역 UI Store (useThemeStore)
 │   └── utils/              # 유틸리티 (dateFormatter, validator)
 │
-├── features/               # [도메인] 비즈니스 로직 (백엔드 모듈과 1:1 매핑)
+├── domains/               # [도메인] 비즈니스 로직 (백엔드 모듈과 1:1 매핑)
 │   ├── cmm/                # [공통 관리] 코드, 파일, 알림
 │   ├── iam/                # [인증/권한] 로그인, 역할 관리
 │   ├── usr/                # [사용자/조직] 조직도, 사원 관리

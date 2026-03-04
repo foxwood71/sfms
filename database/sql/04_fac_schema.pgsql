@@ -142,7 +142,7 @@ BEFORE UPDATE ON fac.facilities
 FOR EACH ROW EXECUTE FUNCTION cmm.trg_set_updated_at();
 
 -- [Index]
-CREATE INDEX idx_fac_name_pg ON fac.facilities USING pgroonga (name);       -- 이름 전문 검색
+CREATE INDEX idx_fac_name_pg ON fac.facilities USING pgroonga (name) with (tokenizer='TokenMecab', normalizer='NormalizerAuto');        -- 이름 전문 검색
 CREATE INDEX idx_fac_meta_gin ON fac.facilities USING GIN (metadata);       -- 메타데이터 검색
 
 -- [Comments]
@@ -210,8 +210,8 @@ BEFORE UPDATE ON fac.spaces
 FOR EACH ROW EXECUTE FUNCTION cmm.trg_set_updated_at();
 
 -- [Index]
-CREATE INDEX idx_fac_spaces_name_pg ON fac.spaces USING pgroonga (name);                -- 이름 전문 검색
-CREATE INDEX idx_fac_spaces_meta_pg ON fac.spaces USING pgroonga (metadata);            -- 메타데이터 전문 검색
+CREATE INDEX idx_fac_spaces_name_pg ON fac.spaces USING pgroonga (name) with (tokenizer='TokenMecab', normalizer='NormalizerAuto');                -- 이름 전문 검색
+CREATE INDEX idx_fac_spaces_meta_pg ON fac.spaces USING pgroonga (metadata) with (tokenizer='TokenMecab', normalizer='NormalizerAuto');            -- 메타데이터 전문 검색
 CREATE INDEX idx_fac_spaces_meta_gin ON fac.spaces USING GIN (metadata);                -- 메타데이터 JSON 검색
 CREATE INDEX idx_fac_spaces_hierarchy ON fac.spaces (facility_id, parent_id);           -- 계층 조회 최적화
 

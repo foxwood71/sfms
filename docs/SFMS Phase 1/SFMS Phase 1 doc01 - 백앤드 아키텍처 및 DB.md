@@ -25,7 +25,7 @@ sfms-backend/
 │   │   ├── security.py     # JWT 핸들러, 암호화
 │   │   ├── exceptions.py   # 커스텀 예외 처리
 │   │   └── middleware/     # ADT 로깅 미들웨어 등
-│   ├── modules/            # 도메인별 모듈 (Modular Monolith)
+│   ├── domains/            # 도메인별 모듈 (Modular Monolith)
 │   │   ├── adt/            # [감사] Audit Log
 │   │   ├── iam/            # [보안] Auth, Role, Permission
 │   │   ├── usr/            # [조직] User, Organization

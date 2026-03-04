@@ -103,7 +103,7 @@ CREATE TABLE usr.users (
 
 -- [Index]
 CREATE INDEX idx_usr_users_org_id ON usr.users (org_id);
-CREATE INDEX idx_usr_name_pg ON usr.users USING pgroonga (name);
+CREATE INDEX idx_usr_name_pg ON usr.users USING pgroonga (name) with (tokenizer='TokenMecab', normalizer='NormalizerAuto'); 
 CREATE INDEX idx_usr_login_id ON usr.users (login_id);
 CREATE INDEX idx_usr_users_metadata_gin ON usr.users USING GIN (metadata);
 

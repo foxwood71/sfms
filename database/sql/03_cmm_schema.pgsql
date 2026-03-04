@@ -212,8 +212,8 @@ CREATE TABLE cmm.audit_logs (
 
 CREATE INDEX idx_cmm_audit_target_lookup ON cmm.audit_logs (target_table, target_id);
 CREATE INDEX idx_cmm_audit_actor ON cmm.audit_logs (actor_user_id);
-CREATE INDEX idx_cmm_audit_desc_pg ON cmm.audit_logs USING pgroonga (description);
-CREATE INDEX idx_cmm_audit_snap_pg ON cmm.audit_logs USING pgroonga (snapshot);
+CREATE INDEX idx_cmm_audit_desc_pg ON cmm.audit_logs USING pgroonga (description) with (tokenizer='TokenMecab', normalizer='NormalizerAuto');
+CREATE INDEX idx_cmm_audit_snap_pg ON cmm.audit_logs USING pgroonga (snapshot) with (tokenizer='TokenMecab', normalizer='NormalizerAuto');
 
 COMMENT ON TABLE cmm.audit_logs IS '시스템 감사 로그 및 주요 행위 추적 테이블';
 COMMENT ON COLUMN cmm.audit_logs.id IS '로그 고유 ID (PK)';

@@ -11,6 +11,8 @@
 		// -------------------------------------------------------------
 		// 1. 공통 에디터 설정
 		// -------------------------------------------------------------
+		"workbench.colorTheme": "Catppuccin Mocha",
+		"workbench.iconTheme": "catppuccin-mocha",
 		"editor.insertSpaces": true,
 		"editor.tabSize": 4, // 모든 파일의 들여쓰기를 4칸으로 통일
 		"editor.formatOnSave": true,
@@ -104,7 +106,7 @@
 		"sqlfluff.dialect": "postgres",
 		"sqlfluff.linter.run": "onSave",
 		"[sql]": {
-			"editor.defaultFormatter": "sqlfluff.vscode-sqlfluff",
+			"editor.defaultFormatter": "bradymholt.pgformatter",
 			"editor.formatOnSave": true
 		},
 		"pgsql.connectionTimeout": 30,

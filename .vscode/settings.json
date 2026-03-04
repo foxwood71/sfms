@@ -2,6 +2,8 @@
 	// -------------------------------------------------------------
 	// 1. 공통 에디터 설정
 	// -------------------------------------------------------------
+	"workbench.colorTheme": "Catppuccin Mocha",
+	"workbench.iconTheme": "catppuccin-mocha",
 	"editor.insertSpaces": true,
 	"editor.tabSize": 4, // 모든 파일의 들여쓰기를 4칸으로 통일
 	"editor.formatOnSave": true,
@@ -16,7 +18,13 @@
 		"**/dist": true, // 빌드 결과물
 		"**/.uv": true, // uv 패키지 매니저 캐시
 		"**/.mypy_cache": true,
-		"**/.pytest_cache": true
+		"**/.pytest_cache": true,
+		// ROOT_CONFIG에서는 하위 프로젝트 폴더를 숨겨서 중복을 방지합니다.
+		"database": true,
+		"backend": true,
+		"frontend": true,
+		"docs": true,
+		"infra": true
 	},
 
 	// 2. Explorer: File Nesting (연관된 설정 파일을 부모 파일 아래로 묶어 깔끔하게 표시)
@@ -57,7 +65,7 @@
 
 	// 워크스페이스(SFMS 폴더) 기준으로 백엔드 가상환경을 동적으로 찾도록 설정
 	"python.terminal.activateEnvironment": true,
-	"python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
+	"python.defaultInterpreterPath": "${workspaceFolder:⚙️ BACKEND}/.venv/bin/python",
 	"python.languageServer": "Pylance",
 	"python.analysis.typeCheckingMode": "basic",
 	"ruff.enableExperimentalCodeActions": true,
@@ -89,12 +97,11 @@
 	"sqlfluff.dialect": "postgres",
 	"sqlfluff.linter.run": "onSave",
 	"[sql]": {
-		"editor.defaultFormatter": "sqlfluff.vscode-sqlfluff",
+		"editor.defaultFormatter": "bradymholt.pgformatter",
 		"editor.formatOnSave": true
 	},
 	"pgsql.connectionTimeout": 30,
 	"pgsql.showStartNotification": false,
-
 	// -------------------------------------------------------------
 	// 5. Markdown 설정
 	// -------------------------------------------------------------
@@ -161,5 +168,6 @@
 			"path": "psql",
 			"args": ["-h", "localhost", "-U", "sfms_user", "sfms"]
 		}
-	}
+	},
+	"markdown.validate.enabled": false
 }
