@@ -2,14 +2,25 @@
 
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
-from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, String
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
 from app.core.database import Base
+
+if TYPE_CHECKING:
+    from app.domains.iam.models import Role
 
 
 class Organization(Base):
@@ -87,6 +98,7 @@ class User(Base):
         UUID(as_uuid=True), nullable=True
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    login_fail_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     last_login_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
@@ -106,4 +118,9 @@ class User(Base):
     # Relationships
     organization: Mapped[Optional["Organization"]] = relationship(
         "Organization", back_populates="users"
+    )
+
+    # app/domains/usr/models.py 파일의 User 클래스 하단에 추가
+    roles: Mapped[List["Role"]] = relationship(
+        "Role", secondary="iam_user_roles", back_populates="users"
     )

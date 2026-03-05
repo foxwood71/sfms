@@ -20,6 +20,13 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "SFMS Backend"
     API_V1_STR: str = "/api/v1"
 
+    # JWT 보안 설정 추가
+    # 실제 운영 환경에서는 반드시 .env 파일을 통해 복잡한 문자열로 변경해야 합니다!
+    SECRET_KEY: str = "your-super-secret-key-change-me-in-production"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+
     # .env 파일에서 읽어올 변수들
     DATABASE_URL: str = ""
     REDIS_URL: str = ""
@@ -38,6 +45,11 @@ class Settings(BaseSettings):
         extra="ignore",  # 정의되지 않은 환경변수 무시
         secrets_dir=active_secrets_dir,
     )
+
+    class Config:
+        """Pydantic Settings 모델의 동작 방식을 설정하는 내부 클래스입니다."""
+
+        case_sensitive = True  # 환경 변수 이름의 대소문자를 엄격하게 구분합니다.
 
 
 settings = Settings()

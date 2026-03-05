@@ -6,27 +6,19 @@
 
 from fastapi import APIRouter
 
-from app.domains.cmm.router import router as cmm_router
-
-#  [Roadmap] 추후 구현 시 주석 해제하여 연결
-# from app.domains.iam.router import router as iam_router
+# TODO: 추후 도메인이 추가되면 아래에 임포트하고 등록합니다.
 # from app.domains.fac.router import router as fac_router
-# from app.domains.eqp.router import router as eqp_router
-
+from app.domains.cmm.router import router as cmm_router
+from app.domains.fac.router import router as fac_router
+from app.domains.iam.router import auth_router, iam_router
+from app.domains.usr.router import router as usr_router
 
 api_router = APIRouter()
 
-#  각 도메인의 라우터를 통합 관리
-api_router.include_router(cmm_router)
-
-# --- 2. 인증/권한 도메인 (Identity) ---
-#  로그인, 토큰 갱신, 메뉴 권한 관리
-# api_router.include_router(iam_router, prefix="/iam", tags=["Identity"])
-
-# --- 3. 시설 관리 도메인 (Facility) ---
-#  시설물 및 공간 정보 관리
-# api_router.include_router(fac_router, prefix="/fac", tags=["Facility"])
-
-# --- 4. 설비 관리 도메인 (Equipment) ---
-#  기계, 전기, 계측제어 설비 마스터 관리
-# api_router.include_router(eqp_router, prefix="/eqp", tags=["Equipment"]))
+# 각 도메인별 라우터를 통합 라우터에 장착합니다.
+# 이미 개별 라우터에 prefix(예: /usr, /iam)가 설정되어 있으므로 여기서는 그대로 포함합니다.
+api_router.include_router(auth_router)  # 인증 라우터
+api_router.include_router(iam_router)  # 권한 라우터
+api_router.include_router(usr_router)  # 사용자 및 조직 라우터
+api_router.include_router(cmm_router)  # 공통 관리 라우터
+api_router.include_router(fac_router)  # 시설 관리 라우터

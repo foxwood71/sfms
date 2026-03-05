@@ -80,6 +80,7 @@ CREATE TABLE usr.users (
     
     is_active           BOOLEAN DEFAULT TRUE,           -- 계정 활성화 여부 (퇴사자 처리 등)
     last_login_at       TIMESTAMPTZ,                    -- 마지막 로그인 시간
+    login_fail_count    INTEGER DEFAULT 0 NOT NULL,     -- 로그인 실패 횟수
     
     -- [Migration] 레거시 데이터 매핑
     legacy_id           INTEGER,
@@ -125,6 +126,7 @@ COMMENT ON COLUMN usr.users.email IS '이메일 주소 (Unique, 소문자)';
 COMMENT ON COLUMN usr.users.phone IS '전화번호 또는 휴대전화번호';
 COMMENT ON COLUMN usr.users.is_active IS '계정 사용 가능 여부 (False: 잠김/퇴사)';
 COMMENT ON COLUMN usr.users.last_login_at IS '최근 로그인 성공 일시';
+COMMENT ON COLUMN usr.users.login_fail_count  IS '로그인 실패 횟수';
 COMMENT ON COLUMN usr.users.legacy_id IS '[마이그레이션] 기존 시스템 사용자 ID';
 COMMENT ON COLUMN usr.users.legacy_source IS '[마이그레이션] 데이터 원천';
 COMMENT ON COLUMN usr.users.metadata IS '사용자 설정 및 확장 속성 (JSONB)';

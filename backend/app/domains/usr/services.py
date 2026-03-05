@@ -1,72 +1,76 @@
 """사용자(User) 및 조직(Organization) 도메인의 비즈니스 로직(Service)을 담당하는 모듈입니다."""
 
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
+from app.core.constants import ErrorCode
 from app.core.exceptions import (
     BadRequestException,
     ConflictException,
+    CustomException,
     NotFoundException,
 )
+from app.core.security import get_password_hash
 from app.domains.usr.models import Organization, User
 from app.domains.usr.schemas import OrgCreate, OrgUpdate, UserCreate, UserUpdate
-
-# TODO: app.core.security 모듈에 get_password_hash 함수 구현 필요
-# from app.core.security import get_password_hash
 
 
 class OrgService:
     """조직(Organization) 관련 비즈니스 로직을 처리하는 서비스 클래스입니다."""
 
     @staticmethod
-    async def get_org_tree(db: AsyncSession) -> List[Dict[str, Any]]:
-        """
-        활성화된 전체 조직을 조회하여 트리 구조(계층형 JSON)로 조립하여 반환합니다.
+    async def get_organizations(
+        db: AsyncSession, mode: str = "tree", is_active: str = "true"
+    ) -> List[Any]:
+        """명세서 2.1: 조직 목록 조회 (Flat vs Tree)"""
+        stmt = select(Organization)
+        if is_active == "true":
+            stmt = stmt.where(Organization.is_active == True)
 
-        DB의 재귀 쿼리 대신, 전체를 한 번에 조회한 후 메모리에서 조립하여 성능을 최적화합니다.
-        """
-        stmt = (
-            select(Organization)
-            .where(Organization.is_active == True)
-            .order_by(Organization.sort_order)
-        )  # noqa: E712
+        stmt = stmt.order_by(Organization.sort_order.asc())
         result = await db.execute(stmt)
-        orgs = result.scalars().all()
+        orgs = list(result.scalars().all())
 
-        # 인메모리 트리 조립 로직
-        org_dict = {org.id: org.__dict__.copy() for org in orgs}
-        for org in org_dict.values():
-            org["children"] = []  # 자식 노드 초기화
+        if mode == "flat":
+            return orgs
 
+        # Tree 구조 조립 로직 (메모리 재귀)
+        org_dict = {org.id: {**org.__dict__, "children": []} for org in orgs}
         tree = []
-        for org in org_dict.values():
-            parent_id = org.get("parent_id")
+        for org_id, org_data in org_dict.items():
+            parent_id = org_data.get("parent_id")
             if parent_id and parent_id in org_dict:
-                org_dict[parent_id]["children"].append(org)
+                org_dict[parent_id]["children"].append(org_data)
             else:
-                tree.append(org)  # 최상위(Root) 노드
-
+                tree.append(org_data)
         return tree
 
+    # 별명 붙이기 (함수 객체를 다른 이름에 할당)
+    get_org_tree = get_organizations
+
     @staticmethod
-    async def create_org(db: AsyncSession, obj_in: OrgCreate) -> Organization:
+    async def create_organizations(db: AsyncSession, obj_in: OrgCreate) -> Organization:
         """새로운 조직을 생성합니다. 코드 중복 및 상위 부서 유효성을 검증합니다."""
         # 1. 코드 중복 검증
         stmt = select(Organization).where(Organization.code == obj_in.code)
         result = await db.execute(stmt)
         if result.scalar_one_or_none():
-            raise ConflictException(
-                error_code=4090, message="이미 존재하는 조직 코드입니다."
+            raise CustomException(
+                error_code=ErrorCode.DUPLICATE_ORG_CODE,
+                message="이미 존재하는 조직 코드입니다.",
             )
 
         # 2. 상위 부서 유효성 검증
         if obj_in.parent_id:
             parent = await db.get(Organization, obj_in.parent_id)
             if not parent:
-                raise BadRequestException(
-                    error_code=4003, message="유효하지 않은 상위 부서 ID입니다."
+                raise CustomException(
+                    error_code=ErrorCode.INVALID_PARENT_ORG,
+                    message="유효하지 않은 상위 부서 ID입니다.",
                 )
 
         db_obj = Organization(**obj_in.model_dump())
@@ -75,7 +79,7 @@ class OrgService:
         return db_obj
 
     @staticmethod
-    async def update_org(
+    async def update_organizations(
         db: AsyncSession, org_id: int, obj_in: OrgUpdate
     ) -> Organization:
         """조직 정보를 수정합니다. 순환 참조를 방지하는 방어 로직이 포함되어 있습니다."""
@@ -89,8 +93,8 @@ class OrgService:
         new_parent_id = update_data.get("parent_id")
         if new_parent_id is not None and new_parent_id != org.parent_id:
             if new_parent_id == org.id:
-                raise BadRequestException(
-                    error_code=4003,
+                raise CustomException(
+                    error_code=ErrorCode.INVALID_PARENT_ORG,
                     message="자기 자신을 상위 부서로 지정할 수 없습니다.",
                 )
 
@@ -98,8 +102,8 @@ class OrgService:
             current_parent = await db.get(Organization, new_parent_id)
             while current_parent and current_parent.parent_id:
                 if current_parent.parent_id == org.id:
-                    raise BadRequestException(
-                        error_code=4005,
+                    raise CustomException(
+                        error_code=ErrorCode.CIRCULAR_REFERENCE,
                         message="하위 부서를 상위 부서로 지정할 수 없습니다 (순환 참조).",
                     )
                 current_parent = await db.get(Organization, current_parent.parent_id)
@@ -110,7 +114,7 @@ class OrgService:
         return org
 
     @staticmethod
-    async def delete_org(db: AsyncSession, org_id: int) -> None:
+    async def delete_organizations(db: AsyncSession, org_id: int) -> None:
         """
         조직을 삭제합니다. 하위 부서나 소속된 사용자가 있으면 삭제를 차단합니다.
         """
@@ -160,11 +164,7 @@ class UserService:
 
         create_data = obj_in.model_dump(exclude={"password"})
 
-        # 임시 비밀번호 해싱 처리 (get_password_hash는 외부 구현 필요)
-        # create_data["password_hash"] = get_password_hash(obj_in.password)
-        create_data["password_hash"] = (
-            f"hashed_{obj_in.password}"  # TODO: 실제 해시 함수로 교체 필요
-        )
+        create_data["password_hash"] = get_password_hash(obj_in.password)
 
         db_obj = User(**create_data)
         db.add(db_obj)
@@ -184,5 +184,74 @@ class UserService:
         user.is_active = False
         # 퇴사 일자를 metadata에 기록
         current_meta = user.user_metadata or {}
-        current_meta["retired_at"] = "2026-03-04"  # TODO: 현재 시간 동적 매핑 필요
+        current_meta["retired_at"] = datetime.now().strftime("%Y-%m-%d")
+        # 만약 상세 시간까지 필요하다면 아래 방식을 추천드려요 (ISO 포맷)
+        # current_meta["retired_at"] = datetime.now().isoformat()  # 2026-03-05T22:44:16... 형태
         user.user_metadata = current_meta
+
+    @staticmethod
+    async def get_user(db: AsyncSession, user_id: int) -> User:
+        """특정 사용자 정보를 상세 조회합니다."""
+        user = await db.get(User, user_id)
+        if not user:
+            from app.core.exceptions import NotFoundException
+
+            raise NotFoundException(message="해당 사용자를 찾을 수 없습니다.")
+        return user
+
+    @staticmethod
+    async def get_my_info_with_org(db: AsyncSession, user_id: int):
+        """
+        사용자 상세 정보와 소속 조직 정보를 조인하여 조회합니다.
+
+        명세서 2.3 요구사항에 따라 User 모델과 Organization 모델을 조인하며,  # 명세서 준수
+        프론트엔드에서 org_name 등의 정보를 추가 호출 없이 즉시 사용할 수 있도록 합니다.
+
+        Args:
+            db (AsyncSession): 비동기 데이터베이스 세션 객체
+            user_id (int): 조회하고자 하는 사용자의 고유 ID (PK)
+
+        Returns:
+            User: 조직(Organization) 정보가 포함된(Eager Loaded) 사용자 모델 객체
+
+        Raises:
+            NotFoundException: 해당 ID를 가진 사용자가 존재하지 않을 경우 발생
+        """
+        # 조직(Organization) 정보를 조인하여 한 번에 가져옴
+        stmt = (
+            select(User)
+            .options(joinedload(User.organization))
+            .where(User.id == user_id)
+        )
+        result = await db.execute(stmt)
+        user = result.scalar_one_or_none()
+
+        if not user:
+            raise NotFoundException(message="사용자를 찾을 수 없습니다.")
+
+        # 프론트엔드 요구사항에 맞춰 데이터 조립 가능
+        return user
+
+    @staticmethod
+    async def get_user_by_login_id(db: AsyncSession, login_id: str) -> Optional[User]:
+        """로그인 ID(문자열)를 기반으로 사용자를 조회합니다."""
+        from sqlalchemy import select
+
+        stmt = select(User).where(User.login_id == login_id)
+        result = await db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_user_by_id(db: AsyncSession, user_id: int) -> Optional[User]:
+        """
+        사용자의 고유 ID(PK)를 기반으로 사용자 정보를 조회합니다.
+
+        Args:
+            db (AsyncSession): 비동기 DB 세션
+            user_id (int): 조회할 사용자의 PK
+
+        Returns:
+            Optional[User]: 사용자 객체 또는 없으면 None
+        """
+        # SQLAlchemy 2.0에서는 db.get()이 가장 깔끔하고 빠릅니다.
+        return await db.get(User, user_id)

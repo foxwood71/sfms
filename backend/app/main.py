@@ -8,9 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from app.api.v1.api_router import api_router
 from app.core.config import settings
 from app.core.exceptions import SFMSException
-from app.domains.usr.router import router as usr_router
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -80,7 +80,8 @@ async def sfms_exception_handler(request: Request, exc: SFMSException):
     )
 
 
-@app.get("/api/v1/system/health", response_model=APIResponse[dict])
+# @app.get("/api/v1/system/health", response_model=APIResponse[dict])
+@app.get("/health", response_model=APIResponse[dict])
 async def health_check():
     """
     시스템의 헬스 체크 상태를 반환합니다.
@@ -106,7 +107,6 @@ async def health_check():
     )
 
 
-# 도메인의 라우터를 메인 애플리케이션에 병합(Mount)
-# prefix에 설정된 값(예: "/api/v1")이 라우터의 모든 엔드포인트 앞에 자동으로 붙습니다.
-# USR(사용자 및 조직)
-app.include_router(usr_router, prefix=settings.API_V1_STR)
+# 통합 라우터를 메인 애플리케이션에 병합(Mount)합니다.
+# 이 한 줄로 api_router 안에 있는 모든 도메인 API가 /api/v1 하위로 맵핑됩니다.
+app.include_router(api_router, prefix=settings.API_V1_STR)

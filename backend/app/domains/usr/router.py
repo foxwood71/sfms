@@ -6,12 +6,9 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.schemas import APIResponse
 from app.domains.usr.schemas import OrgCreate, OrgRead, OrgUpdate, UserCreate, UserRead
 from app.domains.usr.services import OrgService, UserService
-
-# TODO: APIResponse가 main.py에 있으면 순환 참조가 발생할 수 있으므로,
-# 추후 app/core/responses.py 같은 별도 파일로 분리하는 것을 권장합니다!
-from app.main import APIResponse
 
 router = APIRouter(prefix="/usr", tags=["사용자 및 조직 관리 (USR)"])
 
@@ -45,7 +42,7 @@ async def create_organization(
     db: AsyncSession = Depends(get_db),
 ):
     """신규 조직(부서)을 생성합니다."""
-    new_org = await OrgService.create_org(db, obj_in=org_in)
+    new_org = await OrgService.create_organizations(db, obj_in=org_in)
     return APIResponse(
         success=True,
         code=201,
@@ -65,7 +62,9 @@ async def update_organization(
 
     상위 부서(parent_id) 변경 시 순환 참조(Circular Reference) 여부를 자동으로 검증합니다.
     """
-    updated_org = await OrgService.update_org(db, org_id=org_id, obj_in=org_in)
+    updated_org = await OrgService.update_organizations(
+        db, org_id=org_id, obj_in=org_in
+    )
     return APIResponse(
         success=True,
         code=200,
@@ -84,7 +83,7 @@ async def delete_organization(
 
     하위 부서나 소속된 사용자가 존재할 경우 삭제가 차단됩니다. (409 Conflict)
     """
-    await OrgService.delete_org(db, org_id=org_id)
+    await OrgService.delete_organizations(db, org_id=org_id)
     return APIResponse(
         success=True,
         code=200,

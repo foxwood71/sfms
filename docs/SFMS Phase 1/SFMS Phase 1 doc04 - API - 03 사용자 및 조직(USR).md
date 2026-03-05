@@ -168,13 +168,10 @@ export interface CreateUserRequest {
 * `mode`: `flat` (단순 리스트) or `tree` (계층형 JSON) - Default: `tree`
 * `is_active`: `true` (활성 조직만) or `all`
 
-
 * **Response:** `ApiResponse<List[OrgRead]>`
 * **Logic:**
 * `tree` 모드: 전체 데이터를 메모리에서 재귀적으로 조립하여 반환하거나, Postgres `WITH RECURSIVE` 쿼리 활용.
 * 프론트엔드 `Tree` 컴포넌트(AntD 등)에 바인딩하기 적합한 구조로 반환.
-
-
 
 ### 2.2 조직 생성 (Create)
 
@@ -183,8 +180,6 @@ export interface CreateUserRequest {
 * **Logic:**
 * `code` 중복 체크 (Unique).
 * `parent_id`가 존재할 경우, 유효한 상위 부서인지 검증.
-
-
 
 ### 2.3 조직 상세 조회 (Read One)
 
@@ -198,8 +193,6 @@ export interface CreateUserRequest {
 * **Logic:**
 * `parent_id` 수정 시 **순환 참조(Circular Reference)** 방지 로직 필수. (나의 자식을 나의 부모로 설정할 수 없음)
 
-
-
 ### 2.5 조직 삭제 (Delete)
 
 * **URL:** `DELETE /api/v1/usr/organizations/{id}`
@@ -209,10 +202,7 @@ export interface CreateUserRequest {
 1. 하위 조직(`children`)이 존재하는 경우 삭제 불가 → `4091 (STATE_CONFLICT)`
 2. 소속된 사용자(`usr.users`)가 존재하는 경우 삭제 불가 → `4091 (STATE_CONFLICT)`
 
-
 * 위 조건 통과 시 Hard Delete 수행.
-
-
 
 ---
 
@@ -227,7 +217,6 @@ export interface CreateUserRequest {
 * `keyword`: 이름, 사번, 아이디 검색
 * `is_active`: 재직자(`true`), 퇴사자(`false`)
 
-
 * **Response:** `ApiResponse<List[UserRead]>`
 
 ### 3.2 사용자 생성 (Create)
@@ -238,8 +227,6 @@ export interface CreateUserRequest {
 * **중복 체크:** `login_id`, `email`, `emp_code` 중복 시 각각 적절한 에러 메시지 반환 (`4090`).
 * **비밀번호:** `passlib` 등을 사용하여 Hash 후 저장.
 * **기본값:** `is_active=True`, `metadata={}`
-
-
 
 ### 3.3 사용자 상세 조회 (Read One)
 
@@ -256,8 +243,6 @@ export interface CreateUserRequest {
 * `email` 변경 시 중복 체크.
 * `org_id` 변경 시 부서 이동 처리 (Audit Log 기록 권장).
 
-
-
 ### 3.5 비밀번호 변경 (Change Password)
 
 * **URL:** `PUT /api/v1/usr/users/{id}/password`
@@ -266,16 +251,12 @@ export interface CreateUserRequest {
 * 본인 요청: `current_password` 일치 여부 확인.
 * 관리자 요청(비밀번호 초기화): 별도 API(`POST .../reset-password`) 분리 또는 권한 체크 후 강제 변경 허용.
 
-
-
 ### 3.6 사용자 삭제/비활성화 (Delete)
 
 * **URL:** `DELETE /api/v1/usr/users/{id}`
 * **Logic:**
 * 실제 데이터 삭제(Hard Delete)보다는 `is_active=False` 처리(Soft Delete)를 권장.
 * 퇴사 처리를 위해 `metadata`에 `retired_at` 날짜 기록 가능.
-
-
 
 ---
 
@@ -293,8 +274,6 @@ export interface CreateUserRequest {
 3. `usr.users.profile_image_id` 컬럼 업데이트.
 4. 기존 이미지가 있다면 삭제(또는 보관) 처리.
 
-
-
 ---
 
 ## 5. ⚠️ USR 도메인 에러 코드 (Error Codes)
@@ -303,12 +282,14 @@ export interface CreateUserRequest {
 
 | HTTP | Code | Name | Description |
 | --- | --- | --- | --- |
+| 400 | `4003` | `INVALID_PARENT_ORG` | 상위 부서 ID가 자기 자신이거나 유효하지 않습니다. |
+| 400 | `4005` | `CIRCULAR_REFERENCE` | 하위 부서를 상위 부서로 지정할 수 없습니다 (순환 참조). |
 | 409 | `4090` | `DUPLICATE_LOGIN_ID` | 이미 사용 중인 로그인 ID입니다. |
 | 409 | `4093` | `DUPLICATE_EMAIL` | 이미 등록된 이메일 주소입니다. |
 | 409 | `4094` | `DUPLICATE_EMP_CODE` | 이미 등록된 사원 번호입니다. |
+| 409 | `4090` | `DUPLICATE_ORG_CODE` | 이미 사용 중인 조직 코드입니다. |
 | 409 | `4091` | `ORG_HAS_CHILDREN` | 하위 부서가 존재하여 삭제할 수 없습니다. |
 | 409 | `4095` | `ORG_HAS_USERS` | 부서원이 존재하여 부서를 삭제할 수 없습니다. |
-| 400 | `4003` | `INVALID_PARENT_ORG` | 상위 부서 ID가 자기 자신이거나 유효하지 않습니다. |
 
 ---
 

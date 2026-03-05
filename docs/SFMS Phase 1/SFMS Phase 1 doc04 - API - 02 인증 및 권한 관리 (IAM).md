@@ -141,20 +141,16 @@ export interface Role {
 * **Request Body:** `LoginRequest`
 * **Response:** `ApiResponse<Token>`
 * **Logic:**
-1. **Rate Limiting:** IP당 분당 5회 시도 제한 (Redis).
-2. `login_id`로 사용자 조회.
-* 실패 시: "아이디 또는 비번이 틀립니다" (보안상 ID 존재 여부 노출 금지).
+  1. `login_id`로 사용자 조회.
+  2. **Rate Limiting:** IP당 분당 5회 시도 제한 (Redis).
+     * 실패 시: "아이디 또는 비번이 틀립니다" (보안상 ID 존재 여부 노출 금지).
 
+  3. **잠금 확인:** `login_fail_count >= 5` 이면 `4031 (ACCOUNT_LOCKED)` 반환.
+  4. **비밀번호 검증:** BCrypt 해시 대조.
+     * 실패 시: `login_fail_count + 1`.
 
-3. **잠금 확인:** `login_fail_count >= 5` 이면 `4031 (ACCOUNT_LOCKED)` 반환.
-4. **비밀번호 검증:** BCrypt 해시 대조.
-* 실패 시: `login_fail_count + 1`.
-
-
-5. **성공 시:** `login_fail_count = 0`, `last_login_at = Now` 업데이트.
-6. **Audit Log:** `action_type: LOGIN` 기록.
-
-
+  5. **성공 시:** `login_fail_count = 0`, `last_login_at = Now` 업데이트.
+  6. **Audit Log:** `action_type: LOGIN` 기록.
 
 ### 2.2 토큰 갱신 (Refresh Token)
 
@@ -167,8 +163,6 @@ export interface Role {
 2. Redis Blacklist 확인 (이미 사용된 토큰인지).
 3. **Rotation:** 기존 Refresh Token을 무효화(Blacklist 등록)하고, **새로운 Access Token과 새로운 Refresh Token**을 발급하여 반환.
 
-
-
 ### 2.3 내 정보 조회 (Get Me)
 
 * **URL:** `GET /api/v1/auth/me`
@@ -177,15 +171,11 @@ export interface Role {
 * **Logic:**
 * `org_id`를 이용해 `usr.organizations` 테이블을 조인, `org_name`을 함께 반환하여 프론트엔드에서 추가 호출을 줄임.
 
-
-
 ### 2.4 로그아웃 (Logout)
 
 * **URL:** `POST /api/v1/auth/logout`
 * **Logic:**
 * 남은 유효 시간(`exp`)만큼 Access Token을 Redis Blacklist에 등록.
-
-
 
 ---
 
@@ -209,8 +199,6 @@ export interface Role {
 * `code`는 대문자로 강제 변환 및 중복 체크 (`4090`).
 * `permissions` JSON 스키마 검증 (임의의 키값 방지).
 
-
-
 ### 3.4 역할 수정
 
 * **URL:** `PATCH /api/v1/iam/roles/{id}`
@@ -224,8 +212,6 @@ export interface Role {
 * **시스템 역할 삭제 불가** (`4092`).
 * **사용 중인 역할 삭제 불가:** `iam.user_roles` 참조 확인 (`4091`).
 
-
-
 ---
 
 ## 4. 👥 사용자 권한 할당 API (Role Assignment)
@@ -238,8 +224,6 @@ export interface Role {
 * 기존 권한을 모두 삭제(`DELETE`)하고 새로 입력(`INSERT`)하는 **Full Replace** 방식.
 * **Audit Log:** `action_type: GRANT_ROLE`, `target_id: user_id` 기록.
 * **Cache Invalidation:** 대상 사용자가 로그인 중일 경우, 권한 변경 사항이 즉시 반영되지 않으므로, 중요한 변경인 경우 대상 사용자의 Refresh Token을 강제 만료시키는 로직 고려 가능.
-
-
 
 ---
 
