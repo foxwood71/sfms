@@ -27,8 +27,11 @@ EXTENSIONS=(
     "davidWang.ini-for-vscode"
     "ms-python.python"
     "charliermarsh.ruff"
+    "artinmajdi.code-dependency-visualizer"
     "biomejs.biome"
+    "juanallo.vscode-dependency-cruiser"
     "ms-ossdata.vscode-pgsql"
+    "bradymholt.pgformatter"
     "Redis.redis-for-vscode"
     "humao.rest-client"
     "ahmadalli.vscode-nginx-conf"  # Nginx 설정 지원
@@ -50,7 +53,7 @@ echo -e "${BLUE}----------------------------------------${RESET}"
 # 확장 프로그램 설치 루프
 # Bash에서 배열 전체를 순회할 때는 "${EXTENSIONS[@]}" 형식을 사용해야 합니다.
 for EXT in "${EXTENSIONS[@]}"; do
-    echo -e "${YELLOW}📦 설치 중:${RESET} s${GREEN}$EXT${RESET}"
+    echo -e "${YELLOW}📦 설치 중:${RESET} ${GREEN}$EXT${RESET}"
     code --install-extension "$EXT" --force
 done
 

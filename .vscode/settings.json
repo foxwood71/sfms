@@ -70,6 +70,14 @@
 	"python.analysis.typeCheckingMode": "basic",
 	"ruff.enableExperimentalCodeActions": true,
 
+	// Code Dependency Visualizer
+	"codeDependencyVisualizer.pythonEnabled": true,
+	"codeDependencyVisualizer.pythonGraphType": "call", // 함수 호출 그래프
+	"codeDependencyVisualizer.showGraphOnStartup": true, // 열면 자동으로 그래프 열기
+	"codeDependencyVisualizer.excludeImports": false, // import 의존성도 포함
+	"codeDependencyVisualizer.graphLayout": "hierarchical", // 계층형 레이아웃
+	"codeDependencyVisualizer.showStatusBar": true,
+
 	// -------------------------------------------------------------
 	// 3. Frontend 설정 (React/TS - Biome)
 	// -------------------------------------------------------------
@@ -89,6 +97,28 @@
 			"source.addMissingImports": "explicit"
 		}
 	},
+
+	// Call Hierarchy 관련 편의 설정
+	"js/ts.suggest.autoImports": true,
+	"typescript.preferences.includeCompletionsForImportStatements": true,
+
+	// TypeScript/JavaScript에서 Call Hierarchy를 빠르게 쓰기
+	"workbench.list.defaultFindMode": "highlight",
+	"workbench.list.typeNavigationMode": "automatic",
+	"editor.suggestSelection": "first",
+	"editor.snippetSuggestions": "top",
+
+	// dependency-cruiser 확장 설정
+	"dependency-cruiser.configFile": ".dependency-cruiser.js",
+	"dependency-cruiser.runOnSave": true,
+	"dependency-cruiser.layout": "hierarchical",
+	"dependency-cruiser.maxDepth": 3,
+	"dependency-cruiser.exclude": [
+		"node_modules",
+		"dist",
+		"build",
+		"**/*.test.*"
+	],
 
 	// -------------------------------------------------------------
 	// 4. SQL (PostgreSQL)
