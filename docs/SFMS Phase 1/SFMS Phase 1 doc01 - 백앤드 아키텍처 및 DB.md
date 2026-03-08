@@ -1,327 +1,126 @@
 # 📘 SFMS Phase 1: 통합 설계서 (Foundation & Security)
 
 * **프로젝트명:** SFMS (Sewage Facility Management System)
-* **작성일:** 2026-02-18
-* **작성자:** Chief Architect (오빠야~)
+* **최종 수정일:** 2026-03-08
 * **단계:** Phase 1 (기반 구축 및 보안)
 * **기술 스택:**
-* **Backend:** Python 3.12+, FastAPI, SQLAlchemy (Async), Pydantic v2
-* **Database:** PostgreSQL 16 + **PGroonga** (한글/JSONB 검색 최적화)
-* **Frontend:** React, TypeScript, Ant Design Pro
-* **Infra:** Docker Compose
+    * **Backend:** Python 3.13, FastAPI, SQLAlchemy 2.0 (Async), Pydantic v2
+    * **Database:** PostgreSQL 16 + **PGroonga** (한글/JSONB 검색 최적화)
+    * **Caching:** Redis (Session, Blacklist, Sequence Lock)
+    * **Testing:** Pytest + **AnyIO** (pytest-asyncio 미사용)
 
 ---
 
 ## 1. 🏗️ 프로젝트 구조 (Project Structure)
 
-**Domain-Driven Design (DDD)**의 경량화 버전을 채택하여 모듈 간 응집도를 높입니다.
+**Domain-Driven Design (DDD)**의 경량화 버전인 Modular Monolith 구조를 채택하여 도메인 간 독립성을 유지합니다.
 
 ```text
-sfms-backend/
+backend/
 ├── app/
-│   ├── core/               # 전역 설정, 보안, DB, 로깅, 미들웨어
-│   │   ├── config.py       # 환경변수 관리
-│   │   ├── database.py     # SQLAlchemy 세션 및 Base
-│   │   ├── security.py     # JWT 핸들러, 암호화
-│   │   ├── exceptions.py   # 커스텀 예외 처리
-│   │   └── middleware/     # ADT 로깅 미들웨어 등
-│   ├── domains/            # 도메인별 모듈 (Modular Monolith)
-│   │   ├── adt/            # [감사] Audit Log
-│   │   ├── iam/            # [보안] Auth, Role, Permission
-│   │   ├── usr/            # [조직] User, Organization
-│   │   └── fac/            # [시설] Facility Management
-│   └── main.py             # FastAPI 진입점
-├── docs/                   # 설계 문서
-├── tests/                  # Pytest
-├── docker-compose.yml      # PGroonga, Redis 실행
-└── requirements.txt
-
+│   ├── core/               # 전역 설정 및 인프라 레이어
+│   │   ├── config.py       # 환경변수 및 전역 설정
+│   │   ├── database.py     # SQLAlchemy 엔진 및 세션 관리
+│   │   ├── security.py     # bcrypt(Python 3.13) 암호화 및 JWT 로직
+│   │   ├── responses.py    # APIResponse 표준 규격 정의
+│   │   ├── dependencies.py # Annotated 기반 공통 의존성
+│   │   ├── codes.py        # 시스템 공통 에러/성공 코드
+│   │   └── exceptions.py   # 커스텀 예외 클래스
+│   ├── api/v1/             # API 엔드포인트 통합 레이어
+│   │   └── api_router.py   # 모든 도메인 라우터 통합
+│   ├── domains/            # 비즈니스 로직 레이어 (도메인별 격리)
+│   │   ├── {domain}/       # cmm, sys, iam, usr, fac 등
+│   │   │   ├── __init__.py # 도메인 코드 정의 (DOMAIN = "FAC" 등)
+│   │   │   ├── models.py   # SQLAlchemy 테이블 모델
+│   │   │   ├── schemas.py  # Pydantic 데이터 검증 스키마
+│   │   │   ├── services.py # 핵심 비즈니스 로직 (Service Class)
+│   │   │   └── router.py   # FastAPI API 엔드포인트
+│   └── main.py             # FastAPI 애플리케이션 진입점
+├── database/               # PGSQL 스키마 DDL 및 시드 데이터
+├── scripts/                # 관리용 쉘/파이썬 스크립트
+└── tests/                  # AnyIO 기반 도메인/통합 테스트
 ```
 
 ---
 
-## 2. 🗄️ 데이터베이스 스키마 (ERD & Schema)
+## 📜 2. 코드 문서화 표준 (Python Docstrings)
 
-### 2.1 공통 설계 원칙
+백엔드 모든 코드는 **Google Style Docstrings**를 표준으로 사용하며, VS Code 인텔리센스 지원을 극대화합니다.
 
-* Soft Delete: 모든 주요 엔티티(User, Facility 등)는 is_deleted (Boolean) 또는 deleted_at (Timestamp) 컬럼을 보유하여 물리적 삭제를 방지한다.
-
-* Naming: Table(snake_case), Column(snake_case), PK(id BigInt).
-
-### 2.2 ERD 예시
-
-```mermaid
-erDiagram
-    %% USR: 사용자 및 조직
-    USR_Organization ||--o{ USR_Organization : "parent"
-    USR_Organization ||--o{ USR_User : "belongs_to"
-    
-    %% IAM: 권한 관리
-    USR_User ||--o{ IAM_UserRole : "has"
-    IAM_Role ||--o{ IAM_UserRole : "assigned_to"
-
-    %% FAC: 시설 관리
-    FAC_Facility ||--o{ FAC_Facility : "parent"
-
-    %% ADT: 감사 로그 (느슨한 연결)
-    USR_User ||--o{ ADT_AuditLog : "performs"
-
-    USR_User {
-        bigint id PK
-        string email UK
-        string password_hash
-        string name
-        jsonb preferences
-    }
-
-    IAM_Role {
-        bigint id PK
-        string code UK
-        jsonb permissions "Menu Access Matrix"
-    }
-
-    ADT_AuditLog {
-        bigint id PK
-        uuid trace_id
-        string target_domain
-        jsonb snapshot "Before/After Diff"
-    }
-
-    FAC_Facility {
-        bigint id PK
-        string name
-        jsonb metadata "Specs & Attributes"
-    }
-
-```
-
-### 2.2 상세 스키마 정의 (PostgreSQL + PGroonga)
-
-#### 2.2.1. ADT_AuditLog (감사 로그)
-
-시스템의 모든 변경 사항을 추적하는 블랙박스입니다.
-
-**제약 사항:**
-1. **Log Level:** 사용자의 행위만 기록한다.
-2. **Scope:** LOGIN, LOGOUT, CREATE, UPDATE, DELETE 행위만 기록.(설정, 기준정보, 사용자 행위만 기록)
-3. **Partitioning:** 월 단위(Month) 파티셔닝을 적용하여 1년 지난 로그는 아카이빙한다.
-
-* **Index Strategy:** `snapshot` 컬럼에 PGroonga 인덱스를 적용하여 JSON 내부 검색 가속.
-
-| Field | Type | Nullable | Description |
-| --- | --- | --- | --- |
-| `id` | `BigInteger` | NO | PK (Auto Increment) |
-| `trace_id` | `UUID` | NO | 요청 추적 ID (Middleware 생성) |
-| `actor_id` | `BigInteger` | YES | 수행자 ID (User ID) |
-| `ip_address` | `Inet` | YES | 요청자 IP (보안 감사 필수 항목 추가) |
-| `user_agent` | `Text` | YES | 요청 브라우저/기기 정보 (추가) |
-| `target_domain` | `Varchar(50)` | NO | 예: `FAC`, `USR` |
-| `target_id` | `Varchar(100)` | NO | 대상 레코드 PK |
-| `action` | `Varchar(20)` | NO | `CREATE`, `UPDATE`, `DELETE`, `LOGIN` |
-| `snapshot` | `JSONB` | YES | 변경 전/후 데이터 (PGroonga Index) |
-| `created_at` | `DateTime` | NO | 생성 일시 (Default: Now) |
-
-**`snapshot` JSON 구조 예시:**
-
-```json
-{
-  "before": { "status": "STOP", "temp": 45 },
-  "after": { "status": "RUN", "temp": 60 },
-  "changes": ["status", "temp"],
-  "reason": "정기 가동"
-}
-
-```
-
-#### 2.2.2. IAM_Role (역할 및 권한)
-
-* **Key Concept:** 메뉴별 권한을 JSONB로 관리하여 스키마 변경 없이 권한 체계를 수정 가능하게 함.
-* RBAC(Role-Based)와 **데이터 접근 범위(Scope)**를 분리하여 설계한다.
-* **IAM_Role (permissions):** "할 수 있는 행위" (What)
-* **USR_User (access_scope):** "접근 가능한 데이터" (Where)
-
-| Table | Field | Type | Description |
-| --- | --- | --- | --- |
-| IAM_Role | permissions | JSONB | * 메뉴/기능별 권한 매트릭스 <br>예: {"fac": ["read", "write"], "sys": ["read"]} |
-| USR_User | access_scope | JSONB | * 데이터 접근 범위<br>예: {"facility_ids": [101, 102], "dept_code": "MAIN"} |
-
-**`permissions` JSON 구조 예시:**
-
-```json
-{
-  "fac_mgmt": ["read", "create", "update", "delete"],
-  "user_mgmt": ["read"],
-  "report": ["read", "export"]
-}
-
-```
-
-### 2.2.3. CMM_File (파일 메타데이터)
-
-NewMinIO 객체와 DB 간의 정합성을 보장하기 위한 메타데이터 테이블.
-
-| Field | Type | Description |
-| --- | --- | --- |
-| id | UUID | PK (MinIO Object Name과 동일하게 사용 권장) |
-| original_name | Varchar | 업로드 원본 파일명 |
-| file_size | BigInt | 파일 크기 (Byte) |
-| mime_type | Varchar | MIME Type |
-| bucket_name | Varchar | MinIO Bucket 이름 |
-| ref_domain | Varchar | 연결된 도메인 (예: FAC) |
-| ref_id | BigInt | 연결된 레코드 ID |
-
----
-
-## 3. 📡 API 명세서 (Interface Specification)
-
-### 3.1 공통 응답 포맷 (Envelope Pattern)
-
-프론트엔드 타입 추론을 위해 아래 제네릭 모델을 준수한다.
-
-* **backend**
+### 2.1 클래스 및 메서드 가이드
+* 모든 도메인 서비스(`Service`) 및 라우터(`Router`) 메서드는 독스트링을 필수로 포함합니다.
+* 클래스 상단에는 클래스의 역할과 책임을 기술합니다.
 
 ```python
+class FacilityService:
+    """시설물 관련 비즈니스 로직을 처리하는 클래스입니다.
+    
+    이 클래스는 시설의 생성, 수정, 삭제 및 공간 계층 구조 조립을 담당합니다.
+    """
 
-# Pseudo Code
-class APIResponse[T](BaseModel):
-    success: bool
-    code: int
-    message: str
-    data: T | None  # 실제 데이터 타입이 여기에 들어감
-    meta: dict | None
+    @staticmethod
+    async def create_facility(db: AsyncSession, obj_in: FacilityCreate, actor_id: int) -> FacilityRead:
+        """신규 시설을 데이터베이스에 등록합니다.
+
+        Args:
+            db (AsyncSession): 비동기 DB 세션
+            obj_in (FacilityCreate): 시설 생성 정보 스키마
+            actor_id (int): 행위 수행자의 고유 ID
+
+        Returns:
+            FacilityRead: 생성된 시설 정보 (지연 로딩 방지를 위해 스키마로 변환됨)
+
+        Raises:
+            ConflictException: 동일한 시설 코드가 이미 존재할 경우 발생
+        """
+        # ... 구현부
 ```
 
-### 3.2 성공 응답 포멧 예제
+---
 
-* **frontend 예제**
+## 🗄️ 3. 데이터베이스 및 삭제 정책
 
+### 3.1 삭제 전략 (Delete Policy)
+
+데이터의 성격에 따라 삭제 방식을 이원화하여 데이터 무결성을 보장합니다.
+
+* **Soft Delete (논리 삭제)**: 참조 관계가 복잡하고 이력 보존이 중요한 엔티티.
+    * 대상: `User` (`is_active` 필드 사용), `Attachment` (`is_deleted` 필드 사용).
+* **Hard Delete (물리 삭제 + 제약)**: 구조적 틀을 형성하는 엔티티.
+    * 대상: `Organization`, `Space`, `Role`, `SequenceRule`.
+    * 제약: 하위 데이터(자식 노드 또는 소속 사용자)가 존재할 경우 삭제가 엄격히 차단됨 (`ConflictException`).
+
+---
+
+## 🛠️ 4. 백엔드 개발 표준 (Engineering Standards)
+
+### 4.1 의존성 주입 (Dependency Injection)
+반드시 `Annotated` 문법을 사용하며, 기본값이 있는 인자(`Query` 등)는 매개변수 목록의 가장 뒤에 배치합니다.
+```python
+db: Annotated[AsyncSession, Depends(get_db)]
+```
+
+### 4.2 서비스 레이어 및 지연 로딩 방지 (중요)
+비동기 환경에서의 `MissingGreenlet` 에러를 원천 차단하기 위해, 서비스 레이어는 항상 **SQLAlchemy 모델 대신 Pydantic Read 스키마를 반환**해야 합니다.
+* **전략**: 트리 구조 조립 시 모델 데이터를 딕셔너리로 추출하여 스키마를 생성하거나, `joinedload`를 통해 관계를 즉시 로드합니다.
+
+### 4.3 보안 (Security)
+* **Password**: Python 3.13 호환성을 위해 `passlib` 대신 **`bcrypt` 라이브러리를 직접 호출**하여 해싱합니다.
+* **JWT**: 리프레시 토큰 로테이션(RTR) 및 Redis 기반 블랙리스트를 필수로 적용합니다.
+
+---
+
+## 📡 5. 인터페이스 규격 (API Standard)
+
+### 5.1 공통 응답 (Envelope Pattern)
+모든 응답은 `APIResponse` 클래스를 사용하며, 생성 시 해당 도메인 코드를 인자로 전달합니다.
 ```json
 {
-  "success": true,           // 성공 여부
-  "code": 200,               // HTTP Status or Custom Code
-  "message": "Ok",           // 사람이 읽을 수 있는 메시지
-  "data": { ... },           // 실제 페이로드 (List or Object)
-  "meta": {                  // (Optional) 페이지네이션 등 메타 정보
-    "total": 120,
-    "page": 1,
-    "size": 20
-  }
+  "success": true,
+  "domain": "FAC",
+  "code": 200,
+  "message": "성공",
+  "data": { ... }
 }
-
 ```
-
-### 3.2 에러 응답 포맷 예제
-
-```json
-{
-  "success": false,
-  "code": 4001,              // Custom Error Code
-  "message": "이미 존재하는 사용자 이메일입니다.",
-  "data": null
-}
-
-```
-
-### 3.3 Endpoint 규칙
-
-* **Prefix:** `/api/v1`
-* **URL:** `kebab-case` (소문자 및 하이픈)
-* **Resource:** 복수형 명사 사용
-
-| Method | URL | Description |
-| --- | --- | --- |
-| `POST` | `/auth/login` | 로그인 (Access Token 발급, Refresh Token Redis 저장) |
-| `POST` | `/auth/refresh` | 토큰 갱신 (Redis 내 Refresh Token 유효성 검증) |
-| `POST` | `/auth/logout` | 로그아웃 (Access Token Redis Blacklist 등록) |
-| `GET` | `/adt/logs` | 감시 로그 조회 (PGroonga JSON 검색 활용) |
-| `GET` | `/users` | 사용자 목록 조회 |
-| `POST` | `/users` | 사용자 생성 |
-| `GET` | `/users/{id}` | 사용자 상세 조회 |
-| `PATCH` | `/users/{id}` | 사용자 정보 일부 수정 |
-| `GET` | `/fac/facilities` | 시설 트리 조회 |
-
----
-
-## 4. 🔄 핵심 로직 시퀀스 (Sequence Diagram)
-
-### 4.1 로그인 및 세션관리(Radis 활용)
-
-```mermaid
-sequenceDiagram
-    participant Client
-    participant API as Auth API
-    participant DB as PostgreSQL
-    participant Redis
-
-    Client->>API: Login (ID/PW)
-    API->>DB: 사용자 검증 (Hash Check)
-    DB-->>API: User Info + Scope
-
-    API->>API: Access Token(JWT) 생성
-    API->>API: Refresh Token(Random String) 생성
-    
-    API->>Redis: SET refresh:{user_id} {token} (TTL: 7일)
-    
-    API-->>Client: 200 OK (Access + Refresh)
-```
-
-### 4.2 데이터 변경 및 감사 로깅 (Audit + Scope Check)
-
-```mermaid
-sequenceDiagram
-    participant Client
-    participant Guard as PermissionGuard
-    participant Service as FacService
-    participant DB
-    participant ADT as AuditService
-
-    Client->>Guard: [PUT] /fac/facilities/101 (Update)
-    
-    Guard->>Guard: 1. Role Check (수정 권한?) -> OK
-    Guard->>Guard: 2. Scope Check (시설 101번 담당?) -> OK
-    
-    Guard->>Service: Request Forward
-    Service->>DB: 기존 데이터 조회 (Snapshot Before)
-    Service->>DB: 데이터 업데이트 (Commit)
-    
-    Service->>ADT: Async Task 요청 (비동기)
-    ADT->>DB: [INSERT] adt_audit_logs (IP, Agent, Diff 포함)
-```
-
----
-
-## 5. 🔐 권한 매트릭스 (Permission Matrix)
-
-각 역할(Role)별로 수행 가능한 행위를 정의합니다.
-
-| 도메인 | 기능(Menu) | Admin | Operator | Viewer | 비고 |
-| --- | --- | --- | --- | --- | --- |
-| **USR** | 사용자 관리 | ✅ All | ❌ | ❌ | |
-| **IAM** | 권한 설정 | ✅ All | ❌ | ❌ | |
-| **FAC** | 시설 트리 조회 | ✅ Read | ✅ Read | ✅ Read | |
-| **FAC** | 시설 속성 편집 | ✅ All | ✅ Update | ❌ | |
-| **ADT** | 감사 로그 조회 | ✅ Read | ❌ | ❌ | 보안 민감 |
-| **RPT** | 보고서 출력 | ✅ Export | ✅ Export | ✅ Read | |
-
----
-
-## 6. ✅ Phase 1 구현 체크리스트 (Backlog)
-
-### 1주차: 환경 설정 및 공통 모듈
-
-* [ ] Docker Compose: PGroonga, Redis, MinIO 컨테이너 구성 및 연동 확인.
-* [ ] FastAPI Setup: Generic[T] 기반 응답 모델 및 예외 처리 핸들러 구현.
-* [ ] Database: SQLAlchemy Async Engine 설정, Alembic 환경 구성.
-
-### 2주차: 보안(IAM) 및 감사(ADT)
-
-* [ ] Redis 연동: JWT Refresh Token 저장소 및 Blacklist 기능 구현.
-* [ ] ADT 모델: Partitioning이 적용된 Audit Log 테이블 생성.
-* [ ] Middleware: Request Context에서 IP/User-Agent 추출 및 로깅 로직 구현.
-
-### 3주차: 사용자(USR) 및 공통(CMM)
-
-* [ ] Scope Logic: 사용자별 access_scope JSON 처리 로직 구현.
-* [ ] File Mgmt: MinIO 업로드 유틸리티 및 CMM_File 메타데이터 저장 로직.
-
 ---

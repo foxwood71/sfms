@@ -1,0 +1,1 @@
+"""SFMS(Smart Facility Management System) 백엔드 애플리케이션 패키지입니다."""

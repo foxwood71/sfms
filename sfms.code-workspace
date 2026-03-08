@@ -159,6 +159,14 @@
 			"MD032": false
 		},
 
+		"markdown-mermaid.lightModeTheme": "default", // 라이트 모드 테마 (base/forest/dark/default/neutral)
+		"markdown-mermaid.darkModeTheme": "dark", // 다크 모드 테마 (기본값)
+		"markdown-mermaid.mouseNavigation.enabled": "alt", // 마우스 줌/팬: alt키 누를 때만 (always/alt/never)
+		"markdown-mermaid.controls.show": "onHoverOrFocus", // 컨트롤 버튼: 호버/포커스 시 표시 (never/always/onHoverOrFocus)
+		// "markdown-mermaid.maxHeight": "500px",         // 다이어그램 최대 높이 제한 (선택적)
+		"markdown-mermaid.languages": ["mermaid"], // 인식할 언어 블록 (기본값)
+		"markdown.validate.enabled": false,
+
 		// -------------------------------------------------------------
 		// 6. yaml 설정
 		// -------------------------------------------------------------
@@ -193,21 +201,44 @@
 		// 9. 터미널 프로필 설정 (SFMS 프로젝트 맞춤형)
 		// -------------------------------------------------------------
 		"terminal.integrated.profiles.linux": {
+			"Gemini": {
+				"path": "mise",
+				"args": ["exec", "--", "zsh", "-c", "npx @google/gemini-cli"],
+				"cwd": "${workspaceFolder}"
+			},
 			"SFMS Backend": {
 				"path": "mise",
-				"args": ["exec", "--", "uv", "run", "bash"],
+				"args": [
+					"exec",
+					"--",
+					"zsh",
+					"-c",
+					"cd ${workspaceFolder}/backend && uv run zsh"
+				],
 				"cwd": "${workspaceFolder}/backend"
 			},
 			"SFMS Frontend": {
 				"path": "mise",
-				"args": ["exec", "--", "pnpm", "exec", "bash"],
+				"args": [
+					"exec",
+					"--",
+					"zsh",
+					"-c",
+					"cd ${workspaceFolder}/frontend && pnpm exec zsh"
+				],
 				"cwd": "${workspaceFolder}/frontend"
 			},
 			"PostgreSQL": {
-				"path": "psql",
-				"args": ["-h", "localhost", "-U", "sfms_user", "sfms"]
+				"path": "mise",
+				"args": [
+					"exec",
+					"--",
+					"zsh",
+					"-c",
+					"psql -h localhost -U sfms_user sfms; exec zsh"
+				],
+				"cwd": "${workspaceFolder}"
 			}
-		},
-		"markdown.validate.enabled": false
+		}
 	}
 }

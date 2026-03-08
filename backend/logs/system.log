@@ -1,0 +1,45 @@
+2026-03-08 00:06:28 - sfms - ERROR - Health check failed - DB connection error: [Errno 111] Connect call failed ('127.0.0.1', 5432)
+2026-03-08 00:06:28 - sfms - ERROR - Health check failed - Redis connection error: Error 111 connecting to localhost:6379. Connect call failed ('127.0.0.1', 6379).
+2026-03-08 00:06:34 - sfms - ERROR - MinIO 헬스 체크 실패(연결 오류): Could not connect to the endpoint URL: "http://localhost:9000/"
+2026-03-08 00:06:55 - sfms - ERROR - Health check failed - DB connection error: [Errno 111] Connect call failed ('127.0.0.1', 5432)
+2026-03-08 00:06:55 - sfms - ERROR - Health check failed - Redis connection error: Error 111 connecting to localhost:6379. Connect call failed ('127.0.0.1', 6379).
+2026-03-08 00:07:02 - sfms - ERROR - MinIO 헬스 체크 실패(연결 오류): Could not connect to the endpoint URL: "http://localhost:9000/"
+2026-03-08 00:07:20 - sfms - ERROR - Health check failed - DB connection error: [Errno 111] Connect call failed ('127.0.0.1', 5432)
+2026-03-08 00:07:20 - sfms - ERROR - Health check failed - Redis connection error: Error 111 connecting to localhost:6379. Connect call failed ('127.0.0.1', 6379).
+2026-03-08 00:07:29 - sfms - ERROR - MinIO 헬스 체크 실패(연결 오류): Could not connect to the endpoint URL: "http://localhost:9000/"
+2026-03-08 00:07:50 - sfms - ERROR - Health check failed - DB connection error: [Errno 111] Connect call failed ('127.0.0.1', 5432)
+2026-03-08 00:07:50 - sfms - ERROR - Health check failed - Redis connection error: Error 111 connecting to localhost:6379. Connect call failed ('127.0.0.1', 6379).
+2026-03-08 00:07:59 - sfms - ERROR - MinIO 헬스 체크 실패(연결 오류): Could not connect to the endpoint URL: "http://localhost:9000/"
+2026-03-08 00:08:23 - sfms - ERROR - Health check failed - DB connection error: [Errno 111] Connect call failed ('127.0.0.1', 5432)
+2026-03-08 00:08:23 - sfms - ERROR - Health check failed - Redis connection error: Error 111 connecting to localhost:6379. Connect call failed ('127.0.0.1', 6379).
+2026-03-08 00:08:28 - sfms - ERROR - MinIO 헬스 체크 실패(연결 오류): Could not connect to the endpoint URL: "http://localhost:9000/"
+2026-03-08 00:21:19 - sfms - ERROR - Health check failed - Redis connection error: invalid username-password pair or user is disabled.
+2026-03-08 00:21:19 - sfms - ERROR - MinIO 헬스 체크 실패(연결 오류): An error occurred (InvalidAccessKeyId) when calling the ListBuckets operation: The Access Key Id you provided does not exist in our records.
+2026-03-08 00:27:54 - sfms - ERROR - Health check failed - DB connection error: (sqlalchemy.dialects.postgresql.asyncpg.InterfaceError) <class 'asyncpg.exceptions._base.InterfaceError'>: cannot perform operation: another operation is in progress
+[SQL: SELECT 1]
+(Background on this error at: https://sqlalche.me/e/20/rvf5)
+2026-03-08 00:27:54 - sfms - ERROR - Health check failed - Redis connection error: Event loop is closed
+2026-03-08 00:27:54 - sfms - ERROR - MinIO 헬스 체크 실패(연결 오류): An error occurred (InvalidAccessKeyId) when calling the ListBuckets operation: The Access Key Id you provided does not exist in our records.
+2026-03-08 00:29:24 - sfms - ERROR - Health check failed - DB connection error: (sqlalchemy.dialects.postgresql.asyncpg.InterfaceError) <class 'asyncpg.exceptions._base.InterfaceError'>: cannot perform operation: another operation is in progress
+[SQL: SELECT 1]
+(Background on this error at: https://sqlalche.me/e/20/rvf5)
+2026-03-08 00:29:24 - sfms - ERROR - MinIO 헬스 체크 실패(연결 오류): An error occurred (InvalidAccessKeyId) when calling the ListBuckets operation: The Access Key Id you provided does not exist in our records.
+2026-03-08 00:29:58 - sfms - ERROR - Health check failed - DB connection error: (sqlalchemy.dialects.postgresql.asyncpg.InterfaceError) <class 'asyncpg.exceptions._base.InterfaceError'>: cannot perform operation: another operation is in progress
+[SQL: SELECT 1]
+(Background on this error at: https://sqlalche.me/e/20/rvf5)
+2026-03-08 00:29:58 - sfms - ERROR - MinIO 헬스 체크 실패(연결 오류): An error occurred (InvalidAccessKeyId) when calling the ListBuckets operation: The Access Key Id you provided does not exist in our records.
+2026-03-08 00:30:36 - sfms - ERROR - MinIO 헬스 체크 실패(연결 오류): An error occurred (InvalidAccessKeyId) when calling the ListBuckets operation: The Access Key Id you provided does not exist in our records.
+2026-03-08 00:31:04 - sfms - ERROR - MinIO 헬스 체크 실패(연결 오류): An error occurred (InvalidAccessKeyId) when calling the ListBuckets operation: The Access Key Id you provided does not exist in our records.
+2026-03-08 00:34:22 - sfms - ERROR - Health check failed - DB connection error: (sqlalchemy.dialects.postgresql.asyncpg.InterfaceError) <class 'asyncpg.exceptions._base.InterfaceError'>: cannot perform operation: another operation is in progress
+[SQL: SELECT 1]
+(Background on this error at: https://sqlalche.me/e/20/rvf5)
+2026-03-08 00:34:22 - sfms - ERROR - MinIO 헬스 체크 실패(연결 오류): An error occurred (InvalidAccessKeyId) when calling the ListBuckets operation: The Access Key Id you provided does not exist in our records.
+2026-03-08 00:34:45 - sfms - ERROR - Health check failed - DB connection error: (sqlalchemy.dialects.postgresql.asyncpg.InterfaceError) <class 'asyncpg.exceptions._base.InterfaceError'>: cannot perform operation: another operation is in progress
+[SQL: SELECT 1]
+(Background on this error at: https://sqlalche.me/e/20/rvf5)
+2026-03-08 00:34:45 - sfms - ERROR - MinIO 헬스 체크 실패(연결 오류): An error occurred (InvalidAccessKeyId) when calling the ListBuckets operation: The Access Key Id you provided does not exist in our records.
+2026-03-08 00:35:39 - sfms - ERROR - MinIO 헬스 체크 실패(연결 오류): An error occurred (InvalidAccessKeyId) when calling the ListBuckets operation: The Access Key Id you provided does not exist in our records.
+2026-03-08 00:36:27 - sfms - ERROR - MinIO 헬스 체크 실패(연결 오류): An error occurred (InvalidAccessKeyId) when calling the ListBuckets operation: The Access Key Id you provided does not exist in our records.
+2026-03-08 00:37:16 - sfms - ERROR - MinIO 헬스 체크 실패(연결 오류): An error occurred (InvalidAccessKeyId) when calling the ListBuckets operation: The Access Key Id you provided does not exist in our records.
+2026-03-08 00:52:34 - sfms - ERROR - MinIO 버킷 확인 중 오류 발생: An error occurred (403) when calling the HeadBucket operation: Forbidden
+2026-03-08 00:52:34 - sfms - ERROR - MinIO 파일 업로드 실패: An error occurred (InvalidAccessKeyId) when calling the PutObject operation: The Access Key Id you provided does not exist in our records.

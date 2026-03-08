@@ -28,7 +28,7 @@ CREATE TABLE fac.facility_categories (
 -- [Trigger] 수정 일시 자동 갱신
 CREATE TRIGGER trg_updated_at_facility_categories
 BEFORE UPDATE ON fac.facility_categories
-FOR EACH ROW EXECUTE FUNCTION cmm.trg_set_updated_at();
+FOR EACH ROW EXECUTE FUNCTION sys.trg_set_updated_at();
 
 -- [Comments]
 COMMENT ON TABLE fac.facility_categories IS '시설물 유형 분류 (예: 처리장, 펌프장, 관로 등)';
@@ -61,7 +61,7 @@ CREATE TABLE fac.space_types (
 -- [Trigger]
 CREATE TRIGGER trg_updated_at_space_types
 BEFORE UPDATE ON fac.space_types
-FOR EACH ROW EXECUTE FUNCTION cmm.trg_set_updated_at();
+FOR EACH ROW EXECUTE FUNCTION sys.trg_set_updated_at();
 
 -- [Comments]
 COMMENT ON TABLE fac.space_types IS '공간의 물리적 유형 정의 (건물, 층, 구역 등)';
@@ -93,7 +93,7 @@ CREATE TABLE fac.space_functions (
 -- [Trigger]
 CREATE TRIGGER trg_updated_at_space_functions
 BEFORE UPDATE ON fac.space_functions
-FOR EACH ROW EXECUTE FUNCTION cmm.trg_set_updated_at();
+FOR EACH ROW EXECUTE FUNCTION sys.trg_set_updated_at();
 
 -- [Comments]
 COMMENT ON TABLE fac.space_functions IS '공간의 기능적 용도 정의 (전기실, 제어실, 화장실 등)';
@@ -139,7 +139,7 @@ CREATE TABLE fac.facilities (
 -- [Trigger]
 CREATE TRIGGER trg_updated_at_facilities
 BEFORE UPDATE ON fac.facilities
-FOR EACH ROW EXECUTE FUNCTION cmm.trg_set_updated_at();
+FOR EACH ROW EXECUTE FUNCTION sys.trg_set_updated_at();
 
 -- [Index]
 CREATE INDEX idx_fac_name_pg ON fac.facilities USING pgroonga (name) with (tokenizer='TokenMecab', normalizer='NormalizerAuto');        -- 이름 전문 검색
@@ -186,6 +186,9 @@ CREATE TABLE fac.spaces (
     sort_order          INT DEFAULT 0,                  -- 정렬 순서
     is_restricted       BOOLEAN DEFAULT false,          -- 출입 제한 구역 여부
 
+    -- [Org] 관리 책임 부서 (USR 도메인 연계)
+    org_id              BIGINT REFERENCES usr.organizations(id) ON DELETE SET NULL,
+
     -- [Migration] 레거시 통합의 핵심 필드
     metadata            JSONB NOT NULL DEFAULT '{}'::jsonb, -- 기타 속성
     legacy_id           INTEGER,                        -- 구 시스템 ID
@@ -207,7 +210,7 @@ CREATE TABLE fac.spaces (
 -- [Trigger]
 CREATE TRIGGER trg_updated_at_spaces
 BEFORE UPDATE ON fac.spaces
-FOR EACH ROW EXECUTE FUNCTION cmm.trg_set_updated_at();
+FOR EACH ROW EXECUTE FUNCTION sys.trg_set_updated_at();
 
 -- [Index]
 CREATE INDEX idx_fac_spaces_name_pg ON fac.spaces USING pgroonga (name) with (tokenizer='TokenMecab', normalizer='NormalizerAuto');                -- 이름 전문 검색
@@ -229,6 +232,7 @@ COMMENT ON COLUMN fac.spaces.area_size IS '면적 (단위: m2)';
 COMMENT ON COLUMN fac.spaces.is_active IS '사용 여부';
 COMMENT ON COLUMN fac.spaces.sort_order IS '정렬 순서';
 COMMENT ON COLUMN fac.spaces.is_restricted IS '출입 제한/보안 구역 여부';
+COMMENT ON COLUMN fac.spaces.org_id IS '공간 관리 책임 부서 ID (USR 도메인 연계)';
 COMMENT ON COLUMN fac.spaces.metadata IS '공간 추가 속성 JSON';
 COMMENT ON COLUMN fac.spaces.legacy_id IS '[마이그레이션] 기존 시스템 ID';
 COMMENT ON COLUMN fac.spaces.legacy_source_tbl IS '[마이그레이션] 데이터 원천 테이블명';

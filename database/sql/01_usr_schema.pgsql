@@ -42,7 +42,7 @@ CREATE INDEX idx_usr_org_parent ON usr.organizations (parent_id);
 -- [Trigger] 수정 시 updated_at 자동 갱신
 CREATE TRIGGER trg_updated_at_organizations 
 BEFORE UPDATE ON usr.organizations 
-FOR EACH ROW EXECUTE FUNCTION cmm.trg_set_updated_at();
+FOR EACH ROW EXECUTE FUNCTION sys.trg_set_updated_at();
 
 -- [Comments]
 COMMENT ON TABLE usr.organizations IS '조직(부서) 계층 정보 관리 테이블';
@@ -87,6 +87,7 @@ CREATE TABLE usr.users (
     legacy_source       VARCHAR(20),
     
     -- [Extension] 사용자별 설정, UI 테마 등 비정형 데이터
+    -- 예: {"duty": "팀장", "theme": "dark", "sidebar": "collapsed"}
     metadata            JSONB NOT NULL DEFAULT '{}'::jsonb,
 
     -- [Audit] 감사 로그 (FK는 하단 ALTER문에서 추가)
@@ -111,7 +112,7 @@ CREATE INDEX idx_usr_users_metadata_gin ON usr.users USING GIN (metadata);
 -- [Trigger]
 CREATE TRIGGER trg_updated_at_users 
 BEFORE UPDATE ON usr.users 
-FOR EACH ROW EXECUTE FUNCTION cmm.trg_set_updated_at();
+FOR EACH ROW EXECUTE FUNCTION sys.trg_set_updated_at();
 
 -- [Comments]
 COMMENT ON TABLE usr.users IS '시스템 사용자(임직원) 계정 정보 테이블';

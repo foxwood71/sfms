@@ -1,232 +1,154 @@
-# 📘 SFMS Phase 1 doc02 - 프론트엔드 아키텍처 및 UI 표준
+# 📘 SFMS Phase 1: 프론트엔드 아키텍처 및 UI 표준
 
 * **프로젝트명:** SFMS (Smart Facility Management System)
-* **작성일:** 2026-02-18
-* **작성자:** Chief Architect (Min-su)
-* **버전:** v1.0 (Draft)
+* **최종 수정일:** 2026-03-08
 * **단계:** Phase 1 (Foundation & UI Standards)
+* **기술 스택:**
+    * **Core:** React 19 (with v5 Patch), TypeScript 5.x, Vite 6.x
+    * **UI Framework:** **Ant Design v5**, **ProComponents**
+    * **State Management:** TanStack Query v5 (Server), Zustand (Global UI)
+    * **Styling:** Tailwind CSS 4, AntD Design Token
+    * **Lint/Format:** Biome (Strict mode)
 
 ---
 
 ## 1. 🏗️ 아키텍처 개요 (Architecture Overview)
 
-**"복잡한 데이터를 한눈에, 하지만 수정은 안전하게"**
-데이터 중심의 엔터프라이즈 애플리케이션을 위해 **Vite + React + Ant Design Pro**를 기반으로 하며, 상태 관리를 **서버 상태(Data)**와 **UI 상태(View)**로 엄격히 분리합니다.
+**"복잡한 데이터를 한눈에, 수정은 안전하게"**
+데이터 중심의 엔터프라이즈 애플리케이션을 위해 서버 데이터와 UI 상태를 엄격히 분리하여 관리합니다.
 
-### 1.1 기술 스택 (Tech Stack)
-
-* **Core:** React 18, TypeScript 5.x, Vite 5.x
-* **UI Framework:** **Ant Design v5**, **ProComponents** (ProTable, ProForm, ProLayout)
-* **State Management:**
-* **Server State:** **TanStack Query v5** (Caching, Auto-fetching)
-* **Client State:** **Zustand** (Global UI State: Modal, Theme, Auth)
-
-* **Styling:** **Tailwind CSS 4** (Layout/Spacing) + **AntD Token** (Component Style)
-* **Icons:** `lucide-react` (기본), AntD Icons (보조)
-* **Network:** Axios (Interceptors)
-* **Package Manager:** `pnpm` (Strict mode)
-
-### 1.2 데이터 흐름도 (Data Flow)
-
-```mermaid
-graph LR
-    User[👤 User Action] --> UI["⚛️ UI Components"]
-    UI --> Hook["🪝 Custom Hooks (useFacility)"]
-    
-    subgraph State Management
-        Hook --> Query["📡 TanStack Query (Server State)"]
-        Hook --> Store["🐻 Zustand (Client State)"]
-    end
-    
-    Query --> API["🌐 Axios Client"]
-    API --> Backend["Server (FastAPI)"]
-    
-    Backend --> API
-    API --> Query
-    Query --> UI
-    Store --> UI
-
-```
+### 1.1 데이터 흐름 (Data Flow)
+* **Server State**: `TanStack Query`가 모든 API 통신, 캐싱, 동기화를 전담합니다.
+* **Client State**: `Zustand`가 테마, 사이드바 상태, 인증 토큰 등 전역 UI 상태를 관리합니다.
+* **API Client**: `Axios` 인터셉터를 통해 401(토큰 만료), 403(권한 부족) 에러를 통합 처리합니다.
 
 ---
 
-## 2. 📂 디렉토리 구조 (Directory Structure)
+## 📂 2. 디렉토리 구조 (Directory Structure)
 
-백엔드의 **DDD(Domain-Driven Design)** 구조를 프론트엔드 `features` 폴더에 동일하게 적용하여 도메인 응집도를 높입니다.
+백엔드의 DDD 구조와 보조를 맞추어 도메인 응집도를 극대화합니다.
 
 ```text
-src/
-├── app/                    # 앱 전역 설정 (Provider, Router, Entry)
-│   ├── App.tsx
-│   ├── main.tsx
-│   └── router.tsx          # React Router 설정
-│
+frontend/src/
+├── app/                    # 앱 전역 설정 (Router, Providers)
 ├── shared/                 # [공통] 도메인 무관 재사용 요소
-│   ├── api/                # Axios 인스턴스 (Interceptor)
-│   ├── components/         # 공통 UI (Button, ModalWrapper)
-│   ├── hooks/              # 공통 Hook (useDebounce, useAuth)
-│   ├── stores/             # 전역 UI Store (useThemeStore)
-│   └── utils/              # 유틸리티 (dateFormatter, validator)
-│
-├── domains/               # [도메인] 비즈니스 로직 (백엔드 모듈과 1:1 매핑)
-│   ├── cmm/                # [공통 관리] 코드, 파일, 알림
-│   ├── iam/                # [인증/권한] 로그인, 역할 관리
-│   ├── usr/                # [사용자/조직] 조직도, 사원 관리
-│   └── fac/                # [시설 관리] 설비, 공간 트리
+│   ├── api/                # Axios Interceptors
+│   ├── components/         # 공통 UI (Button, Modal)
+│   ├── hooks/              # useAuth, useMessage 등
+│   └── stores/             # Zustand UI Stores
+├── domains/                # [도메인] 백엔드 모듈과 1:1 매핑
+│   ├── cmm/                # 코드, 파일, 알림
+│   ├── sys/                # 감사로그, 채번 설정
+│   ├── usr/                # 조직도, 사용자 관리
+│   └── fac/                # 시설, 공간 트리
 │       ├── api/            # 해당 도메인 API 호출 함수
 │       ├── components/     # 도메인 전용 컴포넌트 (FacilityTree.tsx)
 │       ├── hooks/          # React Query Hooks (useFacilityList)
 │       ├── types/          # TypeScript 인터페이스 (Zod 스키마)
 │       └── pages/          # 라우팅 페이지 (FacilityPage.tsx)
-│
 └── styles/                 # 전역 스타일 (Tailwind, AntD Theme)
-    └── theme.ts            # High Density 토큰 설정
-
 ```
 
 ---
 
-## 3. 🎨 UI/UX 표준 (UI Standards)
+## 📝 3. 코드 문서화 표준 (Documentation Standards)
 
-**"Data Density High"** 가치를 실현하기 위해 Ant Design의 기본 여백을 줄이고 정보 밀도를 높입니다.
+유지보수성과 협업 효율을 위해 모든 코드는 **TSDoc** 규범을 준수하여 문서화합니다.
 
-### 3.1 Ant Design Config (High Density)
+### 3.1 TSDoc 작성 규칙
+* 모든 **Export되는 요소**(컴포넌트, 함수, 클래스, 인터페이스)는 TSDoc 주석을 필수로 포함합니다.
+* **필수 태그**: `@param`, `@returns` (함수일 경우), `@example` (복잡한 로직일 경우).
 
-`ConfigProvider`를 통해 전역적으로 컴포넌트 사이즈를 축소합니다.
+### 3.2 컴포넌트 및 Props 문서화 예시
+Props 인터페이스의 각 필드에는 인라인 주석(`/** ... */`)을 달아 VS Code 인텔리센스에서 설명이 노출되도록 합니다.
 
-* **Global Size:** `small` (기본값)
-* **Font Size:** `13px` (데이터 가독성 최적화)
-* **Border Radius:** `4px` (단단하고 전문적인 느낌)
+```tsx
+/**
+ * 시설물 관리 테이블 컴포넌트
+ * 
+ * @description 시설 목록을 그리드로 표시하고 필터링/페이징 기능을 제공합니다.
+ * @see {@link https://procomponents.ant.design/en-US/components/table ProTable}
+ */
+interface FacilityTableProps {
+  /** 조회 대상 시설 카테고리 코드 (예: 'WTP') */
+  categoryCode?: string;
+  /** 데이터 수정 성공 시 호출되는 콜백 함수 */
+  onSuccess?: () => void;
+  /** 읽기 전용 모드 여부 (기본값: false) */
+  readOnly?: boolean;
+}
+
+export const FacilityTable: React.FC<FacilityTableProps> = ({ 
+  categoryCode, 
+  onSuccess, 
+  readOnly = false 
+}) => {
+  // ... 구현부
+};
+```
+
+### 3.3 커스텀 훅(Custom Hooks) 문서화
+```typescript
+/**
+ * 특정 시설의 상세 정보를 조회하는 React Query 훅
+ * 
+ * @param facilityId 시설 고유 ID
+ * @returns { isLoading, data, error } 쿼리 결과 객체
+ * @example
+ * const { data } = useFacilityDetail(101);
+ */
+export const useFacilityDetail = (facilityId: number) => {
+  // ...
+};
+```
+
+---
+
+## 🎨 4. UI/UX 및 테마 표준
+
+### 4.1 Ant Design v5 Theme (High Density)
+AntD의 기본 여백을 축소하여 전문적인 데이터 밀도를 유지합니다.
 
 ```typescript
 // src/styles/theme.ts
-import { ThemeConfig } from 'antd';
-
-export const sfmsTheme: ThemeConfig = {
+export const sfmsTheme = {
   token: {
     fontSize: 13,
-    colorPrimary: '#1677ff', // SFMS Blue
     borderRadius: 4,
-    fontFamily: "'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
+    fontFamily: "Pretendard, system-ui, sans-serif",
   },
   components: {
+    Layout: {
+      headerBg: '#ffffff', // 최신 토큰 명칭 준수
+      bodyBg: '#f5f5f5',
+      triggerBg: '#001529',
+    },
     Table: {
-      cellPaddingBlock: 8, // 행 높이 축소
-      cellPaddingInline: 8,
-      headerBg: '#f0f2f5', // 헤더 구분감 강화
-    },
-    Button: {
-      paddingInline: 12,
-      controlHeightSM: 28, // 소형 버튼 높이
-    },
-    Form: {
-      itemMarginBottom: 12, // 폼 간격 축소
-    },
-    Card: {
-        paddingLG: 16, // 카드 내부 패딩 축소
+      cellPaddingBlock: 8,
+      headerBg: '#fafafa',
     }
   },
 };
-
 ```
 
-### 3.2 레이아웃 표준 (ProLayout)
-
-* **Navigation:** 좌측 사이드바 (Collapsible)
-* **Header:** 우측 상단 유저 정보, 알림 벨, 테마 토글
-* **Breadcrumb:** 현재 위치 명확히 표시 (예: 시설 관리 > 펌프장 > A동)
-* **PageContainer:** 모든 페이지는 `ProLayout`의 `PageContainer` 내부에 렌더링하여 통일된 헤더/타이틀 제공.
-
----
-
-## 4. 🔄 상태 관리 전략 (State Strategy)
-
-**"섞어 쓰지 않는다."** 이것이 철칙입니다.
-
-| 구분 | 도구 | 사용 규칙 | 예시 |
-| --- | --- | --- | --- |
-| **Server State** | **TanStack Query** | API 데이터 조회, 캐싱, 동기화 | 사용자 목록, 시설 트리, 공통 코드 |
-| **Client State** | **Zustand** | UI 제어, 클라이언트 전역 설정 | 다크모드 여부, 사이드바 열림, 모달 상태 |
-| **Local State** | **useState** | 컴포넌트 내부의 일시적 상태 | 폼 입력값, 탭 선택, 드롭다운 열림 |
-| **Form State** | **AntD Form / RHF** | 복잡한 입력 폼 관리 | 사용자 등록 폼, 검색 필터 |
-
-### 4.1 Query Key 관리 규칙 (Factory Pattern)
-
-쿼리 키가 분산되면 캐시 무효화(Invalidation)가 어렵습니다. `queryKeys` 객체로 중앙 관리합니다.
-
-```typescript
-// src/features/fac/queries.ts
-export const facKeys = {
-  all: ['fac'] as const,
-  lists: () => [...facKeys.all, 'list'] as const,
-  list: (filters: string) => [...facKeys.lists(), { filters }] as const,
-  details: () => [...facKeys.all, 'detail'] as const,
-  detail: (id: number) => [...facKeys.details(), id] as const,
-  tree: (rootId: number) => [...facKeys.all, 'tree', rootId] as const,
-};
-
-// 사용: useQuery({ queryKey: facKeys.detail(1), ... })
-
-```
-
----
-
-## 5. 🧩 컴포넌트 패턴 (Component Patterns)
-
-### 5.1 ProTable 활용 (CRUD 표준)
-
-엔터프라이즈 데이터 조회 화면은 **90% 이상 `ProTable`**을 사용하여 개발 생산성을 극대화합니다.
-
-* **Search:** 상단 검색 영역 자동 생성 (Schema 기반).
-* **Pagination:** 서버 사이드 페이지네이션 기본 적용.
-* **ToolBar:** '신규 등록', '엑셀 다운로드' 등 공통 액션 배치.
+### 4.2 메시지 및 알림 호출 (중요)
+`message.success()` 등의 정적 호출은 테마가 미적용될 수 있으므로, 반드시 **`App.useApp()`** 훅을 통해 추출한 객체를 사용합니다.
 
 ```tsx
-// 예시: 사용자 목록 (features/usr/pages/UserListPage.tsx)
-<ProTable<User>
-  columns={columns}
-  request={async (params, sort) => {
-    // API 호출 및 포맷팅 자동화
-    return getUserList({ ...params, ...sort });
-  }}
-  rowKey="id"
-  search={{ labelWidth: 'auto' }}
-  size="small" // High Density 적용
-  pagination={{ pageSize: 20 }}
-/>
-
+const { message, modal, notification } = App.useApp();
+// 사용: message.success('처리되었습니다');
 ```
 
-### 5.2 Modal vs Drawer (Overlay UI)
-
-* **Drawer (우측 패널):** 상세 정보 조회, 긴 입력 폼, 데이터 비교 시 사용. (사용자가 컨텍스트를 유지해야 할 때)
-* **Modal (중앙 팝업):** 간단한 확인, 알림, 삭제 경고, 짧은 입력 폼.
-
 ---
 
-## 6. 🛡️ 보안 및 에러 처리 (Security & Error)
+## 🛡️ 5. 개발 및 보안 표준
 
-### 6.1 인증 가드 (AuthGuard)
+### 5.1 인증 가드 (AuthGuard)
+* 모든 보호된 경로는 `AuthGuard` 컴포넌트로 감싸 토큰 유효성을 체크합니다.
+* 토큰 만료 시 `Refresh Token Rotation` 로직이 자동으로 실행됩니다.
 
-`react-router`의 `Outlet`을 감싸는 형태로 구현합니다.
-
-* 토큰 존재 여부 확인 -> 없으면 로그인 페이지 리다이렉트.
-* 토큰 만료 시 -> Refresh Token 시도 -> 실패 시 강제 로그아웃.
-* 권한(Role) 체크 -> 권한 부족 시 403 페이지 표시.
-
-### 6.2 에러 핸들링 (Global Boundary)
-
-* **API Error:** Axios Interceptor에서 401, 403, 500 등 공통 에러를 감지하여 `AntD Message` 또는 `Notification`으로 사용자에게 알림.
-* **Runtime Error:** `React Error Boundary`를 사용하여 화면 전체가 깨지는 것을 방지하고 "오류가 발생했습니다" UI 표시.
-
----
-
-## 7. ✅ 프론트엔드 체크리스트 (Kick-off)
-
-1. [ ] **프로젝트 초기화:** `npm create vite@latest sfms-frontend -- --template react-ts`
-2. [ ] **라이브러리 설치:** `antd`, `@ant-design/pro-components`, `@tanstack/react-query`, `axios`, `zustand`, `lucide-react`, `tailwindcss`
-3. [ ] **테마 설정:** `theme.ts` 작성 및 `ConfigProvider` 적용.
-4. [ ] **라우터 구성:** `react-router-dom` 설치 및 `AuthGuard` 구현.
-5. [ ] **API 클라이언트:** Axios 인스턴스 설정 (BaseURL, Timeout, Interceptor).
+### 4.2 권한 제어 (RBAC)
+* `IAM` 도메인에서 내려주는 리소스별 액션 매트릭스를 기반으로 버튼/메뉴 노출을 제어합니다.
+* 예: `can('FAC', 'WRITE')` 형식의 유틸리티 사용 권장.
 
 ---

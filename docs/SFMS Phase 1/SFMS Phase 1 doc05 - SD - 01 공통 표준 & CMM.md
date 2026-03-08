@@ -12,9 +12,11 @@
 
 ### 1.1 핵심 로직 설명
 
-1. **Trace ID:** 요청 진입 시 `X-Request-ID`가 없으면 생성하여 `ContextVar`에 저장 (로그 추적용).
-2. **Global Handler:** 비즈니스 로직에서 `SFMSException`이 발생하면, 이를 가로채어 표준 `ApiResponse` 포맷으로 변환합니다.
-3. **Response Wrapper:** 정상 리턴된 데이터도 `ApiResponse` 객체로 감싸서 일관된 포맷을 보장합니다.
+1. **Annotated Pattern:** 모든 의존성 주입(`Depends`) 및 요청 파라미터(`Query`, `Path`)는 `Annotated[Type, Component]` 문법을 사용합니다. 기본값은 반드시 `Annotated[...] = default` 형태로 외부에 선언합니다.
+2. **Schema-First Service:** 서비스 레이어는 SQLAlchemy 모델 대신 **Pydantic 스키마(Read Schema)**를 반환하여 지연 로딩(Lazy Loading) 충돌 및 직렬화 오류를 사전에 방지합니다.
+3. **Trace ID:** 요청 진입 시 `X-Request-ID`가 없으면 생성하여 `ContextVar`에 저장 (로그 추적용).
+4. **Global Handler:** 비즈니스 로직에서 `SFMSException`이 발생하면, 이를 가로채어 표준 `APIResponse` 포맷으로 변환합니다.
+5. **Response Wrapper:** 모든 응답은 `APIResponse` 객체로 감싸서 일관된 포맷을 보장합니다. (위치/키워드 인자 모두 지원)
 
 ### 1.2 Sequence Diagram
 
@@ -48,7 +50,7 @@ sequenceDiagram
         Mid-->>Client: 200 OK + ApiResponse (Success=True)
         
     else 예외 발생 (Business Error)
-        Service-->>Router: Raise SFMSException(4090, "Duplicate")
+        Service-->>Router: Raise SFMSException(domain="USR", error_code=4090)
         deactivate Service
         Router-->>ErrHandler: Catch Exception
         deactivate Router

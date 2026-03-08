@@ -50,9 +50,9 @@ export const darkTheme: ThemeConfig = {
 		},
 		Layout: {
 			// ProLayout 사이드바 및 헤더 색상 제어
-			colorBgHeader: "#001529",
-			colorBgBody: "#000000",
-			colorBgTrigger: "#002140",
+			headerBg: "#001529",
+			bodyBg: "#000000",
+			triggerBg: "#002140",
 		},
 		Menu: {
 			// 사이드 메뉴 선택 시 배경색

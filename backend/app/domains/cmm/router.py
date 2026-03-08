@@ -1,123 +1,434 @@
-"""공통 관리(CMM) 도메인의 API 엔드포인트를 정의하는 라우터 모듈입니다."""
+"""공통 관리(CMM) 도메인의 API 엔드포인트를 정의하는 라우터 모듈입니다.
+
+이 모듈은 시스템 기준정보(공통 코드) 조회, 통합 파일 업로드/삭제,
+그리고 사용자 알림 관리를 위한 RESTful 인터페이스를 제공합니다.
+"""
 
 import uuid
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, UploadFile, status
+from fastapi import APIRouter, Depends, File, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db
-from app.core.exceptions import (
-    ConflictException,  # 업로드 실패 시 에러 처리를 위해 추가
+from app.core.codes import ErrorCode, SuccessCode
+from app.core.dependencies import check_domain_admin, get_current_user, get_db
+from app.core.exceptions import InternalServerErrorException
+from app.core.responses import APIResponse
+from app.core.storage import upload_file_stream
+from app.domains.cmm.schemas import (
+    AttachmentCreate,
+    AttachmentRead,
+    CodeDetailCreate,
+    CodeDetailRead,
+    CodeDetailUpdate,
+    CodeGroupCreate,
+    CodeGroupRead,
+    CodeGroupUpdate,
+    NotificationRead,
 )
-from app.core.schemas import APIResponse
-from app.core.storage import delete_file, upload_file_stream
-from app.domains.cmm.schemas import AttachmentCreate, AttachmentRead
-from app.domains.cmm.services import AttachmentService, SystemSequenceService
+from app.domains.cmm.services import AttachmentService, CodeService, NotificationService
+from app.domains.usr.models import User
+
+from . import DOMAIN
 
 router = APIRouter(prefix="/cmm", tags=["공통 관리 (CMM)"])
 
 
 # --------------------------------------------------------
-# [Attachment] 파일 업로드 API
+# [Common Code] 공통 코드 조회 및 관리 API
 # --------------------------------------------------------
+
+
+@router.get("/codes", response_model=APIResponse[list[CodeGroupRead]])
+async def list_codes(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    domain_code: Annotated[str | None, Query(description="특정 도메인의 코드만 필터링")] = None,
+):
+    """시스템 전체 또는 특정 도메인의 활성화된 공통 코드 목록을 조회합니다.
+
+    Args:
+        db (AsyncSession): 데이터베이스 비동기 세션
+        current_user (User): 현재 로그인한 사용자 정보
+        domain_code (str | None, optional): 특정 업무 도메인 필터링 코드. 기본값은 None.
+
+    Returns:
+        APIResponse[list[CodeGroupRead]]: 활성화된 코드 그룹 및 상세 코드 리스트
+    """
+    codes = await CodeService.list_active_codes(db, domain_code=domain_code)
+    return APIResponse(domain=DOMAIN, data=codes)
+
+
+@router.get("/codes/{group_code}", response_model=APIResponse[CodeGroupRead])
+async def get_code_group(
+    group_code: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """특정 그룹 코드에 속한 상세 코드 목록을 상세 조회합니다.
+
+    Args:
+        group_code (str): 조회할 코드 그룹의 식별자
+        db (AsyncSession): 데이터베이스 비동기 세션
+        current_user (User): 현재 로그인한 사용자 정보
+
+    Returns:
+        APIResponse[CodeGroupRead]: 코드 그룹 상세 정보 및 하위 코드 리스트
+    """
+    code_group = await CodeService.get_code_group(db, group_code=group_code)
+    return APIResponse(domain=DOMAIN, data=code_group)
+
+
+@router.post(
+    "/codes",
+    response_model=APIResponse[CodeGroupRead],
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_code_group(
+    obj_in: CodeGroupCreate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_admin: Annotated[User, Depends(check_domain_admin("CMM"))],
+):
+    """신규 공통 코드 그룹을 생성합니다.
+
+    이 API는 CMM 도메인 관리 권한이 있는 사용자만 호출 가능합니다.
+
+    Args:
+        obj_in (CodeGroupCreate): 생성할 코드 그룹 정보
+        db (AsyncSession): 데이터베이스 비동기 세션
+        current_admin (User): 행위 수행 권한을 가진 관리자 정보
+
+    Returns:
+        APIResponse[CodeGroupRead]: 생성 완료된 코드 그룹 정보
+    """
+    new_group = await CodeService.create_code_group(db, obj_in=obj_in, actor_id=current_admin.id)
+    return APIResponse(domain=DOMAIN, data=new_group, success_code=SuccessCode.SUCCESS_CREATED)
+
+
+@router.patch("/codes/{group_code}", response_model=APIResponse[CodeGroupRead])
+async def update_code_group(
+    group_code: str,
+    obj_in: CodeGroupUpdate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_admin: Annotated[User, Depends(check_domain_admin("CMM"))],
+):
+    """기존 공통 코드 그룹 정보를 수정합니다.
+
+    Args:
+        group_code (str): 수정할 대상 그룹 코드
+        obj_in (CodeGroupUpdate): 업데이트할 필드 정보
+        db (AsyncSession): 데이터베이스 비동기 세션
+        current_admin (User): 행위 수행 권한을 가진 관리자 정보
+
+    Returns:
+        APIResponse[CodeGroupRead]: 수정 완료된 코드 그룹 정보
+    """
+    updated_group = await CodeService.update_code_group(
+        db, group_code=group_code, obj_in=obj_in, actor_id=current_admin.id
+    )
+    return APIResponse(domain=DOMAIN, data=updated_group)
+
+
+@router.delete("/codes/{group_code}", response_model=APIResponse[None])
+async def delete_code_group(
+    group_code: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_admin: Annotated[User, Depends(check_domain_admin("CMM"))],
+):
+    """공통 코드 그룹을 삭제합니다. 시스템 필수 코드는 삭제할 수 없습니다.
+
+    Args:
+        group_code (str): 삭제할 대상 그룹 코드
+        db (AsyncSession): 데이터베이스 비동기 세션
+        current_admin (User): 행위 수행 권한을 가진 관리자 정보
+
+    Returns:
+        APIResponse[None]: 삭제 성공 응답
+    """
+    await CodeService.delete_code_group(db, group_code=group_code)
+    return APIResponse(domain=DOMAIN, data=None)
+
+
+@router.post(
+    "/codes/{group_code}/details",
+    response_model=APIResponse[CodeDetailRead],
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_code_detail(
+    group_code: str,
+    obj_in: CodeDetailCreate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_admin: Annotated[User, Depends(check_domain_admin("CMM"))],
+):
+    """특정 그룹에 새로운 상세 코드를 추가합니다.
+
+    Args:
+        group_code (str): 부모 그룹 코드
+        obj_in (CodeDetailCreate): 생성할 상세 코드 정보
+        db (AsyncSession): 데이터베이스 비동기 세션
+        current_admin (User): 행위 수행 권한을 가진 관리자 정보
+
+    Returns:
+        APIResponse[CodeDetailRead]: 생성 완료된 상세 코드 정보
+    """
+    new_detail = await CodeService.create_code_detail(
+        db, group_code=group_code, obj_in=obj_in, actor_id=current_admin.id
+    )
+    return APIResponse(domain=DOMAIN, data=new_detail)
+
+
+@router.patch(
+    "/codes/{group_code}/details/{detail_code}",
+    response_model=APIResponse[CodeDetailRead],
+)
+async def update_code_detail(
+    group_code: str,
+    detail_code: str,
+    obj_in: CodeDetailUpdate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_admin: Annotated[User, Depends(check_domain_admin("CMM"))],
+):
+    """특정 상세 코드 정보를 수정합니다.
+
+    Args:
+        group_code (str): 부모 그룹 코드
+        detail_code (str): 수정할 상세 코드
+        obj_in (CodeDetailUpdate): 업데이트할 필드 정보
+        db (AsyncSession): 데이터베이스 비동기 세션
+        current_admin (User): 행위 수행 권한을 가진 관리자 정보
+
+    Returns:
+        APIResponse[CodeDetailRead]: 수정 완료된 상세 코드 정보
+    """
+    updated_detail = await CodeService.update_code_detail(
+        db,
+        group_code=group_code,
+        detail_code=detail_code,
+        obj_in=obj_in,
+        actor_id=current_admin.id,
+    )
+    return APIResponse(domain=DOMAIN, data=updated_detail)
+
+
+# --------------------------------------------------------
+# [Attachment] 통합 파일 관리 API
+# --------------------------------------------------------
+
+
 @router.post(
     "/upload",
     response_model=APIResponse[AttachmentRead],
     status_code=status.HTTP_201_CREATED,
 )
 async def upload_file(
-    file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),
+    file: Annotated[UploadFile, File(...)],
+    domain_code: Annotated[str, Query(..., description="업무 도메인 코드 (예: USR, FAC)")],
+    resource_type: Annotated[str, Query(..., description="리소스 유형 (예: PROFILE, EQUIPMENT)")],
+    ref_id: Annotated[int, Query(..., description="연결될 레코드 PK")],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    category_code: Annotated[str, Query(description="파일 분류 코드")] = "GENERAL",
 ):
-    """
-    단일 파일을 업로드하고 메타데이터를 DB에 저장합니다.
+    """단일 파일을 업로드하고 메타데이터를 저장합니다.
 
-    FastAPI의 UploadFile 객체에서 바이너리 데이터를 읽어 MinIO 서버로 전송합니다.
+    파일은 MinIO 스토리지에 저장되며, DB에는 파일의 경로와 메타데이터만 기록됩니다.
+    업로드한 사용자의 부서(org_id) 정보가 함께 기록되어 부서원 간 공유 권한의 기초가 됩니다.
+
+    Args:
+        file (UploadFile): 업로드할 파일 객체
+        domain_code (str): 업무 도메인 코드
+        resource_type (str): 리소스 유형
+        ref_id (int): 연결될 레코드의 ID
+        db (AsyncSession): 데이터베이스 비동기 세션
+        current_user (User): 현재 로그인한 사용자 정보
+        category_code (str, optional): 파일 분류 구분. 기본값은 "GENERAL".
+
+    Returns:
+        APIResponse[AttachmentRead]: 생성된 첨부파일 메타데이터 정보
+
+    Raises:
+        InternalServerErrorException: 스토리지 서버 업로드 실패 시 발생
     """
-    # 1. 파일 데이터를 메모리로 읽어옵니다.
     file_data = await file.read()
+    new_id = uuid.uuid4()
 
-    # 2. 메타데이터 객체를 미리 생성합니다. (이때 id 값으로 UUID가 자동 발급됩니다!)
-    attachment_in = AttachmentCreate(
-        original_name=file.filename or "unknown",
-        file_size=len(file_data),  # 실제 읽어들인 바이트 크기 사용
-        mime_type=file.content_type or "application/octet-stream",
-        bucket_name="sfms-bucket",
-        ref_domain=None,  # Pylance 타입 체킹 에러 방지를 위해 명시적 None 할당
-        ref_id=None,  # Pylance 타입 체킹 에러 방지를 위해 명시적 None 할당
-        created_by=None,  # Pylance 타입 체킹 에러 방지를 위해 명시적 None 할당
-    )
+    # 스토리지 경로 구성 (도메인별 분리)
+    file_ext = file.filename.split(".")[-1] if file.filename else "bin"
+    object_name = f"{domain_code}/{resource_type}/{new_id.hex}.{file_ext}"
 
-    # 3. 발급된 UUID를 Object Name으로 사용하여 실제 MinIO 서버에 업로드!
-    object_name = str(attachment_in.id)
-    upload_success = upload_file_stream(
+    success = await upload_file_stream(
         object_name=object_name,
         file_data=file_data,
-        content_type=attachment_in.mime_type,
-        bucket_name=attachment_in.bucket_name,
+        content_type=file.content_type or "application/octet-stream",
     )
 
-    # 업로드 실패 시 예외 처리 (DB에 메타데이터를 남기지 않음)
-    if not upload_success:
-        raise ConflictException(message="파일 스토리지 업로드에 실패했습니다.")
+    if not success:
+        raise InternalServerErrorException(domain=DOMAIN, error_code=ErrorCode.STORAGE_ERROR)
 
-    # 4. 스토리지 업로드 성공 시 DB에 메타데이터 기록
-    new_attachment = await AttachmentService.create_attachment_metadata(
-        db, obj_in=attachment_in
+    attachment_in = AttachmentCreate(
+        id=new_id,
+        domain_code=domain_code,
+        resource_type=resource_type,
+        ref_id=ref_id,
+        category_code=category_code,
+        file_name=file.filename or "unknown",
+        file_path=object_name,
+        file_size=len(file_data),
+        content_type=file.content_type,
+        org_id=current_user.org_id,
+        created_by=current_user.id,
     )
 
-    return APIResponse(
-        success=True,
-        code=201,
-        message="파일이 성공적으로 업로드되었습니다.",
-        data=new_attachment,
-    )
+    new_attachment = await AttachmentService.create_attachment_metadata(db, obj_in=attachment_in)
+    await db.commit()
+
+    return APIResponse(domain=DOMAIN, data=new_attachment, success_code=SuccessCode.SUCCESS_CREATED)
 
 
 @router.delete("/attachments/{attachment_id}", response_model=APIResponse[None])
 async def delete_attachment(
     attachment_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    permanent: Annotated[bool, Query(description="즉시 물리 삭제 여부 (관리자 전용)")] = False,
 ):
-    """
-    첨부 파일 메타데이터 및 스토리지의 실제 파일을 삭제합니다.
-    """
-    # 1. MinIO 스토리지에서 실제 파일(Object) 삭제 호출
-    # (삭제 실패 시 False를 반환하더라도 메타데이터 정리를 위해 진행하거나, 에러를 던질 수 있습니다)
-    delete_file(object_name=str(attachment_id), bucket_name="sfms-bucket")
+    """첨부파일을 삭제 처리합니다.
 
-    # 2. 메타데이터 DB에서 삭제
-    await AttachmentService.delete_attachment(db, attachment_id=attachment_id)
+    본인이 업로드했거나, 소속 부서가 같거나, 관리자 권한이 있는 경우에만 삭제 가능합니다.
+    기본은 소프트 삭제(`is_deleted=True`)이며, 관리자는 `permanent=true`를 통해 영구 삭제할 수 있습니다.
 
-    return APIResponse(
-        success=True,
-        code=200,
-        message="파일이 성공적으로 삭제되었습니다.",
-        data=None,
+    Args:
+        attachment_id (uuid.UUID): 삭제할 파일의 고유 ID
+        db (AsyncSession): 데이터베이스 비동기 세션
+        current_user (User): 현재 로그인한 사용자 정보
+        permanent (bool, optional): 물리적 즉시 파기 여부. 기본값은 False.
+
+    Returns:
+        APIResponse[None]: 삭제 성공 응답
+    """
+    await AttachmentService.delete_attachment(
+        db,
+        attachment_id=attachment_id,
+        actor_id=current_user.id,
+        actor_org_id=current_user.org_id,
+        is_admin=current_user.is_superuser,
+        permanent=permanent,
     )
+    await db.commit()
+    return APIResponse(domain=DOMAIN, data=None)
+
+
+@router.get("/attachments/deleted", response_model=APIResponse[list[AttachmentRead]])
+async def list_deleted_attachments(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    domain_code: Annotated[str | None, Query(description="도메인 코드 (예: FAC)")] = None,
+    resource_type: Annotated[str | None, Query(description="리소스 유형 (예: EQUIPMENT)")] = None,
+    ref_id: Annotated[int | None, Query(description="연결 레코드 ID")] = None,
+    skip: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=1000)] = 100,
+):
+    """소프트 삭제된 첨부파일(휴지통) 목록을 조회합니다.
+
+    도메인 및 참조 ID 필터를 통해 특정 데이터에 연결되었던 삭제 파일만 조회할 수 있습니다.
+
+    Args:
+        db (AsyncSession): 데이터베이스 비동기 세션
+        current_user (User): 현재 로그인한 사용자 정보
+        domain_code (str | None, optional): 도메인 필터.
+        resource_type (str | None, optional): 리소스 유형 필터.
+        ref_id (int | None, optional): 참조 ID 필터.
+        skip (int, optional): 페이징 시작 오프셋. 기본값은 0.
+        limit (int, optional): 페이징 제한 수. 기본값은 100.
+
+    Returns:
+        APIResponse[list[AttachmentRead]]: 삭제된 파일 리스트
+    """
+    files = await AttachmentService.list_deleted_attachments(
+        db,
+        actor_id=current_user.id,
+        actor_org_id=current_user.org_id,
+        is_admin=current_user.is_superuser,
+        domain_code=domain_code,
+        resource_type=resource_type,
+        ref_id=ref_id,
+        skip=skip,
+        limit=limit,
+    )
+    return APIResponse(domain=DOMAIN, data=files)
+
+
+@router.post("/attachments/{attachment_id}/restore", response_model=APIResponse[None])
+async def restore_attachment(
+    attachment_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """소프트 삭제된 첨부파일을 다시 복구합니다.
+
+    권한 정책은 삭제와 동일하게 본인, 부서 동료, 관리자만 가능합니다.
+
+    Args:
+        attachment_id (uuid.UUID): 복구할 파일의 고유 ID
+        db (AsyncSession): 데이터베이스 비동기 세션
+        current_user (User): 현재 로그인한 사용자 정보
+
+    Returns:
+        APIResponse[None]: 복구 성공 응답
+    """
+    await AttachmentService.restore_attachment(
+        db,
+        attachment_id=attachment_id,
+        actor_id=current_user.id,
+        actor_org_id=current_user.org_id,
+        is_admin=current_user.is_superuser,
+    )
+    await db.commit()
+    return APIResponse(domain=DOMAIN, data=None)
 
 
 # --------------------------------------------------------
-# [SystemSequence] 시스템 채번 API
+# [Notification] 알림 관리 API
 # --------------------------------------------------------
-@router.get("/sequence/{domain_code}", response_model=APIResponse[str])
-async def get_next_sequence(
-    domain_code: str,
-    db: AsyncSession = Depends(get_db),
+
+
+@router.get("/notifications", response_model=APIResponse[list[NotificationRead]])
+async def list_notifications(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    unread_only: Annotated[bool, Query()] = False,
 ):
-    """
-    특정 도메인 코드(예: FAC_WORK_ORDER)에 대한 다음 시퀀스 번호를 발급받습니다.
+    """로그인한 사용자의 알림 목록을 최신순으로 조회합니다.
 
-    주로 백엔드 내부 비즈니스 로직에서 직접 호출되지만,
-    프론트엔드에서 작성 화면 진입 시 코드를 미리 보여줘야 할 때 유용하게 사용할 수 있습니다.
-    """
-    next_seq = await SystemSequenceService.get_next_sequence(
-        db, domain_code=domain_code
-    )
+    Args:
+        db (AsyncSession): 데이터베이스 비동기 세션
+        current_user (User): 현재 로그인한 사용자 정보
+        unread_only (bool, optional): 읽지 않은 알림만 조회할지 여부. 기본값은 False.
 
-    return APIResponse(
-        success=True,
-        code=200,
-        message="시퀀스가 성공적으로 발급되었습니다.",
-        data=next_seq,
+    Returns:
+        APIResponse[list[NotificationRead]]: 알림 정보 리스트
+    """
+    notifications = await NotificationService.list_my_notifications(
+        db, user_id=current_user.id, unread_only=unread_only
     )
+    return APIResponse(domain=DOMAIN, data=notifications)
+
+
+@router.patch("/notifications/{notification_id}/read", response_model=APIResponse[None])
+async def mark_notification_as_read(
+    notification_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """특정 알림을 읽음 처리합니다. 본인 소유의 알림만 가능합니다.
+
+    Args:
+        notification_id (int): 대상 알림의 고유 ID
+        db (AsyncSession): 데이터베이스 비동기 세션
+        current_user (User): 현재 로그인한 사용자 정보
+
+    Returns:
+        APIResponse[None]: 읽음 처리 성공 응답
+    """
+    await NotificationService.mark_as_read(db, notification_id=notification_id, user_id=current_user.id)
+    return APIResponse(domain=DOMAIN, data=None)

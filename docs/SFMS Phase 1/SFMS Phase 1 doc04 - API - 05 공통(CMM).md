@@ -1,283 +1,205 @@
-# 📘 SFMS Phase 1 API - 05 공통 관리 (CMM) 상세 명세서 (Revised v1.3)
+# 📘 SFMS Phase 1 API - 05 공통 관리 (CMM) 상세 명세서
 
-* **문서 버전:** v1.3 (Production Ready)
-* **작성일:** 2026-02-17
-* **관련 스키마:** `cmm.*` (codes, attachments, notifications, logs, sequences)
+* **문서 버전:** v1.3 (Context-based Recycle Bin Updated)
+* **최종 수정일:** 2026-03-07
+* **관련 스키마:** `cmm.code_groups`, `cmm.code_details`, `cmm.attachments`, `cmm.notifications`
 * **기준 규격:** `SFMS Standard v1.2`
 
 ---
 
 ## 1. 🏗️ 데이터 모델 및 타입 정의 (Data Models & Types)
 
-**보완점:** Pydantic v2 `ConfigDict` 적용, `Enum` 활용, **시스템 상태** 및 **다중 파일 처리** 모델을 추가했습니다.
+### 1.1 Backend Models (SQLAlchemy & Pydantic)
 
-### 1.1 Backend Models (Python/Pydantic)
+#### [Database Models]
 
-파일 위치: `app/modules/cmm/schemas.py`
+**파일 위치:** `backend/app/domains/cmm/models.py`
 
 ```python
-from pydantic import BaseModel, Field, ConfigDict, field_validator
-from typing import Optional, List, Dict, Any
+class CodeGroup(Base):
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    group_code: Mapped[str] = mapped_column(String(30), unique=True, index=True)
+    group_name: Mapped[str] = mapped_column(String(100))
+    domain_code: Mapped[Optional[str]] = mapped_column(String(3))
+    is_system: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+class CodeDetail(Base):
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    group_code: Mapped[str] = mapped_column(String(30), ForeignKey("cmm.code_groups.group_code"))
+    detail_code: Mapped[str] = mapped_column(String(30))
+    detail_name: Mapped[str] = mapped_column(String(100))
+    props: Mapped[Dict[str, Any]] = mapped_column(JSONB)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+
+class Attachment(Base):
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    domain_code: Mapped[str] = mapped_column(String(3))
+    resource_type: Mapped[str] = mapped_column(String(50))
+    ref_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    file_name: Mapped[str] = mapped_column(String(255))
+    file_path: Mapped[str] = mapped_column(String(500), unique=True)
+    org_id: Mapped[int | None] = mapped_column(BigInteger, index=True, comment="업로드 당시 부서 ID")
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+
+class Notification(Base):
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    receiver_user_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    category: Mapped[str] = mapped_column(String(20))
+    title: Mapped[str] = mapped_column(String(200))
+    content: Mapped[Optional[str]] = mapped_column(Text)
+    is_read: Mapped[bool] = mapped_column(Boolean, default=False)
+```
+
+#### [Pydantic Schemas]
+
+**파일 위치:** `backend/app/domains/cmm/schemas.py`
+
+```python
 from datetime import datetime
-from enum import Enum
+from typing import Any, Dict, List, Optional
 import uuid
-
-# [Enum] 정렬 방향
-class SortDirection(str, Enum):
-    ASC = "asc"
-    DESC = "desc"
-
-# [Enum] 이미지 리사이징 옵션 (프론트엔드 최적화)
-class ImageResizeOption(str, Enum):
-    ORIGINAL = "original"
-    THUMBNAIL = "thumbnail" # 200x200 (목록용)
-    MEDIUM = "medium"       # 800x600 (상세용)
+from pydantic import BaseModel, ConfigDict, Field
 
 # --------------------------------------------------------
-# [System] 시스템 상태 (New)
+# [Common Code] 공통 코드 관련 스키마
 # --------------------------------------------------------
-class HealthCheckResponse(BaseModel):
-    status: str = "ok"
-    db_connection: bool
-    redis_connection: bool
-    version: str
-    server_time: datetime
-
-# --------------------------------------------------------
-# [Common Code] 공통 코드
-# --------------------------------------------------------
-class CodeGroupBase(BaseModel):
-    group_code: str = Field(..., pattern=r"^[A-Z0-9_]+$")
-    domain_code: str = Field(..., min_length=3, max_length=3)
-    group_name: str
-    description: Optional[str] = None
-    is_active: bool = True
-
-class CodeDetailBase(BaseModel):
-    detail_code: str = Field(..., pattern=r"^[A-Z0-9_]+$")
+class CodeDetailRead(BaseModel):
+    id: int
+    group_code: str
+    detail_code: str
     detail_name: str
-    props: Dict[str, Any] = Field(default_factory=dict)
-    sort_order: int = 0
-    is_active: bool = True
-
-class CodeLookUpItem(BaseModel):
-    value: str  # detail_code
-    label: str  # detail_name
-    props: Dict[str, Any] = {}
+    props: Dict[str, Any]
     sort_order: int
+    is_active: bool
+    model_config = ConfigDict(from_attributes=True)
+
+class CodeGroupRead(BaseModel):
+    id: int
+    group_code: str
+    group_name: str
+    domain_code: Optional[str]
+    description: Optional[str]
+    is_active: bool
+    is_system: bool
+    details: List[CodeDetailRead] = []
+    model_config = ConfigDict(from_attributes=True)
 
 # --------------------------------------------------------
-# [File] 첨부파일 (Multi-Upload 지원)
+# [Attachment] 첨부 파일 메타데이터 스키마
 # --------------------------------------------------------
-class FileUploadResult(BaseModel):
+class AttachmentRead(BaseModel):
     id: uuid.UUID
+    domain_code: str
+    resource_type: str
+    ref_id: int
+    category_code: str
     file_name: str
     file_path: str
     file_size: int
-    content_type: str
-    url: str
-    thumbnail_url: Optional[str] = None # 이미지인 경우 썸네일 경로
-
-class MultiFileUploadResponse(BaseModel):
-    success_count: int
-    failed_count: int
-    results: List[FileUploadResult]
-    errors: Optional[List[Dict[str, Any]]] = None # 실패 파일명 및 사유
-
-# --------------------------------------------------------
-# [Sequence] 채번 규칙 제어 (New)
-# --------------------------------------------------------
-class SequenceRuleRead(BaseModel):
-    id: int
-    domain_code: str
-    prefix: str
-    current_year: str
-    current_seq: int
-    padding_length: int
-    description: Optional[str]
-    updated_at: datetime
+    content_type: Optional[str]
+    org_id: Optional[int]
+    props: Dict[str, Any]
+    created_at: datetime
+    created_by: Optional[int]
     model_config = ConfigDict(from_attributes=True)
 
-class SequenceResetRequest(BaseModel):
-    current_seq: int = Field(..., ge=0, description="강제 설정할 시퀀스 번호")
-    reason: str = Field(..., min_length=5, description="변경 사유 (Audit Log 필수)")
-
-```
-
-### 1.2 Frontend Interfaces (TypeScript)
-
-파일 위치: `src/api/cmm/types.ts`
-
-```typescript
-// [System]
-export interface SystemHealth {
-  status: string;
-  db_connection: boolean;
-  version: string;
-}
-
-// [File]
-export interface FileUploadResult {
-  id: string; // UUID
-  file_name: string;
-  url: string;
-  thumbnail_url?: string;
-}
-
-export interface MultiFileUploadResponse {
-  success_count: number;
-  failed_count: number;
-  results: FileUploadResult[];
-  errors?: { file_name: string; reason: string }[];
-}
-
-// [Sequence]
-export interface SequenceRule {
-  id: number;
-  domain_code: string;
-  prefix: string;
-  current_seq: number;
-  description?: string;
-}
-
+# --------------------------------------------------------
+# [Notification] 알림 관련 스키마
+# --------------------------------------------------------
+class NotificationRead(BaseModel):
+    id: int
+    category: str
+    priority: str
+    title: str
+    content: Optional[str]
+    link_url: Optional[str]
+    is_read: bool
+    read_at: Optional[datetime]
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
 ```
 
 ---
 
-## 2. ⚙️ 시스템 유틸리티 API (System) - **[신규 추가]**
+## 2. 🔐 보안 및 권한 정책 (Security & Permissions)
 
-**운영 및 모니터링(DevOps)**을 위한 필수 API입니다. 로드밸런서(AWS ALB, Nginx) 설정 시 반드시 필요합니다.
+파일 관리는 업무의 연속성을 위해 **'부서(조직) 기반 공유 소유권'** 모델을 따릅니다.
 
-### 2.1 헬스 체크 (Liveness/Readiness Probe)
+### 2.1 사용자별 권한 매트릭스
 
-* **URL:** `GET /api/v1/system/health`
-* **Auth:** **Public (인증 제외 설정 필수)**
-* **Response:** `HealthCheckResponse`
-* **Logic:**
-* DB `SELECT 1` 수행 (연결 확인)
-* Redis `PING` 수행 (캐시 확인)
-* 하나라도 실패 시 HTTP 503 Service Unavailable 반환.
-
-
-
-### 2.2 서버 시간 조회
-
-* **URL:** `GET /api/v1/system/time`
-* **Response:** `{ "server_time": "2026-02-17T20:30:00+09:00", "timezone": "KST" }`
-* **Use Case:** 클라이언트(Browser)와 서버 간 시간 동기화 문제 해결.
+| 대분류 | 기능 | 일반 사용자 | 관리자(Admin) | 상세 보안 로직 |
+| :--- | :--- | :---: | :---: | :--- |
+| **공통 코드** | 코드 목록/상세 조회 | ✅ | ✅ | 프론트엔드 Select Box용 |
+| | 코드 그룹/상세 CRUD | ❌ | ✅ | 관리자 전용 (`Superuser`) |
+| **첨부파일** | 파일 업로드 | ✅ | ✅ | 모든 인증된 사용자 (부서 정보 자동 기록) |
+| | **파일 삭제/복구** | ⚠️ | ✅ | 소유권 체크: **본인 또는 동일 부서원**만 가능 |
+| | **삭제 목록 조회** | ⚠️ | ✅ | **컨텍스트 필터링** 지원 (본인/부서 데이터 한정) |
+| | 파일 영구 삭제 | ❌ | ✅ | `permanent=true` 옵션 (물리 파기) |
+| **알림 관리** | 내 알림 조회/읽음 | ✅ | ✅ | 본인 데이터만 접근 가능 |
 
 ---
 
-## 3. 🗂️ 공통 코드 관리 API (Codes)
+## 🗂️ 3. 공통 코드 관리 API (Common Codes)
 
-### 3.1 코드 그룹/상세 관리 (CRUD)
+### 3.1 코드 목록 조회
 
-*(기존 v1.0 내용과 유사하나 Pydantic v2 모델 적용)*
+* **URL:** `GET /cmm/codes`
+* **Query Params:** `domain_code` (필터)
 
-### 3.2 [핵심] 프론트엔드 코드 조회 (Lookup)
+### 3.2 코드 그룹/상세 관리 (CRUD)
 
-* **URL:** `GET /api/v1/cmm/codes/{group_code}/lookup`
-* **Response:** `ApiResponse<List[CodeLookUpItem]>`
-* **Performance:** **Redis 캐싱(`@cache(expire=3600)`) 적용 필수.** 코드는 자주 변하지 않으므로 DB 부하를 줄여야 합니다.
+* **URL:** `POST /cmm/codes`, `PATCH /cmm/codes/{group_code}` 등 (상세 내용은 3.2절 참조)
+* **Permission:** **관리자 전용**
 
 ---
 
-## 4. 📂 파일/첨부파일 관리 API (Attachments) - **[대폭 보완]**
+## 📂 4. 통합 파일 관리 API (Attachments)
 
-기존 단건 업로드 방식은 현장 사진(여러 장) 업로드 시 매우 불편합니다. **다중 업로드**와 **이미지 리사이징**을 지원하도록 개선했습니다.
+### 4.1 파일 업로드
 
-### 4.1 다중 파일 업로드 (Multi-Upload)
+* **URL:** `POST /cmm/upload`
+* **Query Params:** `domain_code`, `resource_type`, `ref_id`, `category_code`
+* **Logic:** 업로드 당시 사용자의 **부서 ID(`org_id`)**를 함께 기록하여 부서원 간 공유 권한을 부여합니다.
 
-* **URL:** `POST /api/v1/cmm/files/upload`
-* **Content-Type:** `multipart/form-data`
-* **Form Data:**
-* `files`: `List[UploadFile]` (FastAPI List 타입 사용, 최대 10개 권장)
-* `domain_code`: `FAC`, `USR` 등
-* `category_code`: `EVIDENCE`, `PROFILE` 등
+### 4.2 파일 삭제 (소프트 삭제)
 
+* **URL:** `DELETE /cmm/attachments/{attachment_id}`
+* **Permission:** 본인, 동일 부서원, 또는 관리자
+* **Logic:** `is_deleted = True` 처리.
 
-* **Response:** `ApiResponse<MultiFileUploadResponse>`
-* **Logic:**
-1. **Validation:** 허용되지 않는 확장자(.exe, .sh) 및 개별 파일 용량(10MB) 체크.
-2. **Image Processing:** 이미지 파일(`image/*`)인 경우 `Pillow` 라이브러리를 사용해 썸네일(200px) 자동 생성 및 메타데이터(Exif) 제거.
-3. **Storage:** UUID로 파일명 난수화 후 저장 (원본 + 썸네일).
-4. **DB Transaction:** 성공한 파일만 `cmm.attachments`에 Insert.
-5. **Partial Success:** 일부 파일 실패 시 에러 400이 아닌 `200 OK`와 함께 실패 목록(`errors`)을 반환하여 프론트엔드에서 재시도 유도.
+### 4.3 삭제된 파일 목록 조회 (Recycle Bin)
 
-
-
-### 4.2 파일 다운로드 및 썸네일 조회
-
-* **URL:** `GET /api/v1/cmm/files/{file_id}/download`
+* **URL:** `GET /cmm/attachments/deleted`
 * **Query Params:**
-* `size`: `original` (기본값) | `thumbnail` | `medium`
-
-
+  * `domain_code`: 특정 도메인 필터 (예: FAC)
+  * `resource_type`: 리소스 유형 (예: EQUIPMENT)
+  * `ref_id`: 특정 레코드 ID (예: 10번 시설)
 * **Logic:**
-* `size=thumbnail` 요청 시, 스토리지의 `_thumb` 접미사 파일을 스트리밍.
-* 썸네일이 없으면 원본을 실시간 리사이징(On-the-fly) 하거나 원본 반환.
-* **Browser Cache:** `Cache-Control: max-age=86400` 헤더를 추가하여 트래픽 절감.
+  * **컨텍스트 조회**: 특정 시설 상세 페이지에서 해당 시설과 관련된 삭제 이력만 골라볼 때 사용합니다.
+  * **권한 필터**: 일반 사용자는 본인 또는 우리 부서가 삭제한 파일만 리스트에 나타납니다.
 
+### 4.4 파일 복구 (Restore)
 
-
----
-
-## 5. 🔢 채번 규칙 관리 API (Sequences) - **[기능 보완]**
-
-### 5.1 채번 규칙 목록 조회
-
-* **URL:** `GET /api/v1/cmm/sequences`
-* **Response:** `ApiResponse<List[SequenceRuleRead]>`
-
-### 5.2 시퀀스 강제 조정 (Reset) - **[Admin Only]**
-
-DB 마이그레이션 오류나 테스트 시 번호를 초기화해야 할 때 필요합니다.
-
-* **URL:** `PATCH /api/v1/cmm/sequences/{id}/reset`
-* **Body:** `SequenceResetRequest` (변경할 번호, 사유)
-* **Auth:** **Super Admin 권한 필수**
-* **Logic:**
-1. DB Row Lock (`SELECT ... FOR UPDATE`) 획득.
-2. `current_seq` 값 변경.
-3. **Audit Log:** "누가", "왜", "몇 번으로" 변경했는지 `cmm.audit_logs`에 기록 (`action_type: SEQ_RESET`).
-
-
+* **URL:** `POST /cmm/attachments/{attachment_id}/restore`
+* **Permission:** 본인, 동일 부서원, 또는 관리자
+* **Logic:** 소프트 삭제된 상태를 활성 상태로 되돌립니다.
 
 ---
 
-## 6. 📜 시스템 감사 로그 API (Audit Logs)
+## ⚙️ 5. 운영 가이드: 영구 파기 (Purge)
 
-*(기존 v1.0 내용과 동일하게 PGroonga 검색 지원)*
+### 5.1 배치 스크립트 기반 자동 파기
 
----
-
-## 7. 🔔 알림 관리 API (Notifications)
-
-*(기존 v1.0 내용과 동일)*
+* **스크립트:** `backend/app/scripts/purge_attachments.py`
+* **기능:** 삭제 후 보관 기간(기본 30일)이 지난 데이터를 스토리지와 DB에서 영구 삭제합니다.
+* **보안:** 외부 노출 없이 서버 로컬 터미널(`cron`)에서만 실행됩니다.
 
 ---
 
-## 8. ⚠️ 표준 에러 코드 (Standard Error Codes)
+## ⚠️ 6. CMM 도메인 특화 에러 코드
 
-v1.3에서 **파일 및 시스템 관련 에러**가 추가되었습니다.
-
-| HTTP | Code | Name | Description |
-| --- | --- | --- | --- |
-| **207** | `2070` | `PARTIAL_SUCCESS` | 다건 처리 중 일부만 성공함 (결과 payload 확인 필요) |
-| **400** | `4005` | `FILE_TOO_LARGE` | 개별 파일 크기가 제한을 초과했습니다. |
-| **400** | `4006` | `INVALID_FILE_TYPE` | 허용되지 않는 파일 형식입니다. |
-| **429** | `4290` | `TOO_MANY_REQUESTS` | API 호출 빈도 제한 초과 (Rate Limiting) |
-| **503** | `5030` | `SERVICE_UNAVAILABLE` | DB 또는 Redis 연결 실패 (Health Check) |
-
----
-
-## 9. ✅ 구현 체크리스트 (Final Checklist)
-
-이 체크리스트를 개발 완료 조건(Definition of Done)으로 사용하십시오.
-
-* [ ] **Health Check Bypass**: `FastAPI` 미들웨어 설정에서 `/api/v1/system/health` 경로는 JWT 인증을 거치지 않도록 예외 처리했는가?
-* [ ] **Image Processing**: `Pillow` 라이브러리를 설치하고, 업로드 시 이미지 스트립(Exif 제거) 로직을 구현했는가?
-* [ ] **Transaction Scope**: 파일 업로드(S3/Disk I/O)는 **DB 트랜잭션 외부**에서 수행하여 DB Lock 시간을 최소화했는가?
-* [ ] **Bulk Error Handling**: 다중 파일 업로드 시 1개가 실패해도 나머지는 성공하도록 `try-except` 블록을 개별 파일 단위로 적용했는가?
-* [ ] **Admin Guard**: 시퀀스 리셋 API(`PATCH .../reset`)에 `SuperUser` 전용 의존성(`Depends(get_super_user)`)을 적용했는가?
-* [ ] **CORS Policy**: 프론트엔드 개발 서버(`localhost:3000`) 및 운영 도메인만 허용하도록 설정했는가?
+| Code | Name | Description |
+| --- | --- | --- |
+| `4032` | `ACCESS_DENIED` | 본인 또는 부서 소유 파일이 아니어서 접근 거부 |
+| `4099` | `SYSTEM_RESOURCE_MOD` | 시스템 필수 코드는 삭제 불가능 |

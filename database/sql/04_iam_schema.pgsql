@@ -1,5 +1,5 @@
 -----------------------------------------------------------
--- 🟪 ism 도메인 (인증 및 권한 관리)
+-- 🟪 iam 도메인 (인증 및 권한 관리)
 -----------------------------------------------------------
 CREATE SCHEMA IF NOT EXISTS iam;
 COMMENT ON SCHEMA iam IS '인증 및 권한 관리 도메인';
@@ -34,7 +34,7 @@ CREATE TABLE iam.roles (
 -- [Trigger] 업데이트 시 updated_at 자동 갱신
 CREATE TRIGGER trg_updated_at_roles 
 BEFORE UPDATE ON iam.roles 
-FOR EACH ROW EXECUTE FUNCTION cmm.trg_set_updated_at();
+FOR EACH ROW EXECUTE FUNCTION sys.trg_set_updated_at();
 
 -- [Index] 권한 JSON 데이터의 고속 검색을 위한 GIN 인덱스
 CREATE INDEX idx_iam_roles_permissions_gin ON iam.roles USING GIN (permissions);

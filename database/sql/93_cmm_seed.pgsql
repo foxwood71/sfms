@@ -4,8 +4,9 @@
 -- =========================================================
 
 -- 1. 시스템 도메인 등록 [cite: 3]
-INSERT INTO cmm.system_domains (domain_code, domain_name, schema_name, description, sort_order)
+INSERT INTO sys.system_domains (domain_code, domain_name, schema_name, description, sort_order)
 VALUES
+('SYS', 'System', 'sys', '시스템 관리 도메인', 1),
 ('CMM', 'Common', 'cmm', '공통 관리 도메인', 1),
 ('IAM', 'Identity', 'iam', '인증 및 권한 관리', 2),
 ('USR', 'User', 'usr', '사용자 및 조직 관리', 3),
@@ -13,14 +14,21 @@ VALUES
 ('EQP', 'Equipment', 'eqp', '설비 관리', 5),
 ('WQT', 'Water Quality', 'wqt', '수질 관리', 6);
 
--- 2. 공통 코드 그룹 설정 [cite: 4]
+-- 2. 자동 채번 규칙 초기화 [cite: 12]
+INSERT INTO sys.sequence_rules (domain_code, prefix, current_year, current_seq)
+VALUES
+('FAC', 'FAC', '2026', 0),
+('EQP', 'EQP', '2026', 0),
+('WQT', 'WQT', '2026', 0);
+
+-- 3. 공통 코드 그룹 설정 [cite: 4]
 INSERT INTO cmm.code_groups (group_code, group_name, description, is_system)
 VALUES
 ('SYS_USE_YN', '사용 여부', '시스템 전반 활성화 상태 구분', true),
 ('FILE_CATEGORY', '파일 분류', '문서, 도면, 사진 등 파일 유형', true),
 ('EQP_STATUS', '설비 상태', '설비의 현재 가동 상태', false);
 
--- 3. 공통 코드 상세 및 가변 속성(JSONB) 설정 [cite: 6, 7]
+-- 4. 공통 코드 상세 및 가변 속성(JSONB) 설정 [cite: 6, 7]
 INSERT INTO cmm.code_details (group_code, detail_code, detail_name, props, sort_order)
 VALUES
 -- 사용 여부
@@ -37,9 +45,3 @@ VALUES
 ('EQP_STATUS', 'STP', '정지', '{"status": "default", "color": "#bfbfbf"}', 2),
 ('EQP_STATUS', 'ERR', '장애', '{"status": "error", "color": "#f5222d"}', 3);
 
--- 4. 자동 채번 규칙 초기화 [cite: 12]
-INSERT INTO cmm.sequence_rules (domain_code, prefix, current_year, current_seq)
-VALUES
-('FAC', 'FAC', '2026', 0),
-('EQP', 'EQP', '2026', 0),
-('WQT', 'WQT', '2026', 0);
