@@ -7,7 +7,7 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 # --------------------------------------------------------
 # [Auth] 인증 관련 스키마
@@ -38,10 +38,16 @@ class Token(BaseModel):
 class RoleBase(BaseModel):
     """역할의 공통 속성을 정의하는 기본 스키마입니다."""
 
-    name: str = Field(..., min_length=2, max_length=100, description="역할 명칭 (예: 슈퍼 관리자)")
-    code: str = Field(..., min_length=2, max_length=50, description="역할 식별 코드 (예: ADMIN)")
+    name: str = Field(
+        ..., min_length=2, max_length=100, description="역할 명칭 (예: 슈퍼 관리자)"
+    )
+    code: str = Field(
+        ..., min_length=2, max_length=50, description="역할 식별 코드 (예: ADMIN)"
+    )
     description: str | None = Field(None, description="역할 상세 설명")
-    permissions: dict[str, Any] = Field(default_factory=dict, description="메뉴/기능별 권한 매트릭스 (JSON)")
+    permissions: dict[str, Any] = Field(
+        default_factory=dict, description="메뉴/기능별 권한 매트릭스 (JSON)"
+    )
     is_system: bool = Field(False, description="시스템 필수 역할 여부 (수정/삭제 제한)")
 
 
@@ -81,4 +87,39 @@ class UserRoleUpdate(BaseModel):
     """사용자에게 역할 목록을 할당(전체 교체)하기 위한 스키마입니다."""
 
     user_id: int = Field(..., description="대상 사용자 ID")
-    role_ids: list[int] = Field(..., description="할당할 역할 ID 목록 (기존 권한은 삭제됨)")
+    role_ids: list[int] = Field(
+        ..., description="할당할 역할 ID 목록 (기존 권한은 삭제됨)"
+    )
+
+
+from app.domains.usr.schemas import UserRead
+
+class UserWithPermissions(UserRead):
+    """사용자 정보와 함께 할당된 역할 및 통합 권한 목록을 담는 스키마입니다."""
+
+    roles: list[str] = Field(default_factory=list, description="할당된 역할 코드 목록")
+    permissions: dict[str, list[str]] = Field(
+        default_factory=dict, description="리소스별 통합 권한 매트릭스"
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def fix_sqlalchemy_metadata(cls, data: Any) -> Any:
+        """SQLAlchemy 모델에서 데이터를 읽을 때 metadata 충돌을 방지합니다."""
+        if not isinstance(data, dict):
+            # SQLAlchemy 모델 객체인 경우 (지연 로딩 및 프레임워크 객체 충돌 방지)
+            result = {}
+            # 부모(UserRead)의 필드들을 수동으로 복사
+            for field in cls.model_fields.keys():
+                if field == "user_metadata":
+                    # DB의 'metadata' 컬럼 값(dict)을 'user_metadata' 필드에 매핑
+                    meta_val = getattr(data, "metadata", {})
+                    result[field] = meta_val if isinstance(meta_val, dict) else {}
+                elif hasattr(data, field):
+                    result[field] = getattr(data, field)
+            
+            # 추가 필드들 명시적 주입
+            result["roles"] = getattr(data, "roles", [])
+            result["permissions"] = getattr(data, "permissions", {})
+            return result
+        return data

@@ -38,9 +38,13 @@ class FacilityCategory(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
     created_by: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
     updated_by: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
 
 
@@ -55,8 +59,12 @@ class SpaceType(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 class SpaceFunction(Base):
@@ -70,8 +78,12 @@ class SpaceFunction(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 class Facility(Base):
@@ -81,21 +93,33 @@ class Facility(Base):
     __table_args__ = {"schema": "fac", "comment": "최상위 시설물 정보 테이블"}
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    category_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("fac.facility_categories.id"))
-    representative_image_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    category_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("fac.facility_categories.id")
+    )
+    representative_image_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), nullable=True
+    )
 
-    code: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
+    code: Mapped[str] = mapped_column(
+        String(50), unique=True, nullable=False, index=True
+    )
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     address: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
 
-    metadata_info: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, default=dict, server_default="'{}'::jsonb")
+    metadata_info: Mapped[dict[str, Any]] = mapped_column(
+        "metadata", JSONB, default=dict, server_default="'{}'::jsonb"
+    )
     legacy_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
     created_by: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
     updated_by: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
 
     # Relationships
@@ -109,12 +133,22 @@ class Space(Base):
     __table_args__ = {"schema": "fac", "comment": "시설물 내부 공간 계층 관리 테이블"}
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    facility_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("fac.facilities.id", ondelete="CASCADE"), nullable=False)
-    parent_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("fac.spaces.id", ondelete="CASCADE"), nullable=True)
+    facility_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("fac.facilities.id", ondelete="CASCADE"), nullable=False
+    )
+    parent_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("fac.spaces.id", ondelete="CASCADE"), nullable=True
+    )
 
-    representative_image_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
-    space_type_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("fac.space_types.id"))
-    space_function_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("fac.space_functions.id"))
+    representative_image_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), nullable=True
+    )
+    space_type_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("fac.space_types.id")
+    )
+    space_function_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("fac.space_functions.id")
+    )
 
     code: Mapped[str] = mapped_column(String(50), nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -123,16 +157,28 @@ class Space(Base):
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     is_restricted: Mapped[bool] = mapped_column(Boolean, default=False)
 
-    org_id: Mapped[int | None] = mapped_column(BigInteger, index=True, comment="관리 책임 부서 ID")
-    metadata_info: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, default=dict, server_default="'{}'::jsonb")
+    org_id: Mapped[int | None] = mapped_column(
+        BigInteger, index=True, comment="관리 책임 부서 ID"
+    )
+    metadata_info: Mapped[dict[str, Any]] = mapped_column(
+        "metadata", JSONB, default=dict, server_default="'{}'::jsonb"
+    )
     legacy_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
     created_by: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
     updated_by: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
 
     # Relationships
     facility: Mapped["Facility"] = relationship("Facility", back_populates="spaces")
-    children: Mapped[list["Space"]] = relationship("Space", back_populates="parent", cascade="all, delete-orphan")
-    parent: Mapped[Optional["Space"]] = relationship("Space", back_populates="children", remote_side=[id])
+    children: Mapped[list["Space"]] = relationship(
+        "Space", back_populates="parent", cascade="all, delete-orphan"
+    )
+    parent: Mapped[Optional["Space"]] = relationship(
+        "Space", back_populates="children", remote_side=[id]
+    )

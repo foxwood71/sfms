@@ -24,11 +24,11 @@ class APIResponse[T](BaseModel):
         """위치 인자로 domain을 받을 수 있도록 생성자를 오버라이딩합니다."""
         # 1. domain이 위치 인자로 들어오면 kwargs에 삽입
         kwargs["domain"] = domain
-        
+
         # 2. success_code가 명시적으로 들어오지 않았다면 기본값 설정
         if "success_code" not in kwargs:
             kwargs["success_code"] = SuccessCode.SUCCESS.value
-            
+
         super().__init__(**kwargs)
 
     @model_validator(mode="before")

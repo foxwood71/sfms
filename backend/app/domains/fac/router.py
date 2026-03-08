@@ -31,7 +31,8 @@ router = APIRouter(prefix="/fac", tags=["시설 및 공간 관리 (FAC)"])
 
 @router.get("/facilities", response_model=APIResponse[list[FacilityRead]])
 async def list_facilities(
-    db: Annotated[AsyncSession, Depends(get_db)], current_user: Annotated[User, Depends(get_current_user)]
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ):
     """시스템에 등록된 모든 최상위 시설(사업소/처리장 등) 목록을 조회합니다.
 
@@ -41,6 +42,7 @@ async def list_facilities(
 
     Returns:
         APIResponse[list[FacilityRead]]: 시설 정보 리스트
+
     """
     facilities = await FacilityService.list_facilities(db)
     return APIResponse(domain=DOMAIN, data=facilities)
@@ -61,12 +63,17 @@ async def get_facility(
 
     Returns:
         APIResponse[FacilityRead]: 시설 상세 정보
+
     """
     facility = await FacilityService.get_facility(db, facility_id)
     return APIResponse(domain=DOMAIN, data=facility)
 
 
-@router.post("/facilities", response_model=APIResponse[FacilityRead], status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/facilities",
+    response_model=APIResponse[FacilityRead],
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_facility(
     facility_in: FacilityCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -83,9 +90,14 @@ async def create_facility(
 
     Returns:
         APIResponse[FacilityRead]: 생성 완료된 시설 정보
+
     """
-    new_facility = await FacilityService.create_facility(db, obj_in=facility_in, actor_id=current_admin.id)
-    return APIResponse(domain=DOMAIN, data=new_facility, success_code=SuccessCode.SUCCESS_CREATED)
+    new_facility = await FacilityService.create_facility(
+        db, obj_in=facility_in, actor_id=current_admin.id
+    )
+    return APIResponse(
+        domain=DOMAIN, data=new_facility, success_code=SuccessCode.SUCCESS_CREATED
+    )
 
 
 @router.patch("/facilities/{facility_id}", response_model=APIResponse[FacilityRead])
@@ -105,6 +117,7 @@ async def update_facility(
 
     Returns:
         APIResponse[FacilityRead]: 수정 완료된 시설 정보
+
     """
     updated_facility = await FacilityService.update_facility(
         db, facility_id=facility_id, obj_in=facility_in, actor_id=current_admin.id
@@ -132,12 +145,17 @@ async def get_spaces(
 
     Returns:
         APIResponse[list[Any]]: 최상위 노드부터 하위 children이 포함된 트리 구조
+
     """
     tree_data = await SpaceService.get_space_tree(db, facility_id=facility_id)
     return APIResponse(domain=DOMAIN, data=tree_data)
 
 
-@router.post("/spaces", response_model=APIResponse[SpaceRead], status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/spaces",
+    response_model=APIResponse[SpaceRead],
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_space(
     space_in: SpaceCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -154,9 +172,14 @@ async def create_space(
 
     Returns:
         APIResponse[SpaceRead]: 생성 완료된 공간 정보
+
     """
-    new_space = await SpaceService.create_space(db, obj_in=space_in, actor_id=current_admin.id)
-    return APIResponse(domain=DOMAIN, data=new_space, success_code=SuccessCode.SUCCESS_CREATED)
+    new_space = await SpaceService.create_space(
+        db, obj_in=space_in, actor_id=current_admin.id
+    )
+    return APIResponse(
+        domain=DOMAIN, data=new_space, success_code=SuccessCode.SUCCESS_CREATED
+    )
 
 
 @router.patch("/spaces/{space_id}", response_model=APIResponse[SpaceRead])
@@ -170,7 +193,7 @@ async def update_space(
 
     보안 정책:
     1. 시스템 관리자(Superuser) 또는 FAC 도메인 관리자는 모든 공간 수정 가능.
-    2. 일반 사용자의 경우, 해당 공간의 관리 책임 부서(`org_id`)와 본인의 부서가 일치하고, 
+    2. 일반 사용자의 경우, 해당 공간의 관리 책임 부서(`org_id`)와 본인의 부서가 일치하고,
        사용자 메타데이터상 '팀장' 또는 '부서장' 직책인 경우에만 허용됩니다.
 
     Args:
@@ -181,6 +204,9 @@ async def update_space(
 
     Returns:
         APIResponse[SpaceRead]: 수정 완료된 공간 정보
+
     """
-    updated_space = await SpaceService.update_space(db, space_id=space_id, obj_in=space_in, actor=current_user)
+    updated_space = await SpaceService.update_space(
+        db, space_id=space_id, obj_in=space_in, actor=current_user
+    )
     return APIResponse(domain=DOMAIN, data=updated_space)

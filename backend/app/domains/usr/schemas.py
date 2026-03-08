@@ -1,9 +1,13 @@
+"""사용자(User) 및 조직(Organization) 도메인의 데이터 검증 및 직렬화를 위한 Pydantic 스키마 정의 모듈입니다.
+
+이 모듈은 사용자 및 조직의 조회 및 생성/수정/조회 시 사용되는 데이터
+"""
+
 import uuid
 from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-
 
 # --------------------------------------------------------
 # [Organization] 조직(부서) 관련 스키마
@@ -61,17 +65,15 @@ class UserBase(BaseModel):
 
     name: str = Field(..., min_length=2, max_length=100)
     emp_code: str = Field(..., min_length=1, max_length=16, description="사번")
-    email: str = Field(
-        ..., max_length=100, description="이메일 (소문자 자동 변환)"
-    )
+    email: str = Field(..., max_length=100, description="이메일 (소문자 자동 변환)")
     phone: str | None = Field(None, max_length=50)
     org_id: int | None = Field(None, description="소속 조직 ID")
     is_active: bool = True
     # 'metadata'라는 이름은 SQLAlchemy 모델의 MetaData 객체와 충돌하므로 별도 처리 필요
     user_metadata: dict[str, Any] = Field(
-        default_factory=dict, 
+        default_factory=dict,
         description="추가 속성 (직급, 직책 등)",
-        alias="metadata"  # JSON 출력 시에는 'metadata'로 나감
+        alias="metadata",  # JSON 출력 시에는 'metadata'로 나감
     )
 
     @field_validator("email")
@@ -131,7 +133,7 @@ class UserRead(UserBase):
 
     model_config = ConfigDict(
         from_attributes=True,
-        populate_by_name=True  # alias와 원래 필드명 모두 허용
+        populate_by_name=True,  # alias와 원래 필드명 모두 허용
     )
 
     @model_validator(mode="before")
@@ -143,12 +145,13 @@ class UserRead(UserBase):
             # 'metadata' 속성이 딕셔너리가 아니라면(즉, MetaData 객체라면) 무시
             meta_val = getattr(data, "metadata", None)
             if not isinstance(meta_val, dict):
-                # 실제 DB 컬럼 값이 아닌 프레임워크 객체임. 
+                # 실제 DB 컬럼 값이 아닌 프레임워크 객체임.
                 # 딕셔너리 형태로 변환하여 반환 데이터에 명시적으로 주입
                 # Pydantic이 'user_metadata' 필드를 채울 수 있도록 함
                 return {
-                    k: getattr(data, k, None) 
-                    for k in cls.model_fields.keys() if k != "user_metadata"
+                    k: getattr(data, k, None)
+                    for k in cls.model_fields.keys()
+                    if k != "user_metadata"
                 } | {"user_metadata": {}}
         return data
 

@@ -4,7 +4,7 @@
 그리고 프로필 이미지 업로드 등을 위한 RESTful API를 제공합니다.
 """
 
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Query, Request, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -45,7 +45,7 @@ async def get_organizations(
 ):
     """활성화된 전체 조직도(Tree)를 계층 구조로 조회합니다.
 
-    각 조직 객체는 'children' 필드에 하위 조직 목록을 포함하며, 
+    각 조직 객체는 'children' 필드에 하위 조직 목록을 포함하며,
     비동기 환경의 안정성을 위해 모든 데이터가 사전에 직렬화되어 반환됩니다.
 
     Args:
@@ -54,6 +54,7 @@ async def get_organizations(
 
     Returns:
         APIResponse[list[OrgRead]]: 최상위 부서부터 시작하는 트리 구조 리스트
+
     """
     tree_data = await OrgService.get_organizations(db)
     return APIResponse(domain=DOMAIN, data=tree_data)
@@ -81,9 +82,14 @@ async def create_organization(
 
     Returns:
         APIResponse[OrgRead]: 생성 완료된 부서 정보
+
     """
-    new_org = await OrgService.create_organizations(db, obj_in=org_in, actor_id=current_user.id)
-    return APIResponse(domain=DOMAIN, data=new_org, success_code=SuccessCode.SUCCESS_CREATED)
+    new_org = await OrgService.create_organizations(
+        db, obj_in=org_in, actor_id=current_user.id
+    )
+    return APIResponse(
+        domain=DOMAIN, data=new_org, success_code=SuccessCode.SUCCESS_CREATED
+    )
 
 
 @router.get(
@@ -104,6 +110,7 @@ async def get_organization(
 
     Returns:
         APIResponse[OrgRead]: 조직 상세 정보
+
     """
     org = await OrgService.get_organization(db, org_id=org_id)
     return APIResponse(domain=DOMAIN, data=org)
@@ -121,7 +128,7 @@ async def update_organization(
 ):
     """기존 조직(부서)의 정보를 수정합니다.
 
-    이 API는 관리자 전용입니다. 부서명, 정렬 순서 등을 변경할 수 있으며, 
+    이 API는 관리자 전용입니다. 부서명, 정렬 순서 등을 변경할 수 있으며,
     상위 부서(`parent_id`) 수정 시 순환 참조 발생 여부를 체크합니다.
 
     Args:
@@ -132,11 +139,14 @@ async def update_organization(
 
     Returns:
         APIResponse[OrgRead]: 수정 완료된 부서 정보
+
     """
     updated_org = await OrgService.update_organizations(
         db, org_id=org_id, obj_in=org_in, actor_id=current_user.id
     )
-    return APIResponse(domain=DOMAIN, data=updated_org, success_code=SuccessCode.SUCCESS_UPDATED)
+    return APIResponse(
+        domain=DOMAIN, data=updated_org, success_code=SuccessCode.SUCCESS_UPDATED
+    )
 
 
 @router.delete(
@@ -148,7 +158,7 @@ async def delete_organization(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(check_domain_admin("USR"))],
 ):
-    """특정 조직을 물리적으로 삭제합니다. 
+    """특정 조직을 물리적으로 삭제합니다.
 
     하위 부서가 있거나 소속된 사용자가 한 명이라도 존재하는 경우 삭제가 거부됩니다.
 
@@ -159,9 +169,12 @@ async def delete_organization(
 
     Returns:
         APIResponse[None]: 삭제 성공 응답
+
     """
     await OrgService.delete_organizations(db, org_id=org_id)
-    return APIResponse(domain=DOMAIN, data=None, success_code=SuccessCode.SUCCESS_DELETED)
+    return APIResponse(
+        domain=DOMAIN, data=None, success_code=SuccessCode.SUCCESS_DELETED
+    )
 
 
 # --------------------------------------------------------
@@ -176,7 +189,9 @@ async def delete_organization(
 async def get_users(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
-    sort: Annotated[str | None, Query(description="정렬 필드 (name, created_at)")] = None,
+    sort: Annotated[
+        str | None, Query(description="정렬 필드 (name, created_at)")
+    ] = None,
     keyword: Annotated[str | None, Query(description="검색어 (성명, ID, 사번)")] = None,
     page: Annotated[int, Query(ge=1, description="페이지 번호")] = 1,
     size: Annotated[int, Query(ge=1, le=100, description="페이지 크기")] = 20,
@@ -202,6 +217,7 @@ async def get_users(
 
     Returns:
         APIResponse[list[UserRead]]: 페이징 처리된 사용자 목록
+
     """
     users = await UserService.get_users(
         db=db,
@@ -228,7 +244,7 @@ async def create_user(
 ):
     """신규 사용자 계정을 등록합니다.
 
-    이 API는 관리자만 호출 가능합니다. 로그인 ID, 사번, 이메일의 중복 여부를 
+    이 API는 관리자만 호출 가능합니다. 로그인 ID, 사번, 이메일의 중복 여부를
     사전에 검증하며 초기 비밀번호를 안전하게 해싱하여 저장합니다.
 
     Args:
@@ -238,9 +254,14 @@ async def create_user(
 
     Returns:
         APIResponse[UserRead]: 생성 완료된 사용자 정보
+
     """
-    new_user = await UserService.create_user(db, obj_in=user_in, actor_id=current_user.id)
-    return APIResponse(domain=DOMAIN, data=new_user, success_code=SuccessCode.SUCCESS_CREATED)
+    new_user = await UserService.create_user(
+        db, obj_in=user_in, actor_id=current_user.id
+    )
+    return APIResponse(
+        domain=DOMAIN, data=new_user, success_code=SuccessCode.SUCCESS_CREATED
+    )
 
 
 @router.get(
@@ -261,6 +282,7 @@ async def get_user(
 
     Returns:
         APIResponse[UserRead]: 사용자 상세 정보
+
     """
     user = await UserService.get_user(db, user_id=user_id)
     return APIResponse(domain=DOMAIN, data=user)
@@ -278,7 +300,7 @@ async def update_user(
 
     보안 정책:
     1. 본인 정보 수정 또는 관리자(Superuser) 권한 필요.
-    2. 일반 사용자는 자신의 부서(`org_id`) 및 계정 상태(`is_active`)를 수정할 수 없습니다. 
+    2. 일반 사용자는 자신의 부서(`org_id`) 및 계정 상태(`is_active`)를 수정할 수 없습니다.
        (전달된 경우에도 서비스 레이어에서 무시됨)
 
     Args:
@@ -290,6 +312,7 @@ async def update_user(
 
     Returns:
         APIResponse[UserRead]: 수정 완료된 사용자 프로필 정보
+
     """
     # 보안 체크: 본인이 아니면서 관리자도 아닌 경우 차단
     if user_id != current_user.id and not current_user.is_superuser:
@@ -307,7 +330,9 @@ async def update_user(
         ip=client_ip,
         user_agent=user_agent,
     )
-    return APIResponse(domain=DOMAIN, data=updated_user, success_code=SuccessCode.SUCCESS_UPDATED)
+    return APIResponse(
+        domain=DOMAIN, data=updated_user, success_code=SuccessCode.SUCCESS_UPDATED
+    )
 
 
 @router.put(
@@ -333,6 +358,7 @@ async def change_password(
 
     Returns:
         APIResponse[None]: 변경 성공 응답
+
     """
     # 보안 체크: 본인이 아니면서 관리자도 아닌 경우 차단
     if user_id != current_user.id and not current_user.is_superuser:
@@ -352,7 +378,7 @@ async def delete_user(
 ):
     """사용자 계정을 삭제(비활성화) 처리합니다.
 
-    참조 무결성을 위해 물리적 삭제 대신 `is_active=False`로 변경하는 
+    참조 무결성을 위해 물리적 삭제 대신 `is_active=False`로 변경하는
     논리적 삭제(소프트 삭제)를 수행합니다.
 
     Args:
@@ -362,9 +388,12 @@ async def delete_user(
 
     Returns:
         APIResponse[None]: 비활성화 성공 응답
+
     """
     await UserService.delete_user(db, user_id=user_id, actor_id=current_user.id)
-    return APIResponse(domain=DOMAIN, data=None, success_code=SuccessCode.SUCCESS_DELETED)
+    return APIResponse(
+        domain=DOMAIN, data=None, success_code=SuccessCode.SUCCESS_DELETED
+    )
 
 
 @router.post("/{user_id}/profile-image", response_model=APIResponse[UserRead])
@@ -387,6 +416,7 @@ async def upload_profile_image(
 
     Returns:
         APIResponse[UserRead]: 이미지 정보가 갱신된 사용자 정보
+
     """
     # 보안 체크: 본인이 아니면서 관리자도 아닌 경우 차단
     if user_id != current_user.id and not current_user.is_superuser:
@@ -395,4 +425,6 @@ async def upload_profile_image(
     updated_user = await UserService.upload_profile_image(
         db=db, user_id=user_id, file=file, actor_id=current_user.id
     )
-    return APIResponse(domain=DOMAIN, data=updated_user, success_code=SuccessCode.SUCCESS)
+    return APIResponse(
+        domain=DOMAIN, data=updated_user, success_code=SuccessCode.SUCCESS
+    )

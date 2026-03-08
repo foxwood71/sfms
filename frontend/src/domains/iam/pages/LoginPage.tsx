@@ -1,52 +1,46 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { App, Button, Card, Form, Input, Layout, Typography } from "antd";
+import { App, Button, Card, Form, Input, Layout, Typography, theme, Space } from "antd";
 import { LockOutlined, UserOutlined } from "@ant-design/icons";
 import { loginApi, getMeApi } from "../api/auth";
 import { useAuthStore } from "@/shared/stores/useAuthStore";
+import ThemeToggle from "@/shared/layout/components/ThemeToggle";
+import HealthIndicator from "@/shared/layout/components/HealthIndicator";
 
-const { Content } = Layout;
+const { Content, Header } = Layout;
 const { Title, Text } = Typography;
 
 /**
  * 로그인 페이지 컴포넌트
  * 
  * @description 사용자 인증을 수행하고 토큰을 발급받아 메인 대시보드로 이동시킵니다.
+ * 테마 전환 기능과 시스템 통신 상태 표시 기능을 제공합니다.
  */
 const LoginPage: React.FC = () => {
 	const [loading, setLoading] = useState(false);
 	const navigate = useNavigate();
 	const { message } = App.useApp();
 	const setAuth = useAuthStore((state) => state.setAuth);
+	const { token } = theme.useToken();
 
 	/**
 	 * 로그인 폼 제출 핸들러
-	 * 
-	 * @param values { login_id, password }
 	 */
 	const onFinish = async (values: any) => {
 		setLoading(true);
 		try {
-			// 1. 로그인 API 호출 (토큰 획득)
 			const tokenInfo = await loginApi({
 				login_id: values.loginId,
 				password: values.password,
 			});
 
-			// 2. Zustand Store에 토큰 임시 저장 (getMe 호출을 위해)
-			// 실제로는 setAuth가 한꺼번에 처리하지만, 내 정보를 가져와야 하므로 수동 처리
 			useAuthStore.setState({ accessToken: tokenInfo.access_token });
-
-			// 3. 내 정보 상세 조회
 			const userData = await getMeApi();
-
-			// 4. 최종 인증 상태 저장
 			setAuth(tokenInfo.access_token, tokenInfo.refresh_token, userData);
 
 			message.success(`${userData.name}님, 환영합니다!`);
 			navigate("/");
 		} catch (error: any) {
-			// 에러 처리는 http 인터셉터에서 이미 알림을 띄우지만, 추가 처리가 필요할 경우 여기서 함
 			console.error("Login failed:", error);
 		} finally {
 			setLoading(false);
@@ -54,14 +48,31 @@ const LoginPage: React.FC = () => {
 	};
 
 	return (
-		<Layout style={{ minHeight: "100vh", background: "#f0f2f5" }}>
+		<Layout style={{ minHeight: "100vh" }}>
+			<Header style={{ 
+				background: "transparent", 
+				display: "flex", 
+				justifyContent: "flex-end", 
+				padding: "0 24px",
+				alignItems: "center"
+			}}>
+				<Space size="middle">
+					<HealthIndicator />
+					<ThemeToggle />
+				</Space>
+			</Header>
 			<Content style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
 				<Card
-					style={{ width: 400, boxShadow: "0 4px 12px rgba(0,0,0,0.15)", borderRadius: 8 }}
+					style={{ 
+						width: 400, 
+						boxShadow: token.boxShadowTertiary, 
+						borderRadius: token.borderRadiusLG,
+						background: token.colorBgContainer
+					}}
 					bordered={false}
 				>
 					<div style={{ textAlign: "center", marginBottom: 32 }}>
-						<Title level={2} style={{ margin: 0, color: "#1890ff" }}>SFMS</Title>
+						<Title level={2} style={{ margin: 0, color: token.colorPrimary }}>SFMS</Title>
 						<Text type="secondary">스마트 시설 관리 시스템</Text>
 					</div>
 
@@ -77,7 +88,7 @@ const LoginPage: React.FC = () => {
 							rules={[{ required: true, message: "아이디를 입력해주세요!" }]}
 						>
 							<Input 
-								prefix={<UserOutlined style={{ color: "rgba(0,0,0,.25)" }} />} 
+								prefix={<UserOutlined style={{ color: token.colorTextQuaternary }} />} 
 								placeholder="로그인 아이디" 
 							/>
 						</Form.Item>
@@ -87,7 +98,7 @@ const LoginPage: React.FC = () => {
 							rules={[{ required: true, message: "비밀번호를 입력해주세요!" }]}
 						>
 							<Input.Password
-								prefix={<LockOutlined style={{ color: "rgba(0,0,0,.25)" }} />}
+								prefix={<LockOutlined style={{ color: token.colorTextQuaternary }} />}
 								placeholder="비밀번호"
 							/>
 						</Form.Item>

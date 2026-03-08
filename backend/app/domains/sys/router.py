@@ -49,6 +49,7 @@ async def list_sequence_rules(
 
     Returns:
         APIResponse[list[SequenceRuleRead]]: 전체 채번 규칙 리스트
+
     """
     rules = await SequenceRuleService.list_rules(db)
     return APIResponse(domain=DOMAIN, data=rules)
@@ -66,7 +67,7 @@ async def create_sequence_rule(
 ):
     """신규 자동 채번 규칙을 생성합니다.
 
-    도메인 코드, 접두어, 연도 포맷 및 자릿수 등을 설정할 수 있습니다. 
+    도메인 코드, 접두어, 연도 포맷 및 자릿수 등을 설정할 수 있습니다.
     이 API는 시스템 관리자만 호출 가능합니다.
 
     Args:
@@ -76,6 +77,7 @@ async def create_sequence_rule(
 
     Returns:
         APIResponse[SequenceRuleRead]: 생성 완료된 채번 규칙 정보
+
     """
     new_rule = await SequenceRuleService.create_rule(
         db, obj_in=obj_in, actor_id=current_admin.id
@@ -100,6 +102,7 @@ async def update_sequence_rule(
 
     Returns:
         APIResponse[SequenceRuleRead]: 수정 완료된 채번 규칙 정보
+
     """
     updated_rule = await SequenceRuleService.update_rule(
         db, rule_id=rule_id, obj_in=obj_in, actor_id=current_admin.id
@@ -122,6 +125,7 @@ async def delete_sequence_rule(
 
     Returns:
         APIResponse[None]: 삭제 성공 응답
+
     """
     await SequenceRuleService.delete_rule(db, rule_id=rule_id)
     return APIResponse(domain=DOMAIN, data=None)
@@ -136,7 +140,7 @@ async def get_next_sequence(
 ):
     """특정 도메인 및 접두어에 대해 규칙에 맞는 다음 문서 번호를 발급받습니다.
 
-    이 API는 모든 인증된 사용자가 자신의 업무 처리를 위해 호출할 수 있습니다. 
+    이 API는 모든 인증된 사용자가 자신의 업무 처리를 위해 호출할 수 있습니다.
     동시성 제어를 통해 번호 중복이 방지됩니다.
 
     Args:
@@ -147,6 +151,7 @@ async def get_next_sequence(
 
     Returns:
         APIResponse[str]: 규칙에 따라 포맷팅된 최종 번호 (예: 'WO-2026-0001')
+
     """
     next_seq = await SequenceRuleService.get_next_sequence(
         db, domain_code=domain_code, prefix=prefix
@@ -163,14 +168,18 @@ async def get_next_sequence(
 async def list_audit_logs(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_admin: Annotated[User, Depends(get_current_active_superuser)],
-    target_domain: Annotated[str | None, Query(description="대상 도메인 (USR, FAC 등)")] = None,
-    action_type: Annotated[str | None, Query(description="행위 유형 (CREATE, LOGIN 등)")] = None,
+    target_domain: Annotated[
+        str | None, Query(description="대상 도메인 (USR, FAC 등)")
+    ] = None,
+    action_type: Annotated[
+        str | None, Query(description="행위 유형 (CREATE, LOGIN 등)")
+    ] = None,
     skip: Annotated[int, Query(ge=0, description="건너뛸 레코드 수")] = 0,
     limit: Annotated[int, Query(ge=1, le=1000, description="최대 조회 수")] = 100,
 ):
     """시스템 감사 로그 목록을 통합 조회합니다.
 
-    데이터 변경 이력 및 사용자 로그인 정보를 포함한 상세 로그를 확인할 수 있습니다. 
+    데이터 변경 이력 및 사용자 로그인 정보를 포함한 상세 로그를 확인할 수 있습니다.
     이 API는 시스템 관리자만 호출 가능합니다.
 
     Args:
@@ -183,6 +192,7 @@ async def list_audit_logs(
 
     Returns:
         APIResponse[list[AuditLogRead]]: 감사 로그 목록
+
     """
     logs = await AuditLogService.list_audit_logs(
         db, skip=skip, limit=limit, target_domain=target_domain, action_type=action_type

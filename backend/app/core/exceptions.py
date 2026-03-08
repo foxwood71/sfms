@@ -1,6 +1,7 @@
 """SFMS 전역 커스텀 예외 처리를 정의하는 모듈입니다."""
 
-from fastapi import status
+from fastapi import Request, status
+from fastapi.responses import JSONResponse
 
 from app.core.codes import ErrorCode
 
@@ -270,4 +271,26 @@ class ServiceUnavailableException[T](SFMSException[T]):
             error_code=error_code,
             data=data,
             message=message,
+        )
+
+
+def register_exception_handlers(app):
+    """시스템 전역 커스텀 예외 핸들러를 등록합니다.
+
+    SFMSException 및 그 하위 예외들이 발생했을 때, 500 에러 대신
+    정의된 HTTP 상태 코드와 비즈니스 에러 코드를 포함한 JSON 응답을 반환합니다.
+    """
+
+    @app.exception_handler(SFMSException)
+    async def sfms_exception_handler(request: Request, exc: SFMSException):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "success": False,
+                "domain": exc.domain,
+                "status_code": exc.status_code,
+                "error_code": exc.error_code,
+                "message": exc.message,
+                "data": exc.data,
+            },
         )

@@ -6,8 +6,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,7 +31,7 @@ from . import DOMAIN
 
 class FacilityService:
     """최상위 시설(사업소/처리장 등) 관련 비즈니스 로직을 처리하는 서비스 클래스입니다.
-    
+
     시설의 기본 정보 관리 및 시스템 전반의 물리적 거점을 정의합니다.
     """
 
@@ -46,6 +44,7 @@ class FacilityService:
 
         Returns:
             list[FacilityRead]: 정렬 순서 및 명칭순으로 정렬된 시설 정보 리스트
+
         """
         stmt = select(Facility).order_by(Facility.sort_order.asc(), Facility.name.asc())
         result = await db.execute(stmt)
@@ -54,7 +53,7 @@ class FacilityService:
 
     @staticmethod
     async def get_facility(db: AsyncSession, facility_id: int) -> Facility:
-        """특정 시설 정보를 ID로 조회합니다. (내부 로직용 모델 반환)
+        """특정 시설 정보를 ID로(내부 로직용 모델 반환) 조회합니다.
 
         Args:
             db (AsyncSession): 데이터베이스 비동기 세션
@@ -65,6 +64,7 @@ class FacilityService:
 
         Raises:
             NotFoundException: 해당 ID의 시설이 존재하지 않을 때 발생
+
         """
         facility = await db.get(Facility, facility_id)
         if not facility:
@@ -73,7 +73,9 @@ class FacilityService:
 
     @staticmethod
     async def get_facility_read(db: AsyncSession, facility_id: int) -> FacilityRead:
-        """특정 시설 정보를 상세 조회하여 스키마 형태로 반환합니다. (API 응답용)
+        """특정 시설 정보를 상세 조회하여 스키마 형태로 반환합니다.
+
+        (API 응답용)
 
         Args:
             db (AsyncSession): 데이터베이스 비동기 세션
@@ -81,12 +83,15 @@ class FacilityService:
 
         Returns:
             FacilityRead: 조회된 시설 정보 스키마
+
         """
         facility = await FacilityService.get_facility(db, facility_id)
         return FacilityRead.model_validate(facility)
 
     @staticmethod
-    async def create_facility(db: AsyncSession, obj_in: FacilityCreate, actor_id: int) -> FacilityRead:
+    async def create_facility(
+        db: AsyncSession, obj_in: FacilityCreate, actor_id: int
+    ) -> FacilityRead:
         """새로운 최상위 시설을 등록합니다. 시설 코드는 자동으로 대문자로 변환됩니다.
 
         Args:
@@ -99,8 +104,11 @@ class FacilityService:
 
         Raises:
             ConflictException: 이미 동일한 시설 코드가 존재할 때 발생
+
         """
-        existing = await db.execute(select(Facility).where(Facility.code == obj_in.code.upper()))
+        existing = await db.execute(
+            select(Facility).where(Facility.code == obj_in.code.upper())
+        )
         if existing.scalar_one_or_none():
             raise ConflictException(domain=DOMAIN, error_code=ErrorCode.DUPLICATE_CODE)
 
@@ -113,8 +121,12 @@ class FacilityService:
         return FacilityRead.model_validate(db_obj)
 
     @staticmethod
-    async def update_facility(db: AsyncSession, facility_id: int, obj_in: FacilityUpdate, actor_id: int) -> FacilityRead:
-        """기존 시설 정보를 수정합니다. (주로 관리자 권한으로 수행)
+    async def update_facility(
+        db: AsyncSession, facility_id: int, obj_in: FacilityUpdate, actor_id: int
+    ) -> FacilityRead:
+        """기존 시설 정보를 수정합니다.
+
+        (주로 관리자 권한으로 수행)
 
         Args:
             db (AsyncSession): 데이터베이스 비동기 세션
@@ -124,6 +136,7 @@ class FacilityService:
 
         Returns:
             FacilityRead: 수정 완료된 시설 정보 스키마
+
         """
         facility = await FacilityService.get_facility(db, facility_id)
         update_data = obj_in.model_dump(exclude_unset=True)
@@ -139,7 +152,7 @@ class FacilityService:
 
 class SpaceService:
     """시설 내부의 공간(건물, 층, 호실 등) 계층 구조를 관리하는 서비스 클래스입니다.
-    
+
     트리 구조 조립, 부서별 공간 편집 권한 검증 및 순환 참조 방지 로직을 처리합니다.
     """
 
@@ -147,7 +160,7 @@ class SpaceService:
     async def get_space_tree(db: AsyncSession, facility_id: int) -> list[SpaceRead]:
         """특정 시설에 소속된 모든 공간을 계층적 트리 구조로 조회합니다.
 
-        비동기 지연 로딩 문제를 피하기 위해 모든 공간을 일괄 조회한 후 
+        비동기 지연 로딩 문제를 피하기 위해 모든 공간을 일괄 조회한 후
         메모리 상에서 트리 구조를 조립합니다.
 
         Args:
@@ -156,6 +169,7 @@ class SpaceService:
 
         Returns:
             list[SpaceRead]: 최상위 노드들부터 시작하여 하위 children이 포함된 트리 리스트
+
         """
         stmt = (
             select(Space)
@@ -185,7 +199,9 @@ class SpaceService:
         return tree
 
     @staticmethod
-    async def create_space(db: AsyncSession, obj_in: SpaceCreate, actor_id: int) -> SpaceRead:
+    async def create_space(
+        db: AsyncSession, obj_in: SpaceCreate, actor_id: int
+    ) -> SpaceRead:
         """시설 내부에 새로운 공간(노드)을 생성합니다.
 
         Args:
@@ -198,9 +214,13 @@ class SpaceService:
 
         Raises:
             ConflictException: 시설 내에서 중복된 공간 코드가 사용될 때 발생
+
         """
         existing = await db.execute(
-            select(Space).where(Space.facility_id == obj_in.facility_id, Space.code == obj_in.code.upper())
+            select(Space).where(
+                Space.facility_id == obj_in.facility_id,
+                Space.code == obj_in.code.upper(),
+            )
         )
         if existing.scalar_one_or_none():
             raise ConflictException(domain=DOMAIN, error_code=ErrorCode.DUPLICATE_CODE)
@@ -211,7 +231,7 @@ class SpaceService:
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)
-        
+
         # 지연 로딩 방지
         data = {c.name: getattr(db_obj, c.name) for c in db_obj.__table__.columns}
         return SpaceRead.model_validate(data)
@@ -242,6 +262,7 @@ class SpaceService:
         Raises:
             NotFoundException: 대상 공간이 존재하지 않을 때 발생
             BadRequestException: 권한이 없거나 순환 참조가 발생할 때 발생
+
         """
         space = await db.get(Space, space_id)
         if not space:
@@ -252,7 +273,9 @@ class SpaceService:
         user_metadata = actor.user_metadata or {}
         duty = user_metadata.get("duty", "")
         position = user_metadata.get("position", "")
-        is_leader = any(kw in [duty, position] for kw in ["부서장", "팀장", "MANAGER", "LEADER"])
+        is_leader = any(
+            kw in [duty, position] for kw in ["부서장", "팀장", "MANAGER", "LEADER"]
+        )
 
         can_edit = is_admin or (space.org_id == actor.org_id and is_leader)
 
@@ -265,12 +288,16 @@ class SpaceService:
         new_parent_id = update_data.get("parent_id")
         if new_parent_id is not None and new_parent_id != space.parent_id:
             if new_parent_id == space.id:
-                raise BadRequestException(domain=DOMAIN, error_code=ErrorCode.INVALID_PARENT_ORG)
+                raise BadRequestException(
+                    domain=DOMAIN, error_code=ErrorCode.INVALID_PARENT_ORG
+                )
 
             current_parent = await db.get(Space, new_parent_id)
             while current_parent and current_parent.parent_id:
                 if current_parent.parent_id == space.id:
-                    raise BadRequestException(domain=DOMAIN, error_code=ErrorCode.CIRCULAR_REFERENCE)
+                    raise BadRequestException(
+                        domain=DOMAIN, error_code=ErrorCode.CIRCULAR_REFERENCE
+                    )
                 current_parent = await db.get(Space, current_parent.parent_id)
 
         for field, value in update_data.items():
@@ -279,7 +306,7 @@ class SpaceService:
         space.updated_by = actor.id
         await db.commit()
         await db.refresh(space)
-        
+
         # 지연 로딩 방지
         data = {c.name: getattr(space, c.name) for c in space.__table__.columns}
         return SpaceRead.model_validate(data)

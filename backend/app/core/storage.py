@@ -3,7 +3,9 @@
 aioboto3를 활용하여 완벽한 비동기(Async) 논블로킹 통신을 수행합니다.
 """
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Any
 
 import aioboto3
 from aiobotocore.config import AioConfig
@@ -38,7 +40,7 @@ async def check_storage_connection() -> bool:
 
 
 @asynccontextmanager
-async def get_s3_client():
+async def get_s3_client() -> AsyncIterator[Any]:
     """비동기 S3 클라이언트를 생성하여 반환하는 컨텍스트 매니저입니다."""
     async with session.client(
         service_name="s3",

@@ -9,8 +9,13 @@ interface UserInfo {
 	login_id: string;
 	name: string;
 	email: string;
-	org_id: number;
+	org_id: number | null;
+	organization_name: string | null;
 	is_superuser: boolean;
+	/** 할당된 역할 코드 목록 */
+	roles: string[];
+	/** 리소스별 통합 권한 매트릭스 (예: { USR: ["READ", "WRITE"] }) */
+	permissions: Record<string, string[]>;
 }
 
 /**

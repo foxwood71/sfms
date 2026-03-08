@@ -1,25 +1,15 @@
 import "@ant-design/v5-patch-for-react-19";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { ConfigProvider, App as AntdApp } from "antd"; // Ant Design 한글 설정용
-import koKR from "antd/locale/ko_KR";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import { queryClient } from "./shared/api/queryClient";
-import { darkTheme } from "./styles/theme";
 import "./index.css";
 
 createRoot(document.getElementById("root")!).render(
 	<StrictMode>
-		{/* 모든 전역 Provider는 이곳 선언 */}
-		{/* 1. React Query 공급자 주입 */}
 		<QueryClientProvider client={queryClient}>
-			{/* 2. Ant Design 한글 설정 적용 */}
-			<ConfigProvider locale={koKR} theme={darkTheme}>
-				<AntdApp>
-					<App />
-				</AntdApp>
-			</ConfigProvider>
+			<App />
 		</QueryClientProvider>
 	</StrictMode>,
 );

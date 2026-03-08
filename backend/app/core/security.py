@@ -25,6 +25,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
     Returns:
         bool: 일치하면 True, 그렇지 않으면 False
+
     """
     try:
         return bcrypt.checkpw(
@@ -43,6 +44,7 @@ def get_password_hash(password: str) -> str:
 
     Returns:
         str: bcrypt로 해싱된 비밀번호 문자열
+
     """
     salt = bcrypt.gensalt()
     hashed = bcrypt.hashpw(password.encode("utf-8"), salt)
@@ -60,6 +62,7 @@ def create_access_token(
 
     Returns:
         str: 생성된 JWT 액세스 토큰 문자열
+
     """
     if expires_delta:
         expire = datetime.now(UTC) + expires_delta
@@ -87,6 +90,7 @@ def create_refresh_token(
 
     Returns:
         str: 생성된 JWT 리프레시 토큰 문자열
+
     """
     if expires_delta:
         expire = datetime.now(UTC) + expires_delta
@@ -112,6 +116,7 @@ def decode_token(token: str) -> dict[str, Any]:
 
     Raises:
         InvalidTokenError: 토큰이 유효하지 않을 때 발생
+
     """
     return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
 
@@ -124,6 +129,7 @@ def verify_token(token: str) -> dict[str, Any] | None:
 
     Returns:
         dict[str, Any] | None: 유효한 경우 페이로드 딕셔너리, 그렇지 않으면 None
+
     """
     try:
         # 토큰 디코딩 (서명 검증 포함)
@@ -144,6 +150,7 @@ def get_token_payload(token: str) -> dict[str, Any] | None:
 
     Returns:
         dict[str, Any] | None: 추출된 페이로드 또는 None
+
     """
     try:
         payload = verify_token(token)
@@ -158,6 +165,7 @@ async def add_token_to_blacklist(token: str, expire: int) -> None:
     Args:
         token (str): 블랙리스트에 등록할 토큰 문자열
         expire (int): 토큰의 남은 만료 시간 (초 단위)
+
     """
     key = f"blacklist:{token}"
     try:
@@ -175,6 +183,7 @@ async def is_token_blacklisted(token: str) -> bool:
 
     Returns:
         bool: 블랙리스트에 있으면 True, 없으면 False
+
     """
     key = f"blacklist:{token}"
     try:

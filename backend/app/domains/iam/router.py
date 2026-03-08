@@ -30,6 +30,7 @@ from app.domains.iam.schemas import (
     RoleUpdate,
     Token,
     UserRoleUpdate,
+    UserWithPermissions,
 )
 from app.domains.iam.services import (
     AuthService,
@@ -38,7 +39,6 @@ from app.domains.iam.services import (
     UserRoleService,
 )
 from app.domains.usr.models import User
-from app.domains.usr.schemas import UserRead
 
 from . import DOMAIN
 
@@ -63,11 +63,14 @@ async def login(
 
     Returns:
         APIResponse[Token]: 발급된 토큰 정보 및 만료 시간
+
     """
     user_agent = request.headers.get("User-Agent", "unknown")
     client_ip = request.client.host if request.client else "unknown"
 
-    user = await AuthService.authenticate_user(db, login_in=login_in, ip=client_ip, user_agent=user_agent)
+    user = await AuthService.authenticate_user(
+        db, login_in=login_in, ip=client_ip, user_agent=user_agent
+    )
 
     access_token = create_access_token(subject=str(user.id))
     refresh_token = create_refresh_token(subject=str(user.id))
@@ -79,7 +82,9 @@ async def login(
         token_type="bearer",
     )
 
-    return APIResponse(domain=DOMAIN, data=token_data, success_code=SuccessCode.LOGIN_SUCCESS)
+    return APIResponse(
+        domain=DOMAIN, data=token_data, success_code=SuccessCode.LOGIN_SUCCESS
+    )
 
 
 @auth_router.post("/refresh", response_model=APIResponse[Token])
@@ -97,20 +102,27 @@ async def refresh_token(refresh_in: dict[str, str]):
 
     Raises:
         UnauthorizedException: 리프레시 토큰이 누락되었거나 변조/만료되었을 때 발생
+
     """
     token = refresh_in.get("refresh_token")
     if not token:
-        raise UnauthorizedException(domain=DOMAIN, error_code=ErrorCode.REFRESH_TOKEN_REQUIRED)
+        raise UnauthorizedException(
+            domain=DOMAIN, error_code=ErrorCode.REFRESH_TOKEN_REQUIRED
+        )
 
     if await is_token_blacklisted(token):
-        raise UnauthorizedException(domain=DOMAIN, error_code=ErrorCode.TOKEN_BLACKLISTED)
+        raise UnauthorizedException(
+            domain=DOMAIN, error_code=ErrorCode.TOKEN_BLACKLISTED
+        )
 
     payload = verify_token(token)
     if not payload or payload.get("type") != "refresh":
         raise UnauthorizedException(domain=DOMAIN, error_code=ErrorCode.TOKEN_INVALID)
 
     user_id = payload.get("sub")
-    await add_token_to_blacklist(token, expire=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400)
+    await add_token_to_blacklist(
+        token, expire=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400
+    )
 
     new_access = create_access_token(subject=str(user_id))
     new_refresh = create_refresh_token(subject=str(user_id))
@@ -122,22 +134,28 @@ async def refresh_token(refresh_in: dict[str, str]):
         token_type="bearer",
     )
 
-    return APIResponse(domain=DOMAIN, data=token_data, success_code=SuccessCode.TOKEN_REFRESH_SUCCESS)
+    return APIResponse(
+        domain=DOMAIN, data=token_data, success_code=SuccessCode.TOKEN_REFRESH_SUCCESS
+    )
 
 
-@auth_router.get("/me", response_model=APIResponse[UserRead])
+@auth_router.get("/me", response_model=APIResponse[UserWithPermissions])
 async def get_my_info(
+    db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
-    """현재 로그인된 사용자의 상세 프로필 정보를 조회합니다.
+    """현재 로그인된 사용자의 상세 프로필 정보와 할당된 권한 목록을 조회합니다.
 
     Args:
+        db (AsyncSession): 데이터베이스 비동기 세션
         current_user (User): 인증 필터를 통해 획득한 현재 사용자 모델
 
     Returns:
-        APIResponse[UserRead]: 사용자 프로필 및 소속 부서 정보
+        APIResponse[UserWithPermissions]: 권한 정보가 포함된 사용자 상세 정보
+
     """
-    return APIResponse(domain=DOMAIN, data=current_user)
+    user_info = await AuthService.get_user_with_permissions(db, user=current_user)
+    return APIResponse(domain=DOMAIN, data=user_info)
 
 
 @auth_router.post("/logout", response_model=APIResponse[None])
@@ -153,6 +171,7 @@ async def logout(
 
     Returns:
         APIResponse[None]: 로그아웃 성공 응답
+
     """
     payload = verify_token(token)
     remain_expire = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
@@ -165,7 +184,9 @@ async def logout(
     if remain_expire > 0:
         await add_token_to_blacklist(token, expire=remain_expire)
 
-    return APIResponse(domain=DOMAIN, data=None, success_code=SuccessCode.LOGOUT_SUCCESS)
+    return APIResponse(
+        domain=DOMAIN, data=None, success_code=SuccessCode.LOGOUT_SUCCESS
+    )
 
 
 role_router = APIRouter(prefix="/roles", tags=["권한 관리 (Roles)"])
@@ -190,6 +211,7 @@ async def get_roles(
 
     Returns:
         APIResponse[list[RoleRead]]: 역할 정보 리스트
+
     """
     roles = await RoleService.get_roles(db, keyword, page, size)
     return APIResponse(domain=DOMAIN, data=roles)
@@ -210,12 +232,15 @@ async def get_role(
 
     Returns:
         APIResponse[RoleRead]: 역할 상세 정보
+
     """
     role = await RoleService.get_role(db, role_id)
     return APIResponse(domain=DOMAIN, data=role)
 
 
-@role_router.post("", response_model=APIResponse[RoleRead], status_code=status.HTTP_201_CREATED)
+@role_router.post(
+    "", response_model=APIResponse[RoleRead], status_code=status.HTTP_201_CREATED
+)
 async def create_role(
     role_in: RoleCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -232,9 +257,12 @@ async def create_role(
 
     Returns:
         APIResponse[RoleRead]: 생성 완료된 역할 정보
+
     """
     new_role = await RoleService.create_role(db, role_in, actor_id=current_admin.id)
-    return APIResponse(domain=DOMAIN, data=new_role, success_code=SuccessCode.ROLE_CREATED)
+    return APIResponse(
+        domain=DOMAIN, data=new_role, success_code=SuccessCode.ROLE_CREATED
+    )
 
 
 @role_router.patch("/{role_id}", response_model=APIResponse[RoleRead])
@@ -256,9 +284,14 @@ async def update_role(
 
     Returns:
         APIResponse[RoleRead]: 수정 완료된 역할 정보
+
     """
-    updated_role = await RoleService.update_role(db, role_id, role_in, actor_id=current_admin.id)
-    return APIResponse(domain=DOMAIN, data=updated_role, success_code=SuccessCode.ROLE_UPDATED)
+    updated_role = await RoleService.update_role(
+        db, role_id, role_in, actor_id=current_admin.id
+    )
+    return APIResponse(
+        domain=DOMAIN, data=updated_role, success_code=SuccessCode.ROLE_UPDATED
+    )
 
 
 @role_router.delete("/{role_id}", response_model=APIResponse[None])
@@ -276,6 +309,7 @@ async def delete_role(
 
     Returns:
         APIResponse[None]: 삭제 성공 응답
+
     """
     await RoleService.delete_role(db, role_id)
     return APIResponse(domain=DOMAIN, data=None, success_code=SuccessCode.ROLE_DELETED)
@@ -303,6 +337,7 @@ async def assign_user_roles(
 
     Returns:
         APIResponse[None]: 할당 성공 응답
+
     """
     if user_id != assignment_in.user_id:
         raise BadRequestException(domain=DOMAIN, error_code=ErrorCode.ID_MISMATCH)
@@ -318,7 +353,9 @@ async def assign_user_roles(
         ip=client_ip,
         user_agent=user_agent,
     )
-    return APIResponse(domain=DOMAIN, data=None, success_code=SuccessCode.USER_ROLE_ASSIGNED)
+    return APIResponse(
+        domain=DOMAIN, data=None, success_code=SuccessCode.USER_ROLE_ASSIGNED
+    )
 
 
 @role_router.get("/permissions/resources", response_model=APIResponse[dict[str, Any]])
@@ -332,6 +369,7 @@ async def get_permission_resources(
 
     Returns:
         APIResponse[dict[str, Any]]: 리소스별 액션 매트릭스 데이터
+
     """
     resources = await PermissionService.get_permission_resources()
     return APIResponse(domain=DOMAIN, data=resources)

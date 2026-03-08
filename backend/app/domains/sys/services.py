@@ -23,7 +23,7 @@ from . import DOMAIN
 
 class AuditLogService:
     """시스템 감사 로그(Audit Log) 관련 비즈니스 로직을 처리하는 서비스 클래스입니다.
-    
+
     데이터의 생성, 수정, 삭제 이력을 추적하고 사용자 행위를 기록합니다.
     """
 
@@ -37,6 +37,7 @@ class AuditLogService:
 
         Returns:
             AuditLog: 생성된 감사 로그 SQLAlchemy 모델 객체
+
         """
         db_obj = AuditLog(**obj_in.model_dump())
         db.add(db_obj)
@@ -62,6 +63,7 @@ class AuditLogService:
 
         Returns:
             list[AuditLog]: 조회된 감사 로그 모델 리스트
+
         """
         stmt = (
             select(AuditLog)
@@ -80,7 +82,7 @@ class AuditLogService:
 
 class SequenceRuleService:
     """도메인별 문서 번호 자동 채번 규칙을 관리하고 실시간 번호를 발급하는 서비스 클래스입니다.
-    
+
     시설물 코드, 작업 지시서 번호 등 시스템 전반의 고유 식별자 생성 로직을 중앙 관리합니다.
     """
 
@@ -93,6 +95,7 @@ class SequenceRuleService:
 
         Returns:
             list[SequenceRule]: 채번 규칙 모델 리스트
+
         """
         result = await db.execute(
             select(SequenceRule).order_by(SequenceRule.domain_code, SequenceRule.prefix)
@@ -112,6 +115,7 @@ class SequenceRuleService:
 
         Raises:
             NotFoundException: 요청한 규칙 ID가 데이터베이스에 존재하지 않을 때 발생
+
         """
         rule = await db.get(SequenceRule, rule_id)
         if not rule:
@@ -131,6 +135,7 @@ class SequenceRuleService:
 
         Returns:
             SequenceRule: 생성된 채번 규칙 모델 객체
+
         """
         db_obj = SequenceRule(
             **obj_in.model_dump(), created_by=actor_id, updated_by=actor_id
@@ -154,6 +159,7 @@ class SequenceRuleService:
 
         Returns:
             SequenceRule: 수정 완료된 규칙 모델 객체
+
         """
         rule = await SequenceRuleService.get_rule(db, rule_id)
         update_data = obj_in.model_dump(exclude_unset=True)
@@ -173,6 +179,7 @@ class SequenceRuleService:
         Args:
             db (AsyncSession): 데이터베이스 비동기 세션
             rule_id (int): 삭제할 규칙의 ID
+
         """
         rule = await SequenceRuleService.get_rule(db, rule_id)
         await db.delete(rule)
@@ -181,8 +188,8 @@ class SequenceRuleService:
     @staticmethod
     async def get_next_sequence(db: AsyncSession, domain_code: str, prefix: str) -> str:
         """도메인 코드와 접두어를 기반으로 고유한 다음 문서 번호를 발급합니다.
-        
-        이 메서드는 다중 서버 환경에서의 중복 발급을 방지하기 위해 SELECT ... FOR UPDATE를 
+
+        이 메서드는 다중 서버 환경에서의 중복 발급을 방지하기 위해 SELECT ... FOR UPDATE를
         통한 비관적 락(Pessimistic Locking)을 사용하여 원자적(Atomic)으로 순번을 증가시킵니다.
         연도별 초기화(YEARLY) 방식이 설정된 경우, 연도가 바뀌면 순번이 1로 자동 리셋됩니다.
 
@@ -196,13 +203,14 @@ class SequenceRuleService:
 
         Raises:
             NotFoundException: 활성화된 해당 도메인/접두어 규칙이 존재하지 않을 때 발생
+
         """
         stmt = (
             select(SequenceRule)
             .where(
                 SequenceRule.domain_code == domain_code,
                 SequenceRule.prefix == prefix,
-                SequenceRule.is_active == True,
+                SequenceRule.is_active,
             )
             .with_for_update()
         )  # 동시성 제어를 위한 행 잠금 (락 획득까지 대기)

@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Any
 
 from fastapi import UploadFile
 from sqlalchemy import or_, select
@@ -35,7 +34,6 @@ from app.domains.usr.schemas import (
     OrgRead,
     OrgUpdate,
     UserCreate,
-    UserRead,
     UserPasswordUpdate,
     UserUpdate,
 )
@@ -45,7 +43,7 @@ from . import DOMAIN
 
 class OrgService:
     """조직(Organization) 및 부서 관리 관련 비즈니스 로직을 처리하는 서비스 클래스입니다.
-    
+
     부서 간 계층 구조(Tree)를 조립하고, 순환 참조 방지 및 하위 부서 일괄 조회 기능을 제공합니다.
     """
 
@@ -61,6 +59,7 @@ class OrgService:
 
         Returns:
             list[int]: 자기 자신 및 모든 하위 부서의 고유 ID 리스트
+
         """
         anchor_stmt = (
             select(Organization.id)
@@ -81,7 +80,7 @@ class OrgService:
     ) -> list[OrgRead]:
         """전체 조직 목록을 트리 또는 평면 리스트 구조로 조회합니다.
 
-        비동기 환경에서의 지연 로딩 에러(MissingGreenlet)를 방지하기 위해 
+        비동기 환경에서의 지연 로딩 에러(MissingGreenlet)를 방지하기 위해
         모델 데이터를 딕셔너리로 미리 추출한 후 스키마를 생성하여 반환합니다.
 
         Args:
@@ -91,10 +90,11 @@ class OrgService:
 
         Returns:
             list[OrgRead]: 조직 정보 리스트 (모드에 따라 children 필드 포함 여부 결정)
+
         """
         stmt = select(Organization)
         if is_active:
-            stmt = stmt.where(Organization.is_active == True)
+            stmt = stmt.where(Organization.is_active)
 
         stmt = stmt.order_by(Organization.sort_order.asc())
         result = await db.execute(stmt)
@@ -138,6 +138,7 @@ class OrgService:
 
         Raises:
             ConflictException: 이미 동일한 부서 코드가 존재하거나 상위 부서 ID가 유효하지 않을 때 발생
+
         """
         stmt = select(Organization).where(Organization.code == obj_in.code)
         result = await db.execute(stmt)
@@ -159,14 +160,16 @@ class OrgService:
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)
-        
+
         # 지연 로딩 방지
         data = {c.name: getattr(db_obj, c.name) for c in db_obj.__table__.columns}
         return OrgRead.model_validate(data)
 
     @staticmethod
     async def get_organization(db: AsyncSession, org_id: int) -> Organization:
-        """특정 조직 정보를 ID로 단건 조회합니다. (내부 서비스용 모델 반환)
+        """특정 조직 정보를 ID로 단건 조회합니다.
+
+        (내부 서비스용 모델 반환)
 
         Args:
             db (AsyncSession): 데이터베이스 비동기 세션
@@ -177,6 +180,7 @@ class OrgService:
 
         Raises:
             NotFoundException: 해당 ID의 조직이 존재하지 않을 때 발생
+
         """
         org = await db.get(Organization, org_id)
         if not org:
@@ -200,6 +204,7 @@ class OrgService:
 
         Raises:
             BadRequestException: 자기 자신을 부모로 설정하거나 순환 참조가 발생할 때 발생
+
         """
         org = await OrgService.get_organization(db, org_id)
         update_data = obj_in.model_dump(exclude_unset=True)
@@ -225,7 +230,7 @@ class OrgService:
         org.updated_by = actor_id
         await db.commit()
         await db.refresh(org)
-        
+
         # 지연 로딩 방지
         data = {c.name: getattr(org, c.name) for c in org.__table__.columns}
         return OrgRead.model_validate(data)
@@ -244,6 +249,7 @@ class OrgService:
 
         Raises:
             ConflictException: 하위 데이터가 존재하여 삭제할 수 없을 때 발생
+
         """
         org = await OrgService.get_organization(db, org_id)
 
@@ -263,7 +269,7 @@ class OrgService:
 
 class UserService:
     """사용자(User) 계정 및 프로필 관련 비즈니스 로직을 처리하는 서비스 클래스입니다.
-    
+
     사용자 등록, 정보 수정, 권한별 필드 제한, 비밀번호 관리 및 프로필 이미지 업로드를 담당합니다.
     """
 
@@ -292,6 +298,7 @@ class UserService:
 
         Returns:
             list[User]: 조회된 사용자 모델 객체 리스트
+
         """
         stmt = select(User)
         if is_active is not None:
@@ -336,6 +343,7 @@ class UserService:
 
         Raises:
             ConflictException: 로그인 ID, 이메일, 또는 사번이 이미 존재할 때 발생
+
         """
         checks = [
             (User.login_id == obj_in.login_id, ErrorCode.DUPLICATE_LOGIN_ID),
@@ -372,7 +380,7 @@ class UserService:
     ) -> User:
         """사용자 정보를 수정합니다. 관리자 여부에 따라 수정 가능한 필드가 제한됩니다.
 
-        일반 사용자는 본인의 이름, 이메일 등 프로필은 수정 가능하나 
+        일반 사용자는 본인의 이름, 이메일 등 프로필은 수정 가능하나
         부서(org_id)나 활성 상태(is_active) 변경은 차단(무시)됩니다.
 
         Args:
@@ -386,6 +394,7 @@ class UserService:
 
         Returns:
             User: 수정 완료된 사용자 모델 객체
+
         """
         user = await UserService.get_user(db, user_id)
         update_data = user_in.model_dump(exclude_unset=True)
@@ -416,20 +425,29 @@ class UserService:
         user.updated_by = actor_id
 
         if is_org_changed:
-            await AuditLogService.create_audit_log(
-                db,
-                AuditLogCreate(
-                    action_type="ORG_CHANGE",
-                    target_domain="USR",
-                    target_table="users",
-                    target_id=str(user.id),
-                    actor_user_id=actor_id,
-                    client_ip=ip,
-                    user_agent=user_agent,
-                    snapshot={"old_org_id": old_org_id, "new_org_id": new_org_id},
-                    description=f"사용자 {user.name}의 부서 변경",
-                ),
-            )
+            from sqlalchemy.exc import IntegrityError
+            try:
+                await AuditLogService.create_audit_log(
+                    db,
+                    AuditLogCreate(
+                        action_type="ORG_CHANGE",
+                        target_domain="USR",
+                        target_table="users",
+                        target_id=str(user.id),
+                        actor_user_id=actor_id,
+                        client_ip=ip,
+                        user_agent=user_agent,
+                        snapshot={"old_org_id": old_org_id, "new_org_id": new_org_id},
+                        description=f"사용자 {user.name}의 부서 변경",
+                    ),
+                )
+                # create_audit_log 내부의 db.flush()에서 IntegrityError가 발생할 수 있음
+            except IntegrityError:
+                raise BadRequestException(
+                    domain=DOMAIN,
+                    error_code=ErrorCode.BAD_REQUEST,
+                    message="INVALID_ORGANIZATION_ID"
+                )
 
         await db.commit()
         await db.refresh(user)
@@ -444,7 +462,7 @@ class UserService:
     ) -> None:
         """사용자의 비밀번호를 변경합니다.
 
-        본인의 경우 현재 비밀번호 확인이 필수이며, 
+        본인의 경우 현재 비밀번호 확인이 필수이며,
         관리자는 현재 비밀번호 확인 없이 강제 변경이 가능합니다.
 
         Args:
@@ -455,6 +473,7 @@ class UserService:
 
         Raises:
             BadRequestException: 현재 비밀번호가 일치하지 않거나 권한이 없을 때 발생
+
         """
         user = await UserService.get_user(db, user_id)
         is_self = current_user.id == user.id
@@ -480,13 +499,14 @@ class UserService:
     async def delete_user(db: AsyncSession, user_id: int, actor_id: int) -> None:
         """사용자 계정을 비활성화(소프트 삭제) 처리합니다.
 
-        실제로 데이터를 지우지 않고 `is_active` 플래그를 False로 변경하며, 
+        실제로 데이터를 지우지 않고 `is_active` 플래그를 False로 변경하며,
         메타데이터에 퇴사 일시를 기록합니다.
 
         Args:
             db (AsyncSession): 데이터베이스 비동기 세션
             user_id (int): 대상 사용자 ID
             actor_id (int): 행위 수행자 ID
+
         """
         user = await UserService.get_user(db, user_id)
         user.is_active = False
@@ -511,6 +531,7 @@ class UserService:
 
         Raises:
             NotFoundException: 해당 사용자가 존재하지 않을 때 발생
+
         """
         user = await db.get(User, user_id)
         if not user:
@@ -527,6 +548,7 @@ class UserService:
 
         Returns:
             User | None: 조회된 사용자 객체 또는 None
+
         """
         stmt = select(User).where(User.login_id == login_id)
         result = await db.execute(stmt)
@@ -558,6 +580,7 @@ class UserService:
 
         Raises:
             ServiceUnavailableException: 스토리지 서버(MinIO) 연결 오류 시 발생
+
         """
         user = await UserService.get_user(db, user_id)
 

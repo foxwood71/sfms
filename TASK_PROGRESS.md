@@ -1,58 +1,42 @@
-# 🚩 SFMS Phase 1 작업 진행 보고서 (2026-03-08)
+# SFMS Phase 1 작업 진행 상황
 
-## 1. 🏗️ 백엔드 (Backend) 작업 현황
+## 📋 프로젝트 개요
+- **목표**: 시설 유지보수 관리 시스템(SFMS) 1단계 기반 구축
+- **기술 스택**: FastAPI, React 19, PostgreSQL 16, Redis, Podman
+- **현재 가동 포트**: 8000 (Backend), 5173 (Frontend)
 
-### ✅ 도메인별 검증 및 보완 완료
-- **CMM (공통)**: 
-    - `NotificationService.mark_as_read` 필드명 버그 수정 (`recipient_user_id` -> `receiver_user_id`).
-    - 첨부파일 영구 삭제(`permanent=true`) 로직 검증 및 테스트 보강.
-- **SYS (시스템)**: 
-    - 채번(Sequence) 발급 시 비관적 락(`with_for_update`) 동작 확인 및 연도별 리셋 로직 검증.
-- **IAM (인증/권한)**: 
-    - 리프레시 토큰 로테이션(RTR) 및 블랙리스트 보안 로직 검증.
-    - `AuthService` 내 Rate Limiting 및 계정 잠금 정책 명문화.
-- **USR (사용자/조직)**: 
-    - **[중요]** `OrgService` 지연 로딩(`MissingGreenlet`) 에러 해결 (Pydantic 스키마 선변환 방식 도입).
-    - 조직도 순환 참조(`Circular Reference`) 방지 로직 보강 및 테스트 통과.
-- **FAC (시설/공간)**: 
-    - `FacilityService` 인자 중복 전달 오류(`TypeError`) 수정.
-    - 계층형 공간 트리 조회 로직 최적화.
+## 🛠️ 세부 진행 현황
 
-### ✅ 코드 표준화 (Documentation)
-- 모든 도메인 서비스(`services.py`) 및 라우터(`router.py`)에 **Google Style Docstring** 전수 적용.
-- `core` 레이어(security, database, responses) 문서화 완료.
+### 1. 인프라 및 설정 (CORE)
+- [x] Podman 기반 컨테이너 환경 구축 (PgSQL, Redis, MinIO)
+- [x] Redis 7 인증 및 권한 설정 (Fail-open 정책 적용)
+- [x] MinIO 스토리지 연동 및 버킷 설정
+- [x] `AnyIO` 기반 백엔드 비동기 테스트 환경 구축
 
----
+### 2. 프론트엔드 공통 (SHARED)
+- [x] Ant Design v5 테마 및 디자인 토큰 연동 (Dark/Light 모드)
+- [x] Zustand 기반 전역 인증 및 세션 관리 (Persistence)
+- [x] **실시간 시스템 상태 램프(Health Indicator) 통합**
+- [x] Axios 인터셉터를 통한 지능형 에러 피드백 체계 구축
 
-## 2. 🗄️ 데이터베이스 (Database) 작업 현황
+### 3. 인증 및 권한 (IAM / USR)
+- [x] JWT 기반 로그인/로그아웃 및 RTR(Rotation) 구현
+- [x] 사용자 권한(Resource/Action) 기반 **동적 메뉴 필터링**
+- [x] 사용자 계정 생성 스크립트 (`create_test_user.py`) 완성
 
-### ✅ 스키마 최신화 및 무결성 보강
-- **스키마 패치**: `fac.spaces` 테이블에 누락된 `org_id` (관리 책임 부서) 컬럼 추가 완료.
-- **제약 조건**: 모든 식별 코드에 대문자 강제 제약(`CHECK code = UPPER(code)`) 적용 확인.
-- **문서화**: `database/sql/` 내 모든 `.pgsql` 파일에 상세 `COMMENT ON` 주석 보강 완료.
+### 4. 공통 기능 (CMM)
+- [x] **공통 코드 관리 UI 고도화**
+    - [x] 그룹/상세 테이블 "사용중지 포함" 필터 스위치 적용
+    - [x] 계층 구조 무결성 검증 (하위 코드 존재 시 그룹 삭제/중지 방지)
+    - [x] 상세 코드 `sort_order` 기반 자동 정렬
+    - [x] 코드 입력 시 자동 대문자 변환 로직
+- [x] 통합 파일 업로드/삭제 로직 (MinIO 연동) 완성
 
----
+### 5. 시스템 및 감사 (SYS)
+- [ ] 감사 로그(Audit Log) 조회 및 상세 필터링 페이지 (다음 작업 예정)
+- [ ] 도메인별 자동 채번(Sequence) 관리 기능 통합
 
-## 💻 3. 프론트엔드 (Frontend) 작업 현황
-
-### ✅ 환경 구성 및 기초 구현
-- **기술 스택 최적화**: React 19 호환을 위한 `v5-patch-for-react-19` 적용 및 `antd v5` 안정화.
-- **인증 시스템**: `Zustand` 기반 `useAuthStore` 구현 및 로컬 스토리지 연동.
-- **로그인 페이지**: Ant Design v5 기반의 고밀도(High Density) 로그인 UI 구현 및 API 연동 완료.
-- **메인 레이아웃**: 로그인 사용자 이름 표시, 로그아웃 드롭다운 메뉴 및 `ProLayout` 메뉴 구조 동기화 완료.
-
----
-
-## 🛠️ 4. 시스템 환경 및 이슈 해결
-
-- **빌드 에러 해결**: 불필요하고 컴파일 오류를 유발하던 `pyroonga` 의존성 제거.
-- **실행 환경**: `uv sync`를 통한 가상환경 정상화 및 백엔드(8000), 프론트엔드(5173) 서버 가동 중.
-
----
-
-## 🚀 향후 계획 (Next Steps)
-
-1. **공통 코드 관리 화면 완성**: `CMM` 도메인 API를 활용한 실제 CRUD 연동.
-2. **조직도 관리 화면**: 계층형 트리를 시각적으로 관리하는 UI 구현.
-3. **시설물 관리 화면**: `FAC` 데이터 연동 및 상세 정보 페이지 개발.
-4. **통합 시나리오 테스트 확대**: 더 복잡한 업무 흐름에 대한 전수 검사.
+## 🚀 최근 주요 변경 사항 (2026-03-08)
+- **공통 코드 무결성**: 그룹 비활성화 시 사용 중인 자식이 있으면 거부하도록 백엔드 로직을 강화하여 데이터 정합성을 확보함.
+- **UI 표준화**: 모든 상태 표시를 "사용/중지"로 통일하고 디자인 언어(색상)를 초록/빨강으로 정렬함.
+- **백엔드 안정화**: SQLAlchemy 쿼리 오류 및 임포트 오류를 전수 수정하고 백엔드 가동 상태를 정상화함.

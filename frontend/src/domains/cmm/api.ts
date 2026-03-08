@@ -14,14 +14,16 @@ import type {
 // --- 1. 공통 코드 그룹 관리 ---
 
 /** 활성 코드 그룹 목록을 조회합니다. */
-export const getCodeGroups = async () => {
-	const { data } = await http.get<CodeGroup[]>("/cmm/groups"); //
+export const getCodeGroups = async (includeInactive = true) => {
+	const { data } = await http.get<CodeGroup[]>("/cmm/codes", {
+		params: { include_inactive: includeInactive },
+	});
 	return data;
 };
 
 /** 새로운 코드 그룹을 생성합니다. */
 export const createCodeGroup = async (groupData: Partial<CodeGroup>) => {
-	const { data } = await http.post<CodeGroup>("/cmm/groups", groupData); //
+	const { data } = await http.post<CodeGroup>("/cmm/codes", groupData);
 	return data;
 };
 
@@ -31,34 +33,33 @@ export const updateCodeGroup = async (
 	groupData: Partial<CodeGroup>,
 ) => {
 	const { data } = await http.patch<CodeGroup>(
-		`/cmm/groups/${groupCode}`,
+		`/cmm/codes/${groupCode}`,
 		groupData,
-	); //
+	);
 	return data;
 };
 
 /** 코드 그룹을 삭제합니다 (하위 코드 포함). */
 export const deleteCodeGroup = async (groupCode: string) => {
-	await http.delete(`/cmm/groups/${groupCode}`); //
+	await http.delete(`/cmm/codes/${groupCode}`);
 };
 
 // --- 2. 상세 코드 관리 (Code Details) ---
 
 /** 특정 그룹의 상세 코드 목록을 조회합니다. */
 export const getCodeDetails = async (groupCode: string) => {
-	// 기존의 /cmm/codes/${groupCode}에서 router.py 설계에 맞춰 경로 수정
-	const { data } = await http.get<CodeDetail[]>(
-		`/cmm/groups/${groupCode}/codes`,
-	); //
-	return data;
+	const response = await http.get(`/cmm/codes/${groupCode}`);
+	// response.data는 APIResponse 객체이고, response.data.data가 실제 CodeGroup 객체입니다.
+	return response.data?.data?.details || [];
 };
 
 /** 새로운 상세 코드를 생성합니다. */
 export const createCodeDetail = async (detailData: Partial<CodeDetail>) => {
+	const groupCode = detailData.group_code;
 	const { data } = await http.post<CodeDetail>(
-		"/cmm/groups/details",
+		`/cmm/codes/${groupCode}/details`,
 		detailData,
-	); //
+	);
 	return data;
 };
 
@@ -69,7 +70,7 @@ export const updateCodeDetail = async (
 	detailData: Partial<CodeDetail>,
 ) => {
 	const { data } = await http.patch<CodeDetail>(
-		`/cmm/groups/${groupCode}/details/${detailCode}`, //
+		`/cmm/codes/${groupCode}/details/${detailCode}`,
 		detailData,
 	);
 	return data;
@@ -80,7 +81,7 @@ export const deleteCodeDetail = async (
 	groupCode: string,
 	detailCode: string,
 ) => {
-	await http.delete(`/cmm/groups/${groupCode}/details/${detailCode}`); //
+	await http.delete(`/cmm/codes/${groupCode}/details/${detailCode}`);
 };
 
 // --- 3. 첨부파일 관리 (MinIO 연동) ---
@@ -95,7 +96,7 @@ export const uploadAttachment = async (
 	formData.append("file", file);
 
 	const { data } = await http.post<Attachment>(
-		`/cmm/upload?domain_code=${domainCode}&ref_id=${refId}`, //
+		`/cmm/attachments/upload?domain_code=${domainCode}&ref_id=${refId}`,
 		formData,
 		{ headers: { "Content-Type": "multipart/form-data" } },
 	);
@@ -104,7 +105,7 @@ export const uploadAttachment = async (
 
 /** 첨부파일의 메타데이터 정보를 조회합니다. */
 export const getAttachmentInfo = async (fileId: string) => {
-	const { data } = await http.get<Attachment>(`/cmm/attachments/${fileId}`); //
+	const { data } = await http.get<Attachment>(`/cmm/attachments/${fileId}`);
 	return data;
 };
 
@@ -116,30 +117,27 @@ export const updateAttachmentMetadata = async (
 	const { data } = await http.patch<Attachment>(
 		`/cmm/attachments/${fileId}`,
 		updateData,
-	); //
+	);
 	return data;
 };
 
 /** 첨부파일을 논리 삭제(Soft Delete)합니다. */
 export const deleteAttachment = async (fileId: string) => {
-	await http.delete(`/cmm/attachments/${fileId}`); //
+	await http.delete(`/cmm/attachments/${fileId}`);
 };
 
-/** 첨부파일을 다운로드합니다 (Blob 형태). */
-export const downloadAttachment = async (fileId: string) => {
-	const response = await http.get(`/cmm/download/${fileId}`, {
-		//
-		responseType: "blob",
-	});
-	return response.data;
+// --- 4. 시스템 관리 (SYS) ---
+
+/** 채번(Sequence)을 생성합니다. */
+export const getNextSequence = async (domainCode: string, prefix: string) => {
+	const { data } = await http.get<string>(
+		`/sys/sequence/${domainCode}/${prefix}/next`,
+	);
+	return data;
 };
 
-// --- 4. 기타 공통 기능 ---
-
-/** 도메인별 새 시퀀스 번호를 생성합니다. */
-export const getSequence = async (domainCode: string) => {
-	const { data } = await http.get<{ sequence: string }>(
-		`/cmm/sequence/${domainCode}`,
-	); //
+/** 감사 로그(Audit Logs)를 조회합니다. */
+export const getAuditLogs = async (params: any) => {
+	const { data } = await http.get("/sys/audit-logs", { params });
 	return data;
 };
