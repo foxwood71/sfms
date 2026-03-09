@@ -1,9 +1,14 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ConfigProvider, App as AntdApp } from "antd";
 import koKR from "antd/locale/ko_KR";
-import LoginPage from "@/domains/iam/pages/LoginPage";
-import CodeManagePage from "@/domains/cmm/pages/CodeManagePage";
-import ApiTester from "@/domains/cmm/ApiTester";
+
+// 상대 경로 임포트 (Vite 별칭 이슈 방지)
+import LoginPage from "./domains/iam/pages/LoginPage";
+import CodeManagePage from "./domains/cmm/pages/CodeManagePage";
+import UserListPage from "./domains/usr/pages/UserListPage";
+import OrganizationPage from "./domains/usr/pages/OrganizationPage";
+import ApiTester from "./domains/cmm/ApiTester";
+
 import MainLayout from "./shared/layout/MainLayout";
 import { useAuthStore } from "./shared/stores/useAuthStore";
 import { useThemeStore } from "./shared/stores/useThemeStore";
@@ -51,8 +56,8 @@ function App() {
 
 							{/* 시스템/공통 설정 */}
 							<Route path="cmm/codes" element={<CodeManagePage />} />
-							<Route path="usr/users" element={<PagePlaceholder title="사용자 관리" />} />
-							<Route path="usr/organizations" element={<PagePlaceholder title="조직도 관리" />} />
+							<Route path="usr/users" element={<UserListPage />} />
+							<Route path="usr/organizations" element={<OrganizationPage />} />
 							<Route path="sys/audit-logs" element={<PagePlaceholder title="감사 로그" />} />
 
 							{/* 개발 도구 */}

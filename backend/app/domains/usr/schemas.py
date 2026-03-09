@@ -21,6 +21,7 @@ class OrgBase(BaseModel):
     code: str = Field(..., min_length=2, max_length=50)
     parent_id: int | None = None
     sort_order: int = 10
+    description: str | None = Field(None, max_length=255, description="조직 상세 설명 (비고)")
     is_active: bool = True
 
 
@@ -37,6 +38,7 @@ class OrgUpdate(BaseModel):
     code: str | None = None
     parent_id: int | None = None
     sort_order: int | None = None
+    description: str | None = None
     is_active: bool | None = None
 
 

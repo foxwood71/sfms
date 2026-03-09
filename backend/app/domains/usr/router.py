@@ -42,8 +42,9 @@ router = APIRouter(prefix="/usr", tags=["사용자 및 조직 관리 (USR)"])
 async def get_organizations(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
+    is_active: Annotated[bool | None, Query(description="활성 여부 필터 (None: 전체, True: 활성만)")] = None,
 ):
-    """활성화된 전체 조직도(Tree)를 계층 구조로 조회합니다.
+    """전체 조직도(Tree)를 계층 구조로 조회합니다.
 
     각 조직 객체는 'children' 필드에 하위 조직 목록을 포함하며,
     비동기 환경의 안정성을 위해 모든 데이터가 사전에 직렬화되어 반환됩니다.
@@ -51,12 +52,13 @@ async def get_organizations(
     Args:
         db (AsyncSession): 데이터베이스 비동기 세션
         current_user (User): 현재 인증된 사용자 정보
+        is_active (bool | None, optional): 활성화된 부서만 포함할지 여부. 기본값은 None(전체).
 
     Returns:
         APIResponse[list[OrgRead]]: 최상위 부서부터 시작하는 트리 구조 리스트
 
     """
-    tree_data = await OrgService.get_organizations(db)
+    tree_data = await OrgService.get_organizations(db, is_active=is_active)
     return APIResponse(domain=DOMAIN, data=tree_data)
 
 
