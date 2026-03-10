@@ -71,11 +71,12 @@ class UserBase(BaseModel):
     phone: str | None = Field(None, max_length=50)
     org_id: int | None = Field(None, description="소속 조직 ID")
     is_active: bool = True
-    # 'metadata'라는 이름은 SQLAlchemy 모델의 MetaData 객체와 충돌하므로 별도 처리 필요
+    account_status: str = Field("ACTIVE", description="계정 상태 (ACTIVE: 정상, BLOCKED: 차단)")
+    profile_image_id: uuid.UUID | None = Field(None, description="프로필 이미지 ID")
     user_metadata: dict[str, Any] = Field(
         default_factory=dict,
         description="추가 속성 (직급, 직책 등)",
-        alias="metadata",  # JSON 출력 시에는 'metadata'로 나감
+        alias="metadata",
     )
 
     @field_validator("email")
@@ -94,7 +95,7 @@ class UserCreate(UserBase):
     @field_validator("login_id")
     @classmethod
     def to_lower_login_id(cls, v: str) -> str:
-        """입된 로그인 ID를 모두 소문자로 변환합니다."""
+        """입력된 로그인 ID를 모두 소문자로 변환합니다."""
         return v.lower()
 
 
@@ -125,7 +126,7 @@ class UserRead(UserBase):
     profile_image_id: uuid.UUID | None = None
     login_fail_count: int = 0
     last_login_at: datetime | None = None
-    organization_name: str | None = None  # UI 표시용으로 Join된 부서명
+    org_name: str | None = None  # 프론트엔드 표시용 필드
 
     # 감사 필드 추가
     created_at: datetime
@@ -135,27 +136,38 @@ class UserRead(UserBase):
 
     model_config = ConfigDict(
         from_attributes=True,
-        populate_by_name=True,  # alias와 원래 필드명 모두 허용
+        populate_by_name=True,
     )
 
     @model_validator(mode="before")
     @classmethod
-    def fix_sqlalchemy_metadata(cls, data: Any) -> Any:
-        """SQLAlchemy 모델에서 데이터를 읽을 때 metadata 충돌을 방지합니다."""
+    def wrap_data(cls, data: Any) -> Any:
+        """데이터 변환 및 필드 매핑 처리를 수행합니다."""
         if not isinstance(data, dict):
             # SQLAlchemy 모델 객체인 경우
-            # 'metadata' 속성이 딕셔너리가 아니라면(즉, MetaData 객체라면) 무시
+            # 1. metadata 처리
             meta_val = getattr(data, "metadata", None)
-            if not isinstance(meta_val, dict):
-                # 실제 DB 컬럼 값이 아닌 프레임워크 객체임.
-                # 딕셔너리 형태로 변환하여 반환 데이터에 명시적으로 주입
-                # Pydantic이 'user_metadata' 필드를 채울 수 있도록 함
-                return {
-                    k: getattr(data, k, None)
-                    for k in cls.model_fields.keys()
-                    if k != "user_metadata"
-                } | {"user_metadata": {}}
+            user_meta = meta_val if isinstance(meta_val, dict) else {}
+            
+            # 2. org_name 매핑 (중요: relationship인 organization에서 name 추출)
+            org_name = None
+            org_obj = getattr(data, "organization", None)
+            if org_obj:
+                org_name = getattr(org_obj, "name", None)
+
+            return {
+                k: getattr(data, k, None)
+                for k in cls.model_fields.keys()
+                if k not in ["user_metadata", "org_name"]
+            } | {"user_metadata": user_meta, "org_name": org_name}
         return data
+
+
+class UserListRead(BaseModel):
+    """페이징 처리가 포함된 사용자 목록 응답 스키마입니다."""
+
+    items: list[UserRead]
+    total: int
 
 
 # Pydantic이 'OrgRead' 내부의 자기 참조 타입을 명확히 해석하도록 리빌드합니다.

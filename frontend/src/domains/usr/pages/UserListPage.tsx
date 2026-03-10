@@ -1,280 +1,422 @@
-import React, { useState, useMemo, useEffect } from "react";
-import { PlusOutlined, EditOutlined, DeleteOutlined, ApartmentOutlined, ClusterOutlined, TeamOutlined, SearchOutlined, CompressOutlined, ExpandOutlined } from "@ant-design/icons";
-import type { ProColumns } from "@ant-design/pro-components";
 import {
-	PageContainer,
-	ProTable,
-	ModalForm,
-	ProFormText,
-	ProFormSwitch,
-	ProCard,
-} from "@ant-design/pro-components";
-import { Button, Space, Tag, Popconfirm, App, Tree, Spin, Empty, theme, Switch, Tooltip, Splitter, Input } from "antd";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getUsersApi, createUserApi, updateUserApi, deleteUserApi, getOrganizationsApi } from "../api";
-import type { User, CreateUserParams, UpdateUserParams, Organization } from "../types";
-import OrgTreeSelect from "../components/OrgTreeSelect";
-import CodeSelect from "../components/CodeSelect";
+	ApartmentOutlined,
+	ClusterOutlined,
+	CompressOutlined,
+	DeleteOutlined,
+	EditOutlined,
+	ExpandOutlined,
+	FilterOutlined,
+	PlusOutlined,
+	SearchOutlined,
+	TeamOutlined,
+	LineHeightOutlined,
+	ShrinkOutlined,
+	ColumnHeightOutlined,
+	LockOutlined,
+	UnlockOutlined,
+} from "@ant-design/icons";
+import type { ActionType, ProColumns, ColumnsState } from "@ant-design/pro-components";
+import { PageContainer, ProCard, ProTable } from "@ant-design/pro-components";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	App,
+	Button,
+	Col,
+	Dropdown,
+	Input,
+	Popconfirm,
+	Row,
+	Select,
+	Space,
+	Spin,
+	Splitter,
+	Switch,
+	Tag,
+	Tooltip,
+	Tree,
+	theme,
+} from "antd";
+import type { SizeType } from "antd/es/config-provider/SizeContext";
+import type React from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+	createUserApi,
+	deleteUserApi,
+	getOrganizationsApi,
+	getUsersApi,
+	updateUserApi,
+	toggleUserStatusApi,
+} from "../api";
+import { getCodeDetails } from "../../cmm/api";
+import UserFormDrawer from "../components/UserFormDrawer";
+import type {
+	CreateUserParams,
+	Organization,
+	UpdateUserParams,
+	User,
+} from "../types";
 
 /**
- * 사용자 관리 페이지 컴포넌트
+ * 초기 컬럼 표시 상태 (직위, 직책, 전화번호 숨김)
  */
+const INITIAL_COLUMNS_STATE: Record<string, ColumnsState> = {
+	pos: { show: false },
+	duty: { show: false },
+	phone: { show: false },
+};
+
 const UserListPage: React.FC = () => {
 	const { message } = App.useApp();
 	const queryClient = useQueryClient();
 	const { token } = theme.useToken();
-	
-	const [modalVisible, setModalVisible] = useState(false);
+	const actionRef = useRef<ActionType>();
+
+	const [drawerVisible, setDrawerVisible] = useState(false);
 	const [editingUser, setEditingUser] = useState<User | null>(null);
 	const [selectedOrgId, setSelectedOrgId] = useState<number | undefined>(undefined);
-	
+
+	// 테이블 제어 상태
+	const [tableSize, setTableSize] = useState<SizeType>("middle");
+	const [pageSize, setPageSize] = useState(10);
+
+	// 컬럼 표시 상태 관리
+	const [columnsStateMap, setColumnsStateMap] = useState<Record<string, ColumnsState>>(INITIAL_COLUMNS_STATE);
+
 	// 필터 및 트리 제어 상태
-	const [showInactive, setShowInactive] = useState(false);
-	const [expandedKeys, setExpandedKeys] = useState<React.Key[]>(["all"]);
+	const [showInactiveOrg, setShowInactiveOrg] = useState(false);
+	const [expandedKeys, setExpandedKeys] = useState<React.Key[]>(["root"]);
 	const [searchValue, setSearchValue] = useState("");
 	const [showSearch, setShowSearch] = useState(false);
+	const [showOrgFilter, setShowOrgFilter] = useState(false);
+
+	// 사용자 목록 검색 상태
+	const [showUserFilter, setShowUserFilter] = useState(false);
+	const [userSearchText, setUserSearchText] = useState("");
+	const [showInactiveUser, setShowInactiveUser] = useState(false);
 
 	const CONTENT_HEIGHT = "calc(100vh - 220px)";
+	const HEADER_HEIGHT = "56px";
 
-	// 1. 조직 데이터 조회
-	const { data: orgResponse, isLoading: isOrgLoading } = useQuery({
-		queryKey: ["organizations", "tree", "all"],
-		queryFn: () => getOrganizationsApi("tree", false),
+	// 1. 공통 코드 조회 및 매핑 (직급/직책 한글화용)
+	const { data: posCodes } = useQuery({
+		queryKey: ["codeDetails", "POS_TYPE"],
+		queryFn: () => getCodeDetails("POS_TYPE"),
+	});
+	const { data: dutyCodes } = useQuery({
+		queryKey: ["codeDetails", "DUTY_TYPE"],
+		queryFn: () => getCodeDetails("DUTY_TYPE"),
 	});
 
-	// 모든 키 추출 (전체 제어용)
+	const posMap = useMemo(() => {
+		const map: Record<string, string> = {};
+		posCodes?.forEach(c => map[c.detail_code] = c.detail_name);
+		return map;
+	}, [posCodes]);
+
+	const dutyMap = useMemo(() => {
+		const map: Record<string, string> = {};
+		dutyCodes?.forEach(c => map[c.detail_code] = c.detail_name);
+		return map;
+	}, [dutyCodes]);
+
+	// 2. 조직 데이터 조회
+	const { data: orgResponse, isLoading: isOrgLoading, isFetching: isOrgFetching } = useQuery({
+		queryKey: ["organizations", "tree", showInactiveOrg],
+		queryFn: () => getOrganizationsApi("tree", showInactiveOrg ? undefined : true),
+	});
+
 	const getAllKeys = (items: Organization[]): React.Key[] => {
 		let keys: React.Key[] = [];
+		if (!items) return keys;
 		for (const item of items) {
 			keys.push(item.id);
 			if (item.children) keys = [...keys, ...getAllKeys(item.children)];
 		}
 		return keys;
 	};
-	const allOrgKeys = useMemo(() => ["all", ...(orgResponse?.data ? getAllKeys(orgResponse.data) : [])], [orgResponse]);
+	const allOrgKeys = useMemo(() => ["root", ...(orgResponse?.data ? getAllKeys(orgResponse.data) : [])], [orgResponse]);
 
-	// 검색어 입력 시 자동 펼침
 	useEffect(() => {
-		if (searchValue && orgResponse?.data) { setExpandedKeys(allOrgKeys); } 
-		else { setExpandedKeys(["all"]); }
+		if (searchValue && orgResponse?.data) setExpandedKeys(allOrgKeys);
+		else setExpandedKeys(["root"]);
 	}, [searchValue, allOrgKeys]);
 
-	// 조직 트리 데이터 변환 (Deep Search 포함)
-	const treeData = useMemo(() => {
-		const mapToTree = (items: Organization[]): any[] => {
-			return items.map((item) => {
-				const childrenNodes = item.children ? mapToTree(item.children) : [];
-				const isSearchMatch = !searchValue || item.name.toLowerCase().includes(searchValue.toLowerCase());
-				const hasVisibleChildren = childrenNodes.length > 0;
-				if (searchValue && !isSearchMatch && !hasVisibleChildren) return null;
+	useEffect(() => {
+		if (orgResponse?.data && !expandedKeys.includes("root")) {
+			setExpandedKeys((prev) => Array.from(new Set([...prev, "root"])));
+		}
+	}, [orgResponse, expandedKeys]);
 
+	const treeData = useMemo(() => {
+		const mapToTree = (items: Organization[], parentMatched = false): any[] => {
+			if (!items) return [];
+			return items.map((item) => {
+				const isMatched = !searchValue || item.name.toLowerCase().includes(searchValue.toLowerCase());
+				const childrenNodes = item.children ? mapToTree(item.children, parentMatched || isMatched) : [];
+				const hasVisibleChildren = childrenNodes.length > 0;
+				if (!parentMatched && !isMatched && !hasVisibleChildren) return null;
 				return {
 					key: item.id,
-					title: item.name,
+					title: (
+						<Tooltip title={item.name} placement="right" mouseEnterDelay={0.5}>
+							<span style={{ whiteSpace: 'nowrap', display: 'inline-block' }}>
+								{item.is_active ? item.name : <span style={{ textDecoration: "line-through", color: token.colorTextDisabled, opacity: 0.6, fontStyle: "italic" }}>{item.name} (비활성)</span>}
+							</span>
+						</Tooltip>
+					),
 					icon: item.children && item.children.length > 0 ? <ClusterOutlined /> : <ApartmentOutlined />,
 					children: childrenNodes,
 				};
 			}).filter(Boolean);
 		};
-		return [{
-			key: "all",
-			title: "전체 조직",
-			icon: <TeamOutlined />,
-			children: orgResponse?.data ? mapToTree(orgResponse.data) : [],
-		}];
-	}, [orgResponse, searchValue]);
+		return [{ key: "root", title: "전체 조직도", icon: <TeamOutlined />, children: mapToTree(orgResponse?.data || []) }];
+	}, [orgResponse, searchValue, token]);
 
-	// 2. 뮤테이션 로직
+	// 3. 뮤테이션 로직
 	const saveMutation = useMutation({
 		mutationFn: (values: any) => {
-			const payload = { ...values, metadata: { pos: values.pos } };
-			delete payload.pos;
+			const { pos, duty, ...rest } = values;
+			const payload = { ...rest, metadata: { ...(editingUser?.metadata || {}), pos, duty } };
 			if (editingUser) return updateUserApi(editingUser.id, payload as UpdateUserParams);
 			return createUserApi(payload as CreateUserParams);
 		},
 		onSuccess: () => {
 			message.success("저장 완료");
-			setModalVisible(false);
+			setDrawerVisible(false);
+			actionRef.current?.reload();
 			queryClient.invalidateQueries({ queryKey: ["users"] });
 		},
-		onError: (error: any) => { message.error("저장 실패"); },
+		onError: (error: any) => {
+			const errorMsg = error.response?.data?.message || "저장 실패";
+			message.error(errorMsg);
+		},
 	});
 
 	const deleteMutation = useMutation({
 		mutationFn: (id: number) => deleteUserApi(id),
 		onSuccess: () => {
-			message.success("비활성화 완료");
+			message.success("퇴직 처리가 완료되었습니다.");
+			actionRef.current?.reload();
 			queryClient.invalidateQueries({ queryKey: ["users"] });
 		},
-		onError: (error: any) => { message.error("삭제 실패"); },
+		onError: () => message.error("퇴직 처리 실패"),
 	});
 
-	// 4. 테이블 컬럼
+	const toggleStatusMutation = useMutation({
+		mutationFn: (id: number) => toggleUserStatusApi(id),
+		onSuccess: (res) => {
+			const status = res.data?.account_status === "ACTIVE" ? "해제" : "차단";
+			message.success(`계정 ${status} 완료`);
+			actionRef.current?.reload();
+		},
+		onError: () => message.error("계정 상태 변경 실패"),
+	});
+
+	// 4. 테이블 컬럼 정의
 	const columns: ProColumns<User>[] = [
-		{ title: "로그인 ID", dataIndex: "login_id", copyable: true, width: 120 },
-		{ title: "성명", dataIndex: "name", width: 100 },
-		{ title: "사번", dataIndex: "emp_code", width: 100 },
-		{ title: "소속 부서", dataIndex: "org_name", hideInSearch: true, width: 150 },
-		{ title: "이메일", dataIndex: "email", ellipsis: true, hideInSearch: true },
+		{ title: "로그인 ID", dataIndex: "login_id", key: "login_id", copyable: true, width: 120, ellipsis: true, sorter: true },
+		{ title: "성명", dataIndex: "name", key: "name", width: 100, ellipsis: true, sorter: true },
+		{ title: "사번", dataIndex: "emp_code", key: "emp_code", width: 100, ellipsis: true, sorter: true },
+		{ title: "소속 부서", dataIndex: "org_name", key: "org_name", hideInSearch: true, width: 150, ellipsis: true, sorter: true },
+		{ 
+			title: "직위", 
+			dataIndex: ["metadata", "pos"], 
+			key: "pos", 
+			width: 100, 
+			ellipsis: true,
+			render: (text) => posMap[text as string] || text || "-"
+		},
+		{ 
+			title: "직책", 
+			dataIndex: ["metadata", "duty"], 
+			key: "duty", 
+			width: 100, 
+			ellipsis: true,
+			render: (text) => dutyMap[text as string] || text || "-"
+		},
+		{ title: "전화번호", dataIndex: "phone", key: "phone", width: 130, ellipsis: true },
+		{ title: "이메일", dataIndex: "email", key: "email", width: 180, ellipsis: true, hideInSearch: true },
 		{
 			title: "재직 상태",
 			dataIndex: "is_active",
+			key: "is_active",
 			width: 100,
-			valueEnum: { true: { text: "재직", status: "Success" }, false: { text: "퇴사", status: "Default" } },
+			sorter: true,
 			render: (dom, record) => <Tag color={record.is_active ? "green" : "default"}>{record.is_active ? "재직" : "퇴사"}</Tag>,
+		},
+		{
+			title: "계정 상태",
+			dataIndex: "account_status",
+			key: "account_status",
+			width: 100,
+			sorter: true,
+			render: (text) => (
+				<Tag color={text === "ACTIVE" ? "blue" : "error"}>
+					{text === "ACTIVE" ? "정상" : "차단"}
+				</Tag>
+			),
 		},
 		{
 			title: "관리",
 			valueType: "option",
-			width: 100,
+			key: "option",
+			width: 120,
+			fixed: "right",
+			hideInSetting: true,
 			render: (_, record) => [
-				<a key="edit" onClick={() => { setEditingUser(record); setModalVisible(true); }}><EditOutlined /></a>,
-				<Popconfirm key="delete" title="비활성화?" onConfirm={() => deleteMutation.mutate(record.id)}>
-					<a style={{ color: "#ff4d4f" }}><DeleteOutlined /></a>
+				<Tooltip key="edit-tip" title="수정"><a onClick={() => { setEditingUser({ ...record, org_id: Number(record.org_id) }); setDrawerVisible(true); }}><EditOutlined /></a></Tooltip>,
+				<Tooltip key="lock-tip" title={record.account_status === "ACTIVE" ? "계정 차단" : "차단 해제"}>
+					<a style={{ marginLeft: 8 }} onClick={() => toggleStatusMutation.mutate(record.id)}>
+						{record.account_status === "ACTIVE" ? <LockOutlined style={{ color: '#faad14' }} /> : <UnlockOutlined style={{ color: '#52c41a' }} />}
+					</a>
+				</Tooltip>,
+				<Popconfirm 
+					key="delete" 
+					title="퇴직 처리"
+					description="해당 사용자를 퇴직 처리하시겠습니까? (계정도 자동 차단됩니다)"
+					onConfirm={() => deleteMutation.mutate(record.id)}
+					okText="처리"
+					cancelText="취소"
+				>
+					<Tooltip key="del-tip" title="퇴직 처리">
+						<a style={{ color: "#ff4d4f", marginLeft: 8 }}><DeleteOutlined /></a>
+					</Tooltip>
 				</Popconfirm>,
 			],
 		},
 	];
 
-	const toggleExpandAll = () => expandedKeys.length > 1 ? setExpandedKeys(["all"]) : setExpandedKeys(allOrgKeys);
+	const toggleExpandAll = () => expandedKeys.length > 1 ? setExpandedKeys(["root"]) : setExpandedKeys(allOrgKeys);
 	const closeSearch = () => { setShowSearch(false); setSearchValue(""); };
 
+	// 커스텀 여백 제어 메뉴
+	const densityItems = [
+		{ key: 'default', label: '넓게', icon: <ExpandOutlined />, onClick: () => setTableSize('default') },
+		{ key: 'middle', label: '중간', icon: <ColumnHeightOutlined />, onClick: () => setTableSize('middle') },
+		{ key: 'small', label: '좁게', icon: <ShrinkOutlined />, onClick: () => setTableSize('small') },
+	];
+
 	return (
-		<PageContainer 
+		<PageContainer
 			header={{ title: "사용자 관리" }}
 			childrenContentStyle={{ padding: 0, height: CONTENT_HEIGHT, overflow: "hidden" }}
 		>
-			<Splitter style={{ height: "100%", background: token.colorBgContainer, borderRadius: token.borderRadiusLG, border: `1px solid ${token.colorBorderSecondary}`, overflow: "hidden" }}>
-				
-				{/* [Left] 조직 트리 영역 */}
+			<Splitter
+				style={{
+					height: "100%",
+					background: token.colorBgContainer,
+					borderRadius: token.borderRadiusLG,
+					border: `1px solid ${token.colorBorderSecondary}`,
+					overflow: "hidden",
+				}}
+			>
 				<Splitter.Panel defaultSize="25%" min="15%" max="40%">
-					<ProCard 
-						title="조직도" 
-						headerBordered 
-						headerStyle={{ minHeight: "56px" }}
+					<ProCard
+						title={showSearch ? (<div style={{ display: 'flex', alignItems: 'center', width: '100%' }}><Input placeholder="부서 검색..." variant="borderless" autoFocus value={searchValue} onChange={(e) => setSearchValue(e.target.value)} onKeyDown={(e) => { if (e.key === "Escape") closeSearch(); }} style={{ padding: 0, width: '100%' }} /></div>) : ( "조직도" )}
+						headerBordered
+						headerStyle={{ height: HEADER_HEIGHT, display: 'flex', alignItems: 'center' }}
+						extra={<Space size={2}><Tooltip title="조직 검색"><Button type="text" size="middle" icon={<SearchOutlined style={{ color: showSearch ? token.colorPrimary : undefined }} />} onClick={() => showSearch ? closeSearch() : setShowSearch(true)} /></Tooltip><Tooltip title="필터"><Button type="text" size="middle" icon={<FilterOutlined style={{ color: showOrgFilter ? token.colorPrimary : undefined }} />} onClick={() => setShowOrgFilter(!showOrgFilter)} /></Tooltip><Tooltip title={expandedKeys.length > 1 ? "전체 접기" : "전체 펼치기"}><Button type="text" size="middle" icon={expandedKeys.length > 1 ? <CompressOutlined /> : <ExpandOutlined />} onClick={toggleExpandAll} /></Tooltip></Space>}
+						style={{ height: "100%" }}
+						bodyStyle={{ height: `calc(100% - ${HEADER_HEIGHT})`, display: "flex", flexDirection: "column", padding: 0, overflowX: 'auto' }}
+					>
+						{showOrgFilter && (<div style={{ padding: "16px 24px 8px 24px", flexShrink: 0 }}><div style={{ padding: "8px 12px", background: token.colorFillAlter, borderRadius: token.borderRadiusLG, border: `1px solid ${token.colorBorderSecondary}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{ fontSize: "11px", color: token.colorTextSecondary, fontWeight: 500 }}>조직 필터</span><Space size={4}><span style={{ fontSize: "11px", color: showInactiveOrg ? token.colorError : token.colorSuccess, fontWeight: 500 }}>{showInactiveOrg ? "비활성 포함" : "활성 부서만"}</span><Switch size="small" checked={showInactiveOrg} onChange={setShowInactiveOrg} loading={isOrgFetching} tabIndex={-1} /></Space></div></div>)}
+						<div style={{ flex: 1, overflow: "auto", padding: "16px 24px" }}>
+							{isOrgLoading && !isOrgFetching ? (<div style={{ textAlign: "center", padding: 24 }}><Spin tip="로딩..." /></div>) : (<Tree showLine={{ showLeafIcon: false }} showIcon treeData={treeData} expandedKeys={expandedKeys} onExpand={setExpandedKeys} selectedKeys={selectedOrgId ? [selectedOrgId] : ["root"]} onSelect={(keys) => { if (keys.length > 0) { const key = keys[0]; setSelectedOrgId(key === "root" ? undefined : Number(key)); } else { setSelectedOrgId(undefined); } }} />)}
+						</div>
+					</ProCard>
+				</Splitter.Panel>
+
+				<Splitter.Panel>
+					<ProCard
+						title="사용자 목록"
+						headerBordered
+						headerStyle={{ height: HEADER_HEIGHT, display: 'flex', alignItems: 'center' }}
 						extra={
-							<Space size={4} style={{ height: "32px", display: "flex", alignItems: "center" }}>
-								<Tooltip title="조직 검색"><Button type="text" size="middle" icon={<SearchOutlined style={{ color: showSearch ? token.colorPrimary : undefined }} />} onClick={() => showSearch ? closeSearch() : setShowSearch(true)} /></Tooltip>
-								<Tooltip title={expandedKeys.length > 1 ? "전체 접기" : "전체 펼치기"}><Button type="text" size="middle" icon={expandedKeys.length > 1 ? <CompressOutlined /> : <ExpandOutlined />} onClick={toggleExpandAll} /></Tooltip>
+							<Space size={2}>
+								<Tooltip title="필터">
+									<Button type="text" size="middle" icon={<FilterOutlined style={{ color: showUserFilter ? token.colorPrimary : undefined }} />} onClick={() => setShowUserFilter(!showUserFilter)} />
+								</Tooltip>
+								<Button key="add" icon={<PlusOutlined />} type="primary" size="small" onClick={() => { setEditingUser(null); setDrawerVisible(true); }}>사용자 등록</Button>
 							</Space>
 						}
 						style={{ height: "100%" }}
-						bodyStyle={{ height: "calc(100% - 56px)", display: "flex", flexDirection: "column", padding: 0 }}
+						bodyStyle={{ padding: 0, height: `calc(100% - ${HEADER_HEIGHT})`, overflow: "hidden", display: "flex", flexDirection: "column" }}
 					>
-						<div style={{ padding: "24px 24px 16px 24px", flexShrink: 0 }}>
-							<div style={{ padding: "8px 12px", background: token.colorFillAlter, borderRadius: token.borderRadiusLG, border: `1px solid ${token.colorBorderSecondary}` }}>
-								{showSearch && (
-									<div style={{ marginBottom: 12 }}>
-										<Input
-											placeholder="부서 검색 (ESC/Tab)"
-											prefix={<SearchOutlined style={{ color: "#bfbfbf", fontSize: "12px" }} />}
-											allowClear autoFocus value={searchValue}
-											variant="filled"
-											onChange={(e) => setSearchValue(e.target.value)}
-											onKeyDown={(e) => { if (e.key === "Escape" || e.key === "Tab") setShowSearch(false); }}
-											style={{ width: "100%", background: token.colorBgContainer, height: "32px", fontSize: "13px" }}
-										/>
-									</div>
-								)}
-								<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-									<span style={{ fontSize: "11px", color: token.colorTextSecondary, fontWeight: 500 }}>조직 선택</span>
-									<Tooltip title="선택한 부서의 인원만 목록에 표시됩니다.">
-										<TeamOutlined style={{ color: token.colorTextDescription, fontSize: "12px" }} />
-									</Tooltip>
-								</div>
-							</div>
-						</div>
+						{showUserFilter && (<div style={{ padding: "16px 12px 8px 12px", flexShrink: 0 }}><div style={{ padding: "12px 16px", background: token.colorFillAlter, borderRadius: token.borderRadiusLG, border: `1px solid ${token.colorBorderSecondary}` }}><Row gutter={[16, 12]} align="middle"><Col span={12}><span style={{ fontSize: '12px', color: token.colorTextSecondary, display: 'block', marginBottom: 4 }}>통합 검색 (성명/ID/사번/연락처/이메일)</span><Input placeholder="검색어 입력..." allowClear size="small" value={userSearchText} onChange={e => setUserSearchText(e.target.value)} /></Col><Col span={12}><span style={{ fontSize: '12px', color: token.colorTextSecondary, display: 'block', marginBottom: 4 }}>재직 상태</span><div style={{ display: 'flex', alignItems: 'center', height: '24px' }}><Switch size="small" checked={showInactiveUser} onChange={setShowInactiveUser} /><span style={{ marginLeft: 8, fontSize: '12px', color: showInactiveUser ? token.colorError : token.colorSuccess }}>{showInactiveUser ? "퇴사자 포함" : "재직자만"}</span></div></Col></Row></div></div>)}
+						<div style={{ flex: 1, overflow: 'hidden' }}>
+							<ProTable<User>
+								actionRef={actionRef}
+								size={tableSize}
+								scroll={{ x: 'max-content', y: 480 }}
+								sticky={true}
+								style={{ height: "100%" }}
+								rowKey="id"
+								params={{ org_id: selectedOrgId, keyword: userSearchText, is_active: showInactiveUser ? undefined : true, pageSize }}
+								search={false} 
+								options={{ 
+									setting: true, 
+									density: false, 
+									fullScreen: false 
+								}}
+								locale={{ tableList: { density: '여백' } as any }}
+								toolBarRender={() => [
+									<Select
+										key="pageSize"
+										size="small"
+										value={pageSize}
+										onChange={setPageSize}
+										options={[
+											{ value: 10, label: '10개씩 보기' },
+											{ value: 20, label: '20개씩 보기' },
+											{ value: 50, label: '50개씩 보기' },
+											{ value: 100, label: '100개씩 보기' },
+										]}
+										style={{ width: 110, marginRight: 8 }}
+									/>,
+									<Dropdown key="density" menu={{ items: densityItems }} placement="bottomRight" trigger={['click']}>
+										<Tooltip title="여백 제어">
+											<Button type="text" icon={<LineHeightOutlined />} />
+										</Tooltip>
+									</Dropdown>
+								]}
+								columnsState={{
+									value: columnsStateMap,
+									onChange: (map) => setColumnsStateMap(map),
+								}}
+								request={async (params, sort) => {
+									const { org_id, keyword, is_active, current, pageSize: pSize } = params;
+									
+									let sortParam: string | undefined = undefined;
+									if (sort && Object.keys(sort).length > 0) {
+										const field = Object.keys(sort)[0];
+										const order = sort[field] === 'ascend' ? 'asc' : 'desc';
+										sortParam = `${field}_${order}`;
+									}
 
-						<div style={{ flex: 1, overflowY: "auto", padding: "8px 24px 24px 24px" }}>
-							{isOrgLoading ? (
-								<div style={{ textAlign: "center", padding: 24 }}><Spin tip="로딩..." /></div>
-							) : (
-								<Tree
-									showLine={{ showLeafIcon: false }}
-									showIcon
-									treeData={treeData}
-									expandedKeys={expandedKeys}
-									onExpand={setExpandedKeys}
-									selectedKeys={selectedOrgId ? [selectedOrgId] : ["all"]}
-									onSelect={(keys) => { if (keys.length > 0) { const key = keys[0]; setSelectedOrgId(key === "all" ? undefined : key as number); } }}
-								/>
-							)}
+									try {
+										const response = await getUsersApi({ 
+											keyword, 
+											org_id: org_id !== undefined ? Number(org_id) : undefined, 
+											include_children: true, 
+											is_active, 
+											page: current, 
+											size: pSize,
+											sort: sortParam 
+										});
+										return { data: response.data?.items || [], success: true, total: response.data?.total || 0 };
+									} catch (error) { return { data: [], success: false }; }
+								}}
+								columns={columns}
+								pagination={{ 
+									pageSize, 
+									showSizeChanger: false,
+								}}
+							/>
 						</div>
-					</ProCard>
-				</Splitter.Panel>
-
-				{/* [Right] 사용자 목록 영역 */}
-				<Splitter.Panel>
-					<ProCard 
-						title="사용자 목록" 
-						headerBordered
-						headerStyle={{ minHeight: "56px" }}
-						style={{ height: "100%" }}
-						bodyStyle={{ padding: 0, height: "calc(100% - 56px)", overflow: "hidden", display: "flex", flexDirection: "column" }}
-					>
-						<div style={{ padding: "16px 12px 0 12px", flexShrink: 0 }}>
-							<div style={{ 
-								padding: "8px 12px",
-								background: token.colorFillAlter,
-								borderRadius: token.borderRadiusLG,
-								border: `1px solid ${token.colorBorderSecondary}`,
-								display: "flex",
-								justifyContent: "space-between",
-								alignItems: "center"
-							}}>
-								<span style={{ fontSize: "11px", color: token.colorTextSecondary, fontWeight: 500 }}>조회 필터</span>
-								<Space size={4}>
-									<span style={{ fontSize: "11px", color: token.colorTextDescription }}>퇴사자 포함</span>
-									<Switch 
-										size="small" 
-										checked={showInactive} 
-										onChange={setShowInactive} 
-										tabIndex={-1} // 탭 이동 제외
-									/>
-								</Space>
-							</div>
-						</div>
-
-						<ProTable<User>
-							scroll={{ y: "calc(100vh - 480px)" }}
-							style={{ height: "100%" }}
-							rowKey="id"
-							params={{ org_id: selectedOrgId, is_active: showInactive ? undefined : true }}
-							search={{ labelWidth: "auto", defaultCollapsed: false }}
-							options={{ setting: true, density: true, fullScreen: true }}
-							toolBarRender={() => [
-								<Button key="button" icon={<PlusOutlined />} type="primary" onClick={() => { setEditingUser(null); setModalVisible(true); }}>
-									사용자 등록
-								</Button>,
-							]}
-							request={async (params) => {
-								const { data } = await getUsersApi({ keyword: params.keyword, org_id: params.org_id, include_children: true, is_active: params.is_active });
-								return { data: data.data || [], success: true };
-							}}
-							columns={columns}
-							pagination={{ pageSize: 20, showSizeChanger: true }}
-						/>
 					</ProCard>
 				</Splitter.Panel>
 			</Splitter>
-
-			<ModalForm
-				title={editingUser ? "사용자 수정" : "신규 사용자"}
-				open={modalVisible}
-				onOpenChange={setModalVisible}
-				onFinish={async (values) => { await saveMutation.mutateAsync(values); return true; }}
-				initialValues={editingUser ? { ...editingUser, pos: editingUser.metadata?.pos } : { is_active: true, org_id: selectedOrgId }}
-				modalProps={{ destroyOnClose: true }}
-			>
-				<ProFormText name="login_id" label="로그인 ID" rules={[{ required: true }]} disabled={!!editingUser} />
-				{!editingUser && <ProFormText.Password name="password" label="비밀번호" rules={[{ required: true }]} />}
-				<ProFormText name="name" label="성명" rules={[{ required: true }]} />
-				<ProFormText name="emp_code" label="사번" rules={[{ required: true }]} />
-				<ProFormText name="email" label="이메일" rules={[{ type: "email" }]} />
-				<div style={{ marginBottom: 24 }}><label style={{ display: "block", marginBottom: 8, fontSize: "14px" }}>소속 부서</label><OrgTreeSelect name="org_id" /></div>
-				<div style={{ marginBottom: 24 }}><label style={{ display: "block", marginBottom: 8, fontSize: "14px" }}>직위/직급</label><CodeSelect groupCode="POS_TYPE" name="pos" /></div>
-				<ProFormSwitch name="is_active" label="재직 상태" />
-			</ModalForm>
+			<UserFormDrawer open={drawerVisible} onOpenChange={setDrawerVisible} editingUser={editingUser} initialOrgId={selectedOrgId} onFinish={async (values) => { await saveMutation.mutateAsync(values); return true; }} />
 		</PageContainer>
 	);
 };

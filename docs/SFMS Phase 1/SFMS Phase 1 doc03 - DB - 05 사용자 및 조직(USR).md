@@ -50,7 +50,8 @@ CREATE TABLE usr.users (
     email               VARCHAR(100) NOT NULL UNIQUE,
     phone               VARCHAR(50),
     profile_image_id    UUID,                       -- cmm.attachments 참조
-    is_active           BOOLEAN DEFAULT true,
+    is_active           BOOLEAN DEFAULT true,       -- 재직 여부 (True: 재직, False: 퇴사)
+    account_status      VARCHAR(20) DEFAULT 'ACTIVE' NOT NULL, -- 계정 상태 (ACTIVE: 정상, BLOCKED: 차단)
     login_fail_count    INTEGER DEFAULT 0,
     last_login_at       TIMESTAMPTZ,
     metadata            JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -74,5 +75,8 @@ CREATE TABLE usr.users (
 
 ## 🚀 4. 운영 정책
 
-* **논리적 삭제**: 사용자와 조직은 데이터 보존을 위해 물리 삭제 대신 `is_active = false` 처리를 원칙으로 함.
+* **인사 및 계정 상태 분리**: 
+    *   `is_active`: 인사상의 재직 여부를 관리합니다. 퇴사 시 `false`로 변경됩니다.
+    *   `account_status`: 시스템 보안상의 계정 상태를 관리합니다. 차단 시 `BLOCKED`로 변경됩니다.
+    *   퇴사 처리 시 보안을 위해 계정 상태는 자동으로 `BLOCKED` 처리됩니다.
 * **비밀번호 보안**: 모든 비밀번호는 `bcrypt` 또는 `argon2` 해시로 암호화하여 저장.

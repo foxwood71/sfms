@@ -26,6 +26,9 @@ importers:
       axios:
         specifier: ^1.13.5
         version: 1.13.5
+      dayjs:
+        specifier: ^1.11.19
+        version: 1.11.19
       react:
         specifier: ^19.2.0
         version: 19.2.4
@@ -4815,7 +4818,7 @@ snapshots:
       '@google-cloud/logging': 11.2.1
       '@google-cloud/opentelemetry-cloud-monitoring-exporter': 0.21.0(@opentelemetry/api@1.9.0)(@opentelemetry/core@2.6.0(@opentelemetry/api@1.9.0))(@opentelemetry/resources@2.6.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-metrics@2.6.0(@opentelemetry/api@1.9.0))
       '@google-cloud/opentelemetry-cloud-trace-exporter': 3.0.0(@opentelemetry/api@1.9.0)(@opentelemetry/core@2.6.0(@opentelemetry/api@1.9.0))(@opentelemetry/resources@2.6.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.6.0(@opentelemetry/api@1.9.0))
-      '@google/genai': 1.41.0(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))
+      '@google/genai': 1.41.0(@modelcontextprotocol/sdk@1.27.1(zod@3.25.76))
       '@iarna/toml': 2.2.5
       '@joshua.litt/get-ripgrep': 0.0.3
       '@modelcontextprotocol/sdk': 1.27.1(zod@3.25.76)
@@ -4897,7 +4900,7 @@ snapshots:
     dependencies:
       '@agentclientprotocol/sdk': 0.12.0(zod@3.25.76)
       '@google/gemini-cli-core': 0.32.1(@grpc/grpc-js@1.14.3)(express@5.2.1)
-      '@google/genai': 1.41.0(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))
+      '@google/genai': 1.41.0(@modelcontextprotocol/sdk@1.27.1(zod@3.25.76))
       '@iarna/toml': 2.2.5
       '@modelcontextprotocol/sdk': 1.27.1(zod@3.25.76)
       ansi-escapes: 7.3.0
@@ -4949,7 +4952,7 @@ snapshots:
       - tree-sitter
       - utf-8-validate
 
-  '@google/genai@1.41.0(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))':
+  '@google/genai@1.41.0(@modelcontextprotocol/sdk@1.27.1(zod@3.25.76))':
     dependencies:
       google-auth-library: 10.6.1
       p-retry: 7.1.1

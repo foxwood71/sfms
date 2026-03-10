@@ -26,7 +26,10 @@ INSERT INTO cmm.code_groups (group_code, group_name, description, is_system)
 VALUES
 ('SYS_USE_YN', '사용 여부', '시스템 전반 활성화 상태 구분', true),
 ('FILE_CATEGORY', '파일 분류', '문서, 도면, 사진 등 파일 유형', true),
-('EQP_STATUS', '설비 상태', '설비의 현재 가동 상태', false);
+('EQP_STATUS', '설비 상태', '설비의 현재 가동 상태', false),
+('POS_TYPE', '직위/직급', '사용자의 직위 및 직급 정보', true),
+('DUTY_TYPE', '직책', '사용자의 보직 및 직책 정보', true),
+('USR_STATUS', '계정 상태', '사용자 계정의 활성/차단 상태', true);
 
 -- 4. 공통 코드 상세 및 가변 속성(JSONB) 설정 [cite: 6, 7]
 INSERT INTO cmm.code_details (group_code, detail_code, detail_name, props, sort_order)
@@ -34,6 +37,30 @@ VALUES
 -- 사용 여부
 ('SYS_USE_YN', 'Y', '사용', '{"color": "green"}', 1),
 ('SYS_USE_YN', 'N', '미사용', '{"color": "red"}', 2),
+
+-- 계정 상태
+('USR_STATUS', 'ACTIVE', '정상', '{"color": "blue"}', 10),
+('USR_STATUS', 'BLOCKED', '차단', '{"color": "red"}', 20),
+
+-- 직급 (POS_TYPE)
+('POS_TYPE', 'STAFF', '사원', NULL, 10),
+('POS_TYPE', 'ASSISTANT', '대리', NULL, 20),
+('POS_TYPE', 'MANAGER', '과장', NULL, 30),
+('POS_TYPE', 'DEPUTY', '차장', NULL, 40),
+('POS_TYPE', 'HEAD', '부장', NULL, 50),
+('POS_TYPE', 'DIRECTOR', '이사', NULL, 60),
+('POS_TYPE', 'MD', '상무', NULL, 70),
+('POS_TYPE', 'SMD', '전무', NULL, 80),
+('POS_TYPE', 'EVP', '부사장', NULL, 90),
+('POS_TYPE', 'CEO', '사장', NULL, 100),
+
+-- 직책 (DUTY_TYPE)
+('DUTY_TYPE', 'MEMBER', '팀원', NULL, 10),
+('DUTY_TYPE', 'LEADER', '팀장', NULL, 20),
+('DUTY_TYPE', 'CHIEF', '실장', NULL, 30),
+('DUTY_TYPE', 'DIVISION_HEAD', '본부장', NULL, 40),
+('DUTY_TYPE', 'DIRECTOR_HEAD', '부문장', NULL, 50),
+('DUTY_TYPE', 'PRESIDENT', '대표이사', NULL, 60),
 
 -- 파일 분류
 ('FILE_CATEGORY', 'DWG', 'CAD 도면', '{"icon": "FileDoneOutlined", "ext": "dwg"}', 1),

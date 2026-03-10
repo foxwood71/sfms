@@ -206,36 +206,69 @@ class UserService:
         include_children: bool = False,
         keyword: str | None = None,
         is_active: bool | None = None,
-    ) -> list[User]:
+    ) -> tuple[list[User], int]:
         """사용자 목록을 다양한 조건으로 검색하고 페이징 처리하여 반환합니다."""
-        stmt = select(User)
+        from sqlalchemy import func
+        from sqlalchemy.orm import joinedload
+        
+        # 기본 쿼리 구성
+        stmt = select(User).options(joinedload(User.organization))
         if is_active is not None:
             stmt = stmt.where(User.is_active == is_active)
 
-        if keyword:
+        if keyword and keyword.strip():
+            k = f"%{keyword.strip()}%"
             stmt = stmt.where(
                 or_(
-                    User.name.ilike(f"%{keyword}%"),
-                    User.login_id.ilike(f"%{keyword}%"),
-                    User.emp_code.ilike(f"%{keyword}%"),
+                    User.name.ilike(k),
+                    User.login_id.ilike(k),
+                    User.emp_code.ilike(k),
+                    User.email.ilike(k),
+                    User.phone.ilike(k),
                 )
             )
 
-        if org_id:
+        if org_id is not None:
             if include_children:
                 descendant_org_ids = await OrgService.get_descendant_org_ids(db, org_id)
                 stmt = stmt.where(User.org_id.in_(descendant_org_ids))
             else:
                 stmt = stmt.where(User.org_id == org_id)
 
-        if sort == "name":
-            stmt = stmt.order_by(User.name.asc())
+        # 전체 개수 조회 (페이징 적용 전)
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        total = await db.scalar(count_stmt) or 0
+
+        # 정렬 적용
+        if sort:
+            try:
+                # 'name_asc', 'login_id_desc' 형식의 문자열 처리
+                field, order = sort.rsplit("_", 1)
+                
+                # 소속 부서(org_name) 정렬 특수 처리
+                if field == "org_name":
+                    stmt = stmt.outerjoin(User.organization)
+                    column = Organization.name
+                else:
+                    column = getattr(User, field, None)
+                
+                if column is not None:
+                    if order.lower() == "desc":
+                        stmt = stmt.order_by(column.desc())
+                    else:
+                        stmt = stmt.order_by(column.asc())
+                else:
+                    stmt = stmt.order_by(User.created_at.desc())
+            except (ValueError, AttributeError):
+                stmt = stmt.order_by(User.created_at.desc())
         else:
             stmt = stmt.order_by(User.created_at.desc())
 
         stmt = stmt.offset((page - 1) * size).limit(size)
         result = await db.execute(stmt)
-        return list(result.scalars().all())
+        users = list(result.scalars().all())
+        
+        return users, total
 
     @staticmethod
     async def create_user(db: AsyncSession, obj_in: UserCreate, actor_id: int) -> User:
@@ -252,7 +285,8 @@ class UserService:
             if result.scalar_one_or_none():
                 raise ConflictException(domain=DOMAIN, error_code=error_code)
 
-        create_data = obj_in.model_dump(exclude={"password"})
+        # by_alias=True를 사용하여 user_metadata -> metadata로 변환
+        create_data = obj_in.model_dump(exclude={"password"}, by_alias=True)
         create_data["password_hash"] = get_password_hash(obj_in.password)
         create_data["created_by"] = actor_id
         create_data["updated_by"] = actor_id
@@ -260,8 +294,12 @@ class UserService:
         user = User(**create_data)
         db.add(user)
         await db.commit()
-        await db.refresh(user)
-        return user
+        
+        # 다시 조회하여 organization 정보 포함 (MissingGreenlet 방지)
+        from sqlalchemy.orm import joinedload
+        stmt = select(User).options(joinedload(User.organization)).where(User.id == user.id)
+        result = await db.execute(stmt)
+        return result.scalar_one()
 
     @staticmethod
     async def update_user(
@@ -275,7 +313,9 @@ class UserService:
     ) -> User:
         """사용자 정보를 수정합니다."""
         user = await UserService.get_user(db, user_id)
-        update_data = user_in.model_dump(exclude_unset=True)
+        
+        # by_alias=True를 사용하여 user_metadata -> metadata로 변환
+        update_data = user_in.model_dump(exclude_unset=True, by_alias=True)
 
         restricted_fields = ["org_id", "is_active"]
         if not actor_is_admin:
@@ -297,7 +337,8 @@ class UserService:
         is_org_changed = "org_id" in update_data and old_org_id != new_org_id
 
         for key, value in update_data.items():
-            setattr(user, key, value)
+            if hasattr(user, key):
+                setattr(user, key, value)
 
         user.updated_by = actor_id
 
@@ -326,8 +367,12 @@ class UserService:
                 )
 
         await db.commit()
-        await db.refresh(user)
-        return user
+        
+        # 다시 조회하여 organization 정보 포함 (MissingGreenlet 방지)
+        from sqlalchemy.orm import joinedload
+        stmt = select(User).options(joinedload(User.organization)).where(User.id == user.id)
+        result = await db.execute(stmt)
+        return result.scalar_one()
 
     @staticmethod
     async def change_password(
@@ -359,9 +404,10 @@ class UserService:
 
     @staticmethod
     async def delete_user(db: AsyncSession, user_id: int, actor_id: int) -> None:
-        """사용자 계정을 비활성화 처리합니다."""
+        """사용자 계정을 퇴사 처리(비활성화)합니다."""
         user = await UserService.get_user(db, user_id)
         user.is_active = False
+        user.account_status = "BLOCKED"  # 퇴사 시 계정도 차단
         user.updated_by = actor_id
 
         current_meta = user.user_metadata or {}
@@ -369,6 +415,25 @@ class UserService:
         user.user_metadata = current_meta
 
         await db.commit()
+
+    @staticmethod
+    async def toggle_account_status(db: AsyncSession, user_id: int, actor_id: int) -> User:
+        """사용자 계정 상태를 전환(ACTIVE <-> BLOCKED)합니다."""
+        user = await UserService.get_user(db, user_id)
+        if user.account_status == "ACTIVE":
+            user.account_status = "BLOCKED"
+        else:
+            user.account_status = "ACTIVE"
+        
+        user.updated_by = actor_id
+        await db.commit()
+        await db.refresh(user)
+        
+        # organization 정보 포함하여 반환
+        from sqlalchemy.orm import joinedload
+        stmt = select(User).options(joinedload(User.organization)).where(User.id == user.id)
+        result = await db.execute(stmt)
+        return result.scalar_one()
 
     @staticmethod
     async def get_user(db: AsyncSession, user_id: int) -> User:

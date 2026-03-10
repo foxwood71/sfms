@@ -140,7 +140,10 @@ class User(Base):
         UUID(as_uuid=True), nullable=True, comment="프로필 이미지 ID (cmm.attachments)"
     )
     is_active: Mapped[bool] = mapped_column(
-        Boolean, default=True, comment="계정 활성화 상태"
+        Boolean, default=True, comment="재직 여부 (True: 재직, False: 퇴사)"
+    )
+    account_status: Mapped[str] = mapped_column(
+        String(20), default="ACTIVE", nullable=False, comment="계정 상태 (ACTIVE: 정상, BLOCKED: 차단)"
     )
     login_fail_count: Mapped[int] = mapped_column(
         Integer, default=0, nullable=False, comment="로그인 실패 횟수"

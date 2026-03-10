@@ -55,8 +55,10 @@ export const getUsersApi = async (params: {
 	org_id?: number;
 	include_children?: boolean;
 	is_active?: boolean;
+	page?: number;
+	size?: number;
 }) => {
-	const response = await http.get<APIResponse<User[]>>("/usr", { params });
+	const response = await http.get<APIResponse<{ items: User[]; total: number }>>("/usr", { params });
 	return response.data;
 };
 
@@ -89,6 +91,14 @@ export const updateUserApi = async (id: number, params: UpdateUserParams) => {
  */
 export const deleteUserApi = async (id: number) => {
 	const response = await http.delete<APIResponse<void>>(`/usr/${id}`);
+	return response.data;
+};
+
+/**
+ * 사용자 계정 상태 전환 (정상 <-> 차단)
+ */
+export const toggleUserStatusApi = async (id: number) => {
+	const response = await http.patch<APIResponse<User>>(`/usr/${id}/status`);
 	return response.data;
 };
 

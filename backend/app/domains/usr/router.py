@@ -19,6 +19,7 @@ from app.domains.usr.schemas import (
     OrgRead,
     OrgUpdate,
     UserCreate,
+    UserListRead,
     UserPasswordUpdate,
     UserRead,
     UserUpdate,
@@ -186,7 +187,7 @@ async def delete_organization(
 
 @router.get(
     "",
-    response_model=APIResponse[list[UserRead]],
+    response_model=APIResponse[UserListRead],
 )
 async def get_users(
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -218,10 +219,10 @@ async def get_users(
         is_active (bool | None, optional): 계정 상태 필터. 기본값은 None.
 
     Returns:
-        APIResponse[list[UserRead]]: 페이징 처리된 사용자 목록
+        APIResponse[UserListRead]: 페이징 처리된 사용자 목록
 
     """
-    users = await UserService.get_users(
+    users, total = await UserService.get_users(
         db=db,
         page=page,
         size=size,
@@ -231,7 +232,10 @@ async def get_users(
         keyword=keyword,
         is_active=is_active,
     )
-    return APIResponse(domain=DOMAIN, data=users)
+    return APIResponse(
+        domain=DOMAIN, 
+        data=UserListRead(items=users, total=total)
+    )
 
 
 @router.post(
@@ -396,6 +400,29 @@ async def delete_user(
     return APIResponse(
         domain=DOMAIN, data=None, success_code=SuccessCode.SUCCESS_DELETED
     )
+
+
+@router.patch("/{user_id}/status", response_model=APIResponse[UserRead])
+async def toggle_user_status(
+    user_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(check_domain_admin("USR"))],
+):
+    """사용자의 계정 상태(ACTIVE <-> BLOCKED)를 전환합니다.
+
+    Args:
+        user_id (int): 상태를 변경할 사용자 ID
+        db (AsyncSession): 데이터베이스 비동기 세션
+        current_user (User): 행위 권한을 가진 관리자 정보
+
+    Returns:
+        APIResponse[UserRead]: 변경된 사용자 정보
+
+    """
+    updated_user = await UserService.toggle_account_status(
+        db=db, user_id=user_id, actor_id=current_user.id
+    )
+    return APIResponse(domain=DOMAIN, data=updated_user, success_code=SuccessCode.SUCCESS_UPDATED)
 
 
 @router.post("/{user_id}/profile-image", response_model=APIResponse[UserRead])
