@@ -4,140 +4,104 @@
  */
 
 import { http } from "@/shared/api/http";
-import type {
-	Attachment,
-	AttachmentUpdate,
-	CodeDetail,
-	CodeGroup,
-} from "./types";
+import type { Attachment, AttachmentUpdate, CodeDetail, CodeGroup } from "./types";
 
 // --- 1. 공통 코드 그룹 관리 ---
 
 /** 활성 코드 그룹 목록을 조회합니다. */
 export const getCodeGroups = async (includeInactive = true) => {
-	const { data } = await http.get<CodeGroup[]>("/cmm/codes", {
-		params: { include_inactive: includeInactive },
-	});
-	return data;
+    const { data } = await http.get<CodeGroup[]>("/cmm/codes", {
+        params: { include_inactive: includeInactive },
+    });
+    return data;
 };
 
 /** 새로운 코드 그룹을 생성합니다. */
 export const createCodeGroup = async (groupData: Partial<CodeGroup>) => {
-	const { data } = await http.post<CodeGroup>("/cmm/codes", groupData);
-	return data;
+    const { data } = await http.post<CodeGroup>("/cmm/codes", groupData);
+    return data;
 };
 
 /** 코드 그룹 정보를 수정합니다. */
-export const updateCodeGroup = async (
-	groupCode: string,
-	groupData: Partial<CodeGroup>,
-) => {
-	const { data } = await http.patch<CodeGroup>(
-		`/cmm/codes/${groupCode}`,
-		groupData,
-	);
-	return data;
+export const updateCodeGroup = async (groupCode: string, groupData: Partial<CodeGroup>) => {
+    const { data } = await http.patch<CodeGroup>(`/cmm/codes/${groupCode}`, groupData);
+    return data;
 };
 
 /** 코드 그룹을 삭제합니다 (하위 코드 포함). */
 export const deleteCodeGroup = async (groupCode: string) => {
-	await http.delete(`/cmm/codes/${groupCode}`);
+    await http.delete(`/cmm/codes/${groupCode}`);
 };
 
 // --- 2. 상세 코드 관리 (Code Details) ---
 
 /** 특정 그룹의 상세 코드 목록을 조회합니다. */
 export const getCodeDetails = async (groupCode: string) => {
-	const response = await http.get(`/cmm/codes/${groupCode}`);
-	// response.data는 APIResponse 객체이고, response.data.data가 실제 CodeGroup 객체입니다.
-	return response.data?.data?.details || [];
+    const response = await http.get(`/cmm/codes/${groupCode}`);
+    // response.data는 APIResponse 객체이고, response.data.data가 실제 CodeGroup 객체입니다.
+    return response.data?.data?.details || [];
 };
 
 /** 새로운 상세 코드를 생성합니다. */
 export const createCodeDetail = async (detailData: Partial<CodeDetail>) => {
-	const groupCode = detailData.group_code;
-	const { data } = await http.post<CodeDetail>(
-		`/cmm/codes/${groupCode}/details`,
-		detailData,
-	);
-	return data;
+    const groupCode = detailData.group_code;
+    const { data } = await http.post<CodeDetail>(`/cmm/codes/${groupCode}/details`, detailData);
+    return data;
 };
 
 /** 상세 코드 정보를 수정합니다 (JSONB props 포함). */
-export const updateCodeDetail = async (
-	groupCode: string,
-	detailCode: string,
-	detailData: Partial<CodeDetail>,
-) => {
-	const { data } = await http.patch<CodeDetail>(
-		`/cmm/codes/${groupCode}/details/${detailCode}`,
-		detailData,
-	);
-	return data;
+export const updateCodeDetail = async (groupCode: string, detailCode: string, detailData: Partial<CodeDetail>) => {
+    const { data } = await http.patch<CodeDetail>(`/cmm/codes/${groupCode}/details/${detailCode}`, detailData);
+    return data;
 };
 
 /** 특정 상세 코드를 삭제합니다. */
-export const deleteCodeDetail = async (
-	groupCode: string,
-	detailCode: string,
-) => {
-	await http.delete(`/cmm/codes/${groupCode}/details/${detailCode}`);
+export const deleteCodeDetail = async (groupCode: string, detailCode: string) => {
+    await http.delete(`/cmm/codes/${groupCode}/details/${detailCode}`);
 };
 
 // --- 3. 첨부파일 관리 (MinIO 연동) ---
 
 /** 파일을 업로드하고 DB 메타데이터를 등록합니다. */
-export const uploadAttachment = async (
-	domainCode: string,
-	refId: string,
-	file: File,
-) => {
-	const formData = new FormData();
-	formData.append("file", file);
+export const uploadAttachment = async (domainCode: string, refId: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
 
-	const { data } = await http.post<Attachment>(
-		`/cmm/attachments/upload?domain_code=${domainCode}&ref_id=${refId}`,
-		formData,
-		{ headers: { "Content-Type": "multipart/form-data" } },
-	);
-	return data;
+    const { data } = await http.post<Attachment>(
+        `/cmm/attachments/upload?domain_code=${domainCode}&ref_id=${refId}`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } },
+    );
+    return data;
 };
 
 /** 첨부파일의 메타데이터 정보를 조회합니다. */
 export const getAttachmentInfo = async (fileId: string) => {
-	const { data } = await http.get<Attachment>(`/cmm/attachments/${fileId}`);
-	return data;
+    const { data } = await http.get<Attachment>(`/cmm/attachments/${fileId}`);
+    return data;
 };
 
 /** 첨부파일 메타데이터(파일명 등)를 수정합니다. */
-export const updateAttachmentMetadata = async (
-	fileId: string,
-	updateData: AttachmentUpdate,
-) => {
-	const { data } = await http.patch<Attachment>(
-		`/cmm/attachments/${fileId}`,
-		updateData,
-	);
-	return data;
+export const updateAttachmentMetadata = async (fileId: string, updateData: AttachmentUpdate) => {
+    const { data } = await http.patch<Attachment>(`/cmm/attachments/${fileId}`, updateData);
+    return data;
 };
 
 /** 첨부파일을 논리 삭제(Soft Delete)합니다. */
 export const deleteAttachment = async (fileId: string) => {
-	await http.delete(`/cmm/attachments/${fileId}`);
+    await http.delete(`/cmm/attachments/${fileId}`);
 };
 
 // --- 4. 시스템 관리 (SYS) ---
 
 /** 채번(Sequence)을 생성합니다. */
 export const getNextSequence = async (domainCode: string, prefix: string) => {
-	const { data } = await http.get<string>(
-		`/sys/sequence/${domainCode}/${prefix}/next`,
-	);
-	return data;
+    const { data } = await http.get<string>(`/sys/sequence/${domainCode}/${prefix}/next`);
+    return data;
 };
 
 /** 감사 로그(Audit Logs)를 조회합니다. */
-export const getAuditLogs = async (params: any) => {
+export const getAuditLogs = async (params: Record<string, unknown>) => {
 	const { data } = await http.get("/sys/audit-logs", { params });
 	return data;
 };

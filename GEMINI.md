@@ -17,8 +17,12 @@
     *   **Split Layout**: 좌측 트리/필터와 우측 상세 정보/목록을 `Splitter` 컴포넌트로 분리하여 리사이즈 가능하게 구현합니다.
     *   **Bento Style Filter**: 목록 제어용 스위치와 검색창은 카드 내부에서 별도의 둥근 박스(Bento Box)로 그룹화합니다.
     *   **High Density**: 폼 필드는 `Row`/`Col`을 사용한 2단 그리드로 배치하여 세로 길이를 최소화하고 한 화면에 모든 정보를 노출합니다.
-    *   **스크롤 관리**: 브라우저 전체 스크롤을 금지하며, 각 섹션별 독립 스크롤(Internal Scroll)을 정밀하게 구현합니다.
-*   **상태 관리**: 전역 인증 및 세션 상태는 `Zustand`를 사용하며, API 통신은 `TanStack Query`를 통해 최신 상태를 유지합니다.
+    * **스크롤 관리**: 브라우저 전체 스크롤을 금지하며, 각 섹션별 독립 스크롤(Internal Scroll)을 정밀하게 구현합니다.
+    * **타입 안전성 (TypeScript & Biome)**:
+    * **`any` 사용 금지**: 모든 변수, 매개변수, 반환값에 명시적 타입을 지정합니다. 불가피한 경우 `unknown`을 사용합니다.
+    * **에러 처리**: `catch (error: unknown)`를 사용하며, `AxiosError<APIErrorResponse>`로 타입 단언(Type Assertion)하여 처리합니다.
+    * **Ant Design 타입 활용**: 트리 데이터나 폼 값에는 `TreeDataNode`, `DefaultOptionType` 등 라이브러리 제공 타입을 우선적으로 사용합니다.
+    * **상태 관리**: 전역 인증 및 세션 상태는 `Zustand`를 사용하며, API 통신은 `TanStack Query`를 통해 최신 상태를 유지합니다.
 
 ### 3. 데이터베이스 (PostgreSQL 16)
 *   **코드 대문자 강제**: 모든 식별용 `code` 컬럼에는 `CHECK (code = UPPER(code))` 제약 조건을 적용하며, 프론트엔드에서도 전송 전 `toUpperCase()` 처리를 수행합니다.

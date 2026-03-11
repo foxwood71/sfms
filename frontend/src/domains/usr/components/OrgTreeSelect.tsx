@@ -1,6 +1,7 @@
-import React from "react";
-import { TreeSelect, type TreeSelectProps } from "antd";
 import { useQuery } from "@tanstack/react-query";
+import { TreeSelect, type TreeSelectProps } from "antd";
+import type { DefaultOptionType } from "antd/es/select";
+import React, { useCallback, useMemo } from "react";
 import { getOrganizationsApi } from "../api";
 import type { Organization } from "../types";
 
@@ -15,10 +16,10 @@ interface OrgTreeSelectProps extends Omit<TreeSelectProps, "treeData"> {
 /**
  * 조직(부서) 선택을 위한 트리형 셀렉트 컴포넌트
  */
-const OrgTreeSelect: React.FC<OrgTreeSelectProps> = ({ 
-	activeOnly = true, 
+const OrgTreeSelect: React.FC<OrgTreeSelectProps> = ({
+	activeOnly = true,
 	placeholder = "부서를 선택하세요",
-	...props 
+	...props
 }) => {
 	const { data, isLoading } = useQuery({
 		queryKey: ["organizations", "tree", activeOnly],
@@ -26,19 +27,20 @@ const OrgTreeSelect: React.FC<OrgTreeSelectProps> = ({
 		staleTime: 5 * 60 * 1000,
 	});
 
-	const mapOrgToTreeData = (orgs: Organization[]): any[] => {
+	const mapOrgToTreeData = useCallback((orgs: Organization[]): DefaultOptionType[] => {
 		return orgs.map((org) => ({
 			id: org.id,
 			value: org.id,
 			title: org.name,
-			children: org.children && org.children.length > 0 ? mapOrgToTreeData(org.children) : undefined,
+			children:
+				org.children && org.children.length > 0 ? mapOrgToTreeData(org.children) : undefined,
 		}));
-	};
+	}, []);
 
-	const treeData = React.useMemo(() => {
+	const treeData = useMemo(() => {
 		if (!data?.data) return [];
 		return mapOrgToTreeData(data.data);
-	}, [data]);
+	}, [data, mapOrgToTreeData]);
 
 	return (
 		<TreeSelect

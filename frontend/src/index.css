@@ -69,13 +69,13 @@ button:focus-visible {
 
 /* src/index.css */
 body {
-	margin: 0;
-	padding: 0;
-	width: 100%;
-	height: 100%;
-	/* Vite의 flex, place-items 등은 AntD Layout과 충돌하므로 제거합니다. */
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    /* Vite의 flex, place-items 등은 AntD Layout과 충돌하므로 제거합니다. */
 }
 
 #root {
-	height: 100vh;
+    height: 100vh;
 }
