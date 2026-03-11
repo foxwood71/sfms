@@ -30,6 +30,20 @@
 ## 3. 👤 사용자(User) 관리 API
 (생략: 표준 REST 규격을 따름)
 
+### 3.1 주요 DTO 스키마 (v1.5 Update)
+
+#### [UserUpdate] 사용자 정보 수정
+기존 기본 필드 외에 다음 필드들이 수정 가능하도록 확장되었습니다.
+*   `emp_code` (string): 사원 번호 (영문 대문자, 숫자, _, - 조합)
+*   `account_status` (string): 계정 상태 (`ACTIVE`, `BLOCKED`)
+*   `metadata` (object): 추가 정보 (직위 `pos`, 직책 `duty` 등 JSONB 매핑)
+
+#### [UserRead] 사용자 정보 응답
+프론트엔드 UI 고도화를 위해 다음 필드들이 포함되어 반환됩니다.
+*   `roles` (list[object]): 할당된 역할 리스트 (`id`, `name`, `code` 포함)
+*   `metadata` (object): 직급/직책 정보가 포함된 확장 속성
+*   `org_name` (string): 소속 부서 명칭 (조인 결과)
+
 ---
 
 ## 4. ⚠️ 주요 예외 및 비즈니스 에러 코드 (USR Domain)

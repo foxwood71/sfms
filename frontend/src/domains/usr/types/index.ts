@@ -25,12 +25,24 @@ export interface User {
     emp_code: string;
     name: string;
     email: string | null;
+    phone?: string | null; // 추가
     org_id: number;
     org_name?: string;
     is_active: boolean;
-    profile_id?: string | null;
-    metadata?: Record<string, unknown>;    created_at: string;
+    account_status: string; // 추가
+    profile_image_id?: string | null;
+    metadata?: Record<string, any>;
+    roles?: { id: number; name: string; code: string }[]; // 추가
+    created_at: string;
     updated_at: string;
+}
+
+/**
+ * 역할 및 통합 권한 정보를 포함하는 사용자 타입
+ */
+export interface UserWithPermissions extends User {
+    roles: string[];
+    permissions: Record<string, string[]>;
 }
 
 /**

@@ -91,49 +91,51 @@ export const menuConfig: MenuItem[] = [
  * 사용자의 권한에 따라 메뉴를 필터링하는 함수
  */
 export const filterMenus = (
-    menus: MenuItem[],
-    permissions: Record<string, string[]> = {},
-    isSuperuser = false,
+	menus: MenuItem[],
+	permissions: Record<string, string[]> = {},
+	isSuperuser = false,
 ): MenuItem[] => {
-    // 1. 슈퍼유저 여부 확인
-    // - is_superuser 플래그가 true이거나
-    // - permissions에 'all' 또는 'ALL' 리소스에 대한 '*' 권한이 있는 경우
-    const hasGlobalAdmin =
-        isSuperuser ||
-        (permissions["all"] && permissions["all"].includes("*")) ||
-        (permissions["ALL"] && permissions["ALL"].includes("*"));
+	// 1. 슈퍼유저 여부 확인 (대소문자 무관하게 ALL: ['*'] 확인)
+	const hasGlobalAdmin =
+		isSuperuser ||
+		Object.keys(permissions).some(
+			(key) => key.toUpperCase() === "ALL" && permissions[key].includes("*"),
+		);
 
-    if (hasGlobalAdmin) return menus;
+	if (hasGlobalAdmin) return menus;
 
-    const filtered = menus
-        .filter((menu) => {
-            // 2. 권한 설정이 없는 메뉴는 누구나 접근 가능
-            if (!menu.resource) return true;
+	const filtered = menus
+		.filter((menu) => {
+			// 2. 권한 설정이 없는 메뉴는 누구나 접근 가능
+			if (!menu.resource) return true;
 
-            // 3. 해당 리소스에 대한 사용자의 권한 확인
-            // 리소스 코드는 관례상 대문자로 처리하므로 둘 다 확인
-            const userActions = permissions[menu.resource] || permissions[menu.resource.toLowerCase()] || [];
+			// 3. 해당 리소스에 대한 사용자의 권한 확인 (대소문자 구분 없이 찾기)
+			const resourceKey = Object.keys(permissions).find(
+				(key) => key.toUpperCase() === menu.resource?.toUpperCase(),
+			);
+			const userActions = resourceKey ? permissions[resourceKey] : [];
 
-            // 해당 도메인의 모든 권한('*')이 있거나, 특정 액션 권한이 있는지 확인
-            if (userActions.includes("*")) return true;
+			// 해당 도메인의 모든 권한('*')이 있거나, 특정 액션 권한이 있는지 확인
+			if (userActions.includes("*")) return true;
 
-            const requiredAction = menu.action || "READ";
-            return userActions.includes(requiredAction);
-        })
-        .map((menu) => {
-            if (menu.routes) {
-                return {
-                    ...menu,
-                    routes: filterMenus(menu.routes, permissions, hasGlobalAdmin),
-                };
-            }
-            return menu;
-        });
+			const requiredAction = menu.action || "READ";
+			return userActions.includes(requiredAction);
+		})
+		.map((menu) => {
+			if (menu.routes) {
+				const childRoutes = filterMenus(menu.routes, permissions, hasGlobalAdmin);
+				return {
+					...menu,
+					routes: childRoutes,
+				};
+			}
+			return menu;
+		});
 
-    // 자식이 있는 메뉴인데 필터링 후 자식이 하나도 없으면 대메뉴 제외 (대시보드 제외)
-    return filtered.filter((menu) => {
-        if (menu.path === "/dashboard") return true;
-        if (menu.routes && menu.routes.length === 0) return false;
-        return true;
-    });
+	// 자식이 있는 메뉴인데 필터링 후 자식이 하나도 없으면 대메뉴 제외 (대시보드 제외)
+	return filtered.filter((menu) => {
+		if (menu.path === "/dashboard") return true;
+		if (menu.routes && menu.routes.length === 0) return false;
+		return true;
+	});
 };

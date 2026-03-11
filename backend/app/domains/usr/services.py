@@ -209,10 +209,13 @@ class UserService:
     ) -> tuple[list[User], int]:
         """사용자 목록을 다양한 조건으로 검색하고 페이징 처리하여 반환합니다."""
         from sqlalchemy import func
-        from sqlalchemy.orm import joinedload
+        from sqlalchemy.orm import joinedload, selectinload
         
-        # 기본 쿼리 구성
-        stmt = select(User).options(joinedload(User.organization))
+        # 기본 쿼리 구성 (organization은 joinedload, roles는 selectinload로 즉시 로딩)
+        stmt = select(User).options(
+            joinedload(User.organization),
+            selectinload(User.roles)
+        )
         if is_active is not None:
             stmt = stmt.where(User.is_active == is_active)
 
@@ -242,10 +245,7 @@ class UserService:
         # 정렬 적용
         if sort:
             try:
-                # 'name_asc', 'login_id_desc' 형식의 문자열 처리
                 field, order = sort.rsplit("_", 1)
-                
-                # 소속 부서(org_name) 정렬 특수 처리
                 if field == "org_name":
                     stmt = stmt.outerjoin(User.organization)
                     column = Organization.name
@@ -285,19 +285,28 @@ class UserService:
             if result.scalar_one_or_none():
                 raise ConflictException(domain=DOMAIN, error_code=error_code)
 
-        # by_alias=True를 사용하여 user_metadata -> metadata로 변환
-        create_data = obj_in.model_dump(exclude={"password"}, by_alias=True)
+        # metadata -> user_metadata 매핑 처리
+        create_data = obj_in.model_dump(exclude={"password", "role_ids", "metadata"})
+        create_data["user_metadata"] = obj_in.metadata or {}
         create_data["password_hash"] = get_password_hash(obj_in.password)
         create_data["created_by"] = actor_id
         create_data["updated_by"] = actor_id
 
         user = User(**create_data)
         db.add(user)
+        await db.flush()
+        
+        if obj_in.role_ids:
+            from app.domains.iam.services import UserRoleService
+            await UserRoleService.assign_roles_to_user(
+                db, user_id=user.id, role_ids=obj_in.role_ids, actor_id=actor_id,
+                ip="system", user_agent="system"
+            )
+
         await db.commit()
         
-        # 다시 조회하여 organization 정보 포함 (MissingGreenlet 방지)
-        from sqlalchemy.orm import joinedload
-        stmt = select(User).options(joinedload(User.organization)).where(User.id == user.id)
+        from sqlalchemy.orm import joinedload, selectinload
+        stmt = select(User).options(joinedload(User.organization), selectinload(User.roles)).where(User.id == user.id)
         result = await db.execute(stmt)
         return result.scalar_one()
 
@@ -313,9 +322,7 @@ class UserService:
     ) -> User:
         """사용자 정보를 수정합니다."""
         user = await UserService.get_user(db, user_id)
-        
-        # by_alias=True를 사용하여 user_metadata -> metadata로 변환
-        update_data = user_in.model_dump(exclude_unset=True, by_alias=True)
+        update_data = user_in.model_dump(exclude_unset=True)
 
         restricted_fields = ["org_id", "is_active"]
         if not actor_is_admin:
@@ -323,54 +330,29 @@ class UserService:
                 if field in update_data:
                     del update_data[field]
 
+        # 이메일 중복 체크
         new_email = update_data.get("email")
         if new_email and new_email != user.email:
             stmt = select(User).where(User.email == new_email)
-            existing = await db.execute(stmt)
-            if existing.scalar_one_or_none():
-                raise ConflictException(
-                    domain=DOMAIN, error_code=ErrorCode.DUPLICATE_EMAIL
-                )
+            if (await db.execute(stmt)).scalar_one_or_none():
+                raise ConflictException(domain=DOMAIN, error_code=ErrorCode.DUPLICATE_EMAIL)
 
-        old_org_id = user.org_id
-        new_org_id = update_data.get("org_id")
-        is_org_changed = "org_id" in update_data and old_org_id != new_org_id
+        # metadata -> user_metadata 명시적 매핑 및 병합
+        if "metadata" in update_data:
+            current_meta = user.user_metadata or {}
+            new_meta = update_data.pop("metadata")
+            user.user_metadata = {**current_meta, **new_meta}
 
+        # 나머지 일반 필드 반영
         for key, value in update_data.items():
             if hasattr(user, key):
                 setattr(user, key, value)
 
         user.updated_by = actor_id
-
-        if is_org_changed:
-            from sqlalchemy.exc import IntegrityError
-            try:
-                await AuditLogService.create_audit_log(
-                    db,
-                    AuditLogCreate(
-                        action_type="ORG_CHANGE",
-                        target_domain="USR",
-                        target_table="users",
-                        target_id=str(user.id),
-                        actor_user_id=actor_id,
-                        client_ip=ip,
-                        user_agent=user_agent,
-                        snapshot={"old_org_id": old_org_id, "new_org_id": new_org_id},
-                        description=f"사용자 {user.name}의 부서 변경",
-                    ),
-                )
-            except IntegrityError:
-                raise BadRequestException(
-                    domain=DOMAIN,
-                    error_code=ErrorCode.BAD_REQUEST,
-                    message="INVALID_ORGANIZATION_ID"
-                )
-
         await db.commit()
         
-        # 다시 조회하여 organization 정보 포함 (MissingGreenlet 방지)
-        from sqlalchemy.orm import joinedload
-        stmt = select(User).options(joinedload(User.organization)).where(User.id == user.id)
+        from sqlalchemy.orm import joinedload, selectinload
+        stmt = select(User).options(joinedload(User.organization), selectinload(User.roles)).where(User.id == user.id)
         result = await db.execute(stmt)
         return result.scalar_one()
 
@@ -437,8 +419,15 @@ class UserService:
 
     @staticmethod
     async def get_user(db: AsyncSession, user_id: int) -> User:
-        """특정 사용자 정보를 ID로 조회합니다."""
-        user = await db.get(User, user_id)
+        """특정 사용자 정보를 ID로 조회합니다. (권한 정보 포함)"""
+        from sqlalchemy.orm import joinedload, selectinload
+        stmt = select(User).options(
+            joinedload(User.organization),
+            selectinload(User.roles)
+        ).where(User.id == user_id)
+        
+        result = await db.execute(stmt)
+        user = result.scalar_one_or_none()
         if not user:
             raise NotFoundException(domain=DOMAIN, error_code=ErrorCode.NOT_FOUND)
         return user

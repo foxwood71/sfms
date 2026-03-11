@@ -29,17 +29,25 @@ const LoginPage: React.FC = () => {
 		setLoading(true);
 		try {
 			// 1. 로그인 요청
-			const loginRes = await loginApi(values.login_id, values.password);
-			const { access_token } = loginRes.data;
+			const loginRes = await loginApi({
+				login_id: values.login_id,
+				password: values.password,
+			});
+			const { access_token, refresh_token } = loginRes;
 
-			// 2. 토큰 저장 (스토어)
+			if (!access_token) {
+				throw new Error("서버로부터 토큰을 받지 못했습니다.");
+			}
+
+			// 2. 토큰 저장
 			localStorage.setItem("accessToken", access_token);
 
-			// 3. 내 정보 가져오기
-			const userRes = await getMeApi();
-			const userData = userRes.data;
+			// 3. 내 정보 가져오기 (인증 헤더가 필요한 API이므로 토큰 직접 전달)
+			const userData = await getMeApi(access_token);
 
-			setAuth(userData, access_token);
+			// 4. 스토어 업데이트 (중요: 순서 엄수 - accessToken, refreshToken, user)
+			setAuth(access_token, refresh_token, userData);
+			
 			message.success(`${userData.name}님, 환영합니다!`);
 			navigate("/");
 		} catch (error: unknown) {

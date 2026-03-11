@@ -73,11 +73,7 @@ class UserBase(BaseModel):
     is_active: bool = True
     account_status: str = Field("ACTIVE", description="계정 상태 (ACTIVE: 정상, BLOCKED: 차단)")
     profile_image_id: uuid.UUID | None = Field(None, description="프로필 이미지 ID")
-    user_metadata: dict[str, Any] = Field(
-        default_factory=dict,
-        description="추가 속성 (직급, 직책 등)",
-        alias="metadata",
-    )
+    metadata: dict[str, Any] = Field(default_factory=dict, description="추가 속성 (직급, 직책 등)")
 
     @field_validator("email")
     @classmethod
@@ -91,6 +87,7 @@ class UserCreate(UserBase):
 
     login_id: str = Field(..., min_length=4, max_length=50, pattern=r"^[a-z0-9_]+$")
     password: str = Field(..., min_length=8, description="초기 비밀번호")
+    role_ids: list[int] | None = Field(None, description="할당할 역할 ID 리스트")
 
     @field_validator("login_id")
     @classmethod
@@ -103,11 +100,13 @@ class UserUpdate(BaseModel):
     """사용자 정보 수정 시 사용하는 스키마입니다."""
 
     name: str | None = None
+    emp_code: str | None = None
     email: str | None = None
     phone: str | None = None
     org_id: int | None = None
     is_active: bool | None = None
-    user_metadata: dict[str, Any] | None = Field(None, alias="metadata")
+    account_status: str | None = None
+    metadata: dict[str, Any] | None = None
     profile_image_id: uuid.UUID | None = None
 
 
@@ -127,16 +126,10 @@ class UserRead(UserBase):
     login_fail_count: int = 0
     last_login_at: datetime | None = None
     org_name: str | None = None  # 프론트엔드 표시용 필드
-
-    # 감사 필드 추가
-    created_at: datetime
-    created_by: int | None = None
-    updated_at: datetime
-    updated_by: int | None = None
+    roles: list[dict[str, Any]] = [] # 역할 정보 추가
 
     model_config = ConfigDict(
         from_attributes=True,
-        populate_by_name=True,
     )
 
     @model_validator(mode="before")
@@ -145,21 +138,27 @@ class UserRead(UserBase):
         """데이터 변환 및 필드 매핑 처리를 수행합니다."""
         if not isinstance(data, dict):
             # SQLAlchemy 모델 객체인 경우
-            # 1. metadata 처리
-            meta_val = getattr(data, "metadata", None)
-            user_meta = meta_val if isinstance(meta_val, dict) else {}
+            # 1. user_metadata -> metadata 매핑
+            meta_val = getattr(data, "user_metadata", None)
+            meta = meta_val if isinstance(meta_val, dict) else {}
             
-            # 2. org_name 매핑 (중요: relationship인 organization에서 name 추출)
+            # 2. org_name 매핑
             org_name = None
             org_obj = getattr(data, "organization", None)
             if org_obj:
                 org_name = getattr(org_obj, "name", None)
 
+            # 3. roles 매핑
+            roles_list = []
+            roles_obj = getattr(data, "roles", [])
+            if roles_obj:
+                roles_list = [{"id": r.id, "name": r.name, "code": r.code} for r in roles_obj]
+
             return {
                 k: getattr(data, k, None)
                 for k in cls.model_fields.keys()
-                if k not in ["user_metadata", "org_name"]
-            } | {"user_metadata": user_meta, "org_name": org_name}
+                if k not in ["metadata", "org_name", "roles"]
+            } | {"metadata": meta, "org_name": org_name, "roles": roles_list}
         return data
 
 
