@@ -1,7 +1,16 @@
 /**
+ * 시스템 공통 에러 응답 규격
+ */
+export interface APIErrorResponse {
+	message: string;
+	code: number;
+	domain: string;
+}
+
+/**
  * 시스템 공통 API 응답 규격
  */
-export interface APIResponse<T = any> {
+export interface APIResponse<T = unknown> {
 	/** 성공 여부 */
 	success: boolean;
 	/** 도메인 코드 (CMM, SYS, USR, FAC 등) */
