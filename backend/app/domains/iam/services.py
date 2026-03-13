@@ -19,7 +19,6 @@ from app.core.exceptions import (
     RateLimitException,
     UnauthorizedException,
 )
-from app.core.logger import logger
 from app.core.security import verify_password
 from app.domains.iam.models import Role, UserRole
 from app.domains.iam.schemas import (
@@ -175,26 +174,29 @@ class AuthService:
         # 3. 반환용 데이터 조립 (지연 로딩 및 프레임워크 객체 충돌 방지)
         # SQLAlchemy 모델의 필드만 추출하되, 'metadata' 객체는 제외합니다.
         user_data = {
-            c.name: getattr(user, c.name) 
-            for c in user.__table__.columns 
+            c.name: getattr(user, c.name)
+            for c in user.__table__.columns
             if c.name != "metadata"
         }
-        
+
         # 실제 비즈니스 메타데이터(JSON)는 user_metadata 필드로 안전하게 전달
-        user_data["user_metadata"] = user.metadata if isinstance(user.metadata, dict) else {}
+        user_data["user_metadata"] = (
+            user.metadata if isinstance(user.metadata, dict) else {}
+        )
 
         # organization_name 처리
-        organization_name = None
+        org_name = None
         if user.org_id:
             from app.domains.usr.models import Organization
 
             org = await db.get(Organization, user.org_id)
             if org:
-                organization_name = org.name
+                org_name = org.name
 
         return UserWithPermissions(
             **user_data,
-            organization_name=organization_name,
+            is_superuser=user.is_superuser,
+            org_name=org_name,
             roles=role_codes,
             permissions={k: list(v) for k, v in merged_permissions.items()},
         )

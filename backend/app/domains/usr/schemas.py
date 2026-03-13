@@ -122,43 +122,56 @@ class UserRead(UserBase):
 
     id: int
     login_id: str
+    is_superuser: bool = False
     profile_image_id: uuid.UUID | None = None
     login_fail_count: int = 0
     last_login_at: datetime | None = None
-    org_name: str | None = None  # 프론트엔드 표시용 필드
-    roles: list[dict[str, Any]] = [] # 역할 정보 추가
+    org_name: str | None = None
+    roles: list[dict[str, Any]] = []
 
-    model_config = ConfigDict(
-        from_attributes=True,
-    )
+    model_config = ConfigDict(from_attributes=True)
 
     @model_validator(mode="before")
     @classmethod
     def wrap_data(cls, data: Any) -> Any:
         """데이터 변환 및 필드 매핑 처리를 수행합니다."""
         if not isinstance(data, dict):
-            # SQLAlchemy 모델 객체인 경우
-            # 1. user_metadata -> metadata 매핑
-            meta_val = getattr(data, "user_metadata", None)
-            meta = meta_val if isinstance(meta_val, dict) else {}
-            
+            # 1. metadata 매핑 (SQLAlchemy 'metadata' 컬럼 -> Pydantic 'metadata' 필드)
+            # SQLAlchemy 모델의 .metadata는 MetaData 객체이므로 .user_metadata 컬럼을 봐야함
+            # 하지만 모델에서 이미 이 부분을 처리하고 있을 수 있으므로 안전하게 접근
+            user_meta = getattr(data, "user_metadata", {})
+            if not isinstance(user_meta, dict):
+                user_meta = {}
+
             # 2. org_name 매핑
             org_name = None
-            org_obj = getattr(data, "organization", None)
-            if org_obj:
-                org_name = getattr(org_obj, "name", None)
+            if hasattr(data, "organization") and data.organization:
+                org_name = data.organization.name
 
             # 3. roles 매핑
             roles_list = []
-            roles_obj = getattr(data, "roles", [])
-            if roles_obj:
-                roles_list = [{"id": r.id, "name": r.name, "code": r.code} for r in roles_obj]
+            if hasattr(data, "roles") and data.roles:
+                roles_list = [{"id": r.id, "name": r.name, "code": r.code} for r in data.roles]
 
+            # 4. 명시적 딕셔너리 생성 (필드 누락 방지)
             return {
-                k: getattr(data, k, None)
-                for k in cls.model_fields.keys()
-                if k not in ["metadata", "org_name", "roles"]
-            } | {"metadata": meta, "org_name": org_name, "roles": roles_list}
+                "id": data.id,
+                "login_id": data.login_id,
+                "name": data.name,
+                "emp_code": data.emp_code,
+                "email": data.email,
+                "phone": data.phone,
+                "org_id": data.org_id,
+                "org_name": org_name,
+                "is_active": data.is_active,
+                "is_superuser": bool(getattr(data, "is_superuser", False)),
+                "account_status": data.account_status,
+                "profile_image_id": data.profile_image_id,
+                "login_fail_count": data.login_fail_count,
+                "last_login_at": data.last_login_at,
+                "metadata": user_meta,
+                "roles": roles_list,
+            }
         return data
 
 

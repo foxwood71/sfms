@@ -1,12 +1,12 @@
 import i18n from "i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 import { initReactI18next } from "react-i18next";
-import commonKo from "../locales/ko/common.json";
+import messagesKo from "../locales/ko/messages.json";
 
 // 리소스 정의
 const resources = {
 	ko: {
-		translation: commonKo,
+		translation: messagesKo,
 	},
 } as const;
 

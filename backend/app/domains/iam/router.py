@@ -45,7 +45,7 @@ from . import DOMAIN
 auth_router = APIRouter(prefix="/auth", tags=["인증 (Auth)"])
 
 
-@auth_router.post("/login", response_model=APIResponse[Token])
+@auth_router.post("/login", response_model=Any)
 async def login(
     request: Request,
     login_in: LoginRequest,
@@ -160,29 +160,43 @@ async def get_my_info(
 
 @auth_router.post("/logout", response_model=APIResponse[None])
 async def logout(
+    request: Request,
     token: Annotated[str, Depends(oauth2_scheme)],
 ):
-    """사용자 로그아웃을 수행하고 현재 토큰을 블랙리스트에 등록합니다.
+    """사용자 로그아웃을 수행하고 현재 토큰 세트를 블랙리스트에 등록합니다.
 
-    블랙리스트에 등록된 토큰은 만료 전이라도 시스템 접근이 즉시 차단됩니다.
+    액세스 토큰뿐만 아니라 바디에 포함된 리프레시 토큰도 함께 무효화하여
+    보안을 강화합니다.
 
     Args:
+        request (Request): 리프레시 토큰을 포함한 요청 객체
         token (str): 현재 요청에 사용된 OAuth2 Bearer 토큰
 
     Returns:
         APIResponse[None]: 로그아웃 성공 응답
 
     """
+    # 1. 액세스 토큰 무효화
     payload = verify_token(token)
-    remain_expire = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
-
     if payload:
         exp = payload.get("exp")
-        if exp:
-            remain_expire = exp - int(time.time())
+        remain_expire = exp - int(time.time()) if exp else 3600
+        if remain_expire > 0:
+            await add_token_to_blacklist(token, expire=remain_expire)
 
-    if remain_expire > 0:
-        await add_token_to_blacklist(token, expire=remain_expire)
+    # 2. 리프레시 토큰 무효화 (JSON 바디에서 추출)
+    try:
+        body = await request.json()
+        refresh_token = body.get("refresh_token")
+        if refresh_token:
+            refresh_payload = verify_token(refresh_token)
+            if refresh_payload:
+                exp = refresh_payload.get("exp")
+                remain_refresh = exp - int(time.time()) if exp else 86400 * 7
+                if remain_refresh > 0:
+                    await add_token_to_blacklist(refresh_token, expire=remain_refresh)
+    except Exception:
+        pass  # 바디가 없거나 형식이 잘못된 경우 무시
 
     return APIResponse(
         domain=DOMAIN, data=None, success_code=SuccessCode.LOGOUT_SUCCESS

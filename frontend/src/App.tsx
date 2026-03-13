@@ -1,5 +1,6 @@
 import { App as AntdApp, ConfigProvider } from "antd";
 import koKR from "antd/locale/ko_KR";
+import { useTranslation } from "react-i18next";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import ApiTester from "./domains/cmm/ApiTester";
 import CodeManagePage from "./domains/cmm/pages/CodeManagePage";
@@ -7,9 +8,7 @@ import CodeManagePage from "./domains/cmm/pages/CodeManagePage";
 import LoginPage from "./domains/iam/pages/LoginPage";
 import OrganizationPage from "./domains/usr/pages/OrganizationPage";
 import UserListPage from "./domains/usr/pages/UserListPage";
-
 import MainLayout from "./shared/layout/MainLayout";
-import { useTranslation } from "react-i18next";
 import { useAuthStore } from "./shared/stores/useAuthStore";
 import { useThemeStore } from "./shared/stores/useThemeStore";
 import { getThemeConfig } from "./styles/theme";
@@ -38,22 +37,48 @@ function App() {
 				<BrowserRouter>
 					<Routes>
 						{/* 로그인 페이지 */}
-						<Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />} />
+						<Route
+							path="/login"
+							element={
+								isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />
+							}
+						/>
 
 						{/* 메인 서비스 영역 (인증 필요) */}
-						<Route path="/" element={isAuthenticated ? <MainLayout /> : <Navigate to="/login" replace />}>
+						<Route
+							path="/"
+							element={
+								isAuthenticated ? (
+									<MainLayout />
+								) : (
+									<Navigate to="/login" replace />
+								)
+							}
+						>
 							<Route index element={<Navigate to="/dashboard" replace />} />
-							<Route path="dashboard" element={<PagePlaceholder title={t("common.dashboard")} />} />
+							<Route
+								path="dashboard"
+								element={<PagePlaceholder title={t("common.dashboard")} />}
+							/>
 
 							{/* 시설 관리 */}
-							<Route path="fac/list" element={<PagePlaceholder title={t("menu.fac_list")} />} />
-							<Route path="fac/register" element={<PagePlaceholder title={t("menu.fac_register")} />} />
+							<Route
+								path="fac/list"
+								element={<PagePlaceholder title={t("menu.fac_list")} />}
+							/>
+							<Route
+								path="fac/register"
+								element={<PagePlaceholder title={t("menu.fac_register")} />}
+							/>
 
 							{/* 시스템/공통 설정 */}
 							<Route path="cmm/codes" element={<CodeManagePage />} />
 							<Route path="usr/users" element={<UserListPage />} />
 							<Route path="usr/organizations" element={<OrganizationPage />} />
-							<Route path="sys/audit-logs" element={<PagePlaceholder title={t("menu.sys_audit_logs")} />} />
+							<Route
+								path="sys/audit-logs"
+								element={<PagePlaceholder title={t("menu.sys_audit_logs")} />}
+							/>
 
 							{/* 개발 도구 */}
 							<Route path="dev/tester" element={<ApiTester />} />

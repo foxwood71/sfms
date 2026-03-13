@@ -1,43 +1,48 @@
 import { useQuery } from "@tanstack/react-query";
-import { Select, type SelectProps } from "antd";
-import React from "react";
-import { getCodeDetails } from "../../cmm/api";
+import { Select } from "antd";
+import type { SelectProps } from "antd";
+import type React from "react";
+import { getCodeDetails } from "@/domains/cmm/api";
 
-/**
- * 공통 코드 셀렉트 Props
- */
-interface CodeSelectProps extends Omit<SelectProps, "options"> {
-    groupCode: string;
-    activeOnly?: boolean;
+interface CodeSelectProps extends SelectProps {
+	/** 조회할 공통 코드 그룹 키 */
+	groupCode: string;
+	/** 비활성 코드 포함 여부 */
+	includeInactive?: boolean;
 }
 
 /**
- * 공통 코드를 조회하여 Select 옵션으로 렌더링하는 컴포넌트
+ * 시스템 공통 코드를 조회하여 선택 목록으로 표시하는 컴포넌트 (Zero Any 적용)
  */
-const CodeSelect: React.FC<CodeSelectProps> = ({
-    groupCode,
-    activeOnly = true,
-    placeholder = "선택하세요",
-    ...props
+const CodeSelect: React.FC<CodeSelectProps> = ({ 
+	groupCode, 
+	includeInactive = false, 
+	placeholder = "선택하세요", 
+	...rest 
 }) => {
-    const { data, isLoading } = useQuery({
-        queryKey: ["codeDetails", groupCode],
-        queryFn: () => getCodeDetails(groupCode),
-        staleTime: Infinity,
-    });
+	const { data: codes, isLoading } = useQuery({
+		queryKey: ["codeDetails", groupCode, includeInactive],
+		queryFn: () => getCodeDetails(groupCode, includeInactive ? undefined : true),
+	});
 
-    const options = React.useMemo(() => {
-        if (!data) return [];
-        const list = activeOnly ? data.filter((item) => item.is_active) : data;
-        return list
-            .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
-            .map((item) => ({
-                label: item.detail_name,
-                value: item.detail_code,
-            }));
-    }, [data, activeOnly]);
+	// API 응답 데이터를 Ant Design Select 옵션 규격으로 변환
+	const options = codes?.map((code) => ({
+		label: code.detail_name,
+		value: code.detail_code,
+		disabled: !code.is_active,
+	})) || [];
 
-    return <Select {...props} loading={isLoading} placeholder={placeholder} options={options} />;
+	return (
+		<Select
+			placeholder={placeholder}
+			loading={isLoading}
+			options={options}
+			showSearch
+			optionFilterProp="label"
+			allowClear
+			{...rest}
+		/>
+	);
 };
 
 export default CodeSelect;

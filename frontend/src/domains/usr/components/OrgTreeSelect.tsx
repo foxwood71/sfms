@@ -1,62 +1,56 @@
 import { useQuery } from "@tanstack/react-query";
-import { TreeSelect, type TreeSelectProps } from "antd";
-import type { DefaultOptionType } from "antd/es/select";
-import React, { useCallback, useMemo } from "react";
-import { getOrganizationsApi } from "../api";
-import type { Organization } from "../types";
+import { TreeSelect } from "antd";
+import type { TreeSelectProps } from "antd";
+import type { DataNode } from "antd/es/tree";
+import type React from "react";
+import { useMemo } from "react";
+import { getOrganizationsApi } from "@/domains/usr/api";
+import type { Organization } from "@/domains/usr/types";
 
-/**
- * 조직 트리 셀렉트 Props
- */
-interface OrgTreeSelectProps extends Omit<TreeSelectProps, "treeData"> {
-	/** 활성 상태인 조직만 표시할지 여부 (기본값: true) */
-	activeOnly?: boolean;
+interface OrgTreeSelectProps extends TreeSelectProps {
+	/** 비활성 부서 포함 여부 */
+	includeInactive?: boolean;
 }
 
 /**
- * 조직(부서) 선택을 위한 트리형 셀렉트 컴포넌트
+ * 조직(부서) 구조를 트리 선택 목록으로 표시하는 컴포넌트 (Zero Any 적용)
  */
-const OrgTreeSelect: React.FC<OrgTreeSelectProps> = ({
-	activeOnly = true,
-	placeholder = "부서를 선택하세요",
-	...props
+const OrgTreeSelect: React.FC<OrgTreeSelectProps> = ({ 
+	includeInactive = false, 
+	placeholder = "부서를 선택하세요", 
+	...rest 
 }) => {
-	const { data, isLoading } = useQuery({
-		queryKey: ["organizations", "tree", activeOnly],
-		queryFn: () => getOrganizationsApi("tree", activeOnly),
-		staleTime: 5 * 60 * 1000,
+	const { data: orgResponse, isLoading } = useQuery({
+		queryKey: ["organizations", "tree", includeInactive],
+		queryFn: () => getOrganizationsApi("tree", includeInactive ? undefined : true),
 	});
 
-	const mapOrgToTreeData = useCallback((orgs: Organization[]): DefaultOptionType[] => {
-		return orgs.map((org) => ({
-			id: org.id,
-			value: org.id,
-			title: org.name,
-			children:
-				org.children && org.children.length > 0 ? mapOrgToTreeData(org.children) : undefined,
-		}));
-	}, []);
-
+	// API 응답 데이터를 Ant Design TreeSelect 데이터 규격(DataNode)으로 변환
 	const treeData = useMemo(() => {
-		if (!data?.data) return [];
-		return mapOrgToTreeData(data.data);
-	}, [data, mapOrgToTreeData]);
+		const mapNodes = (items: Organization[]): DataNode[] => {
+			return items.map((item) => ({
+				title: item.name,
+				value: item.id,
+				key: item.id,
+				disabled: !item.is_active,
+				children: item.children ? mapNodes(item.children) : [],
+			}));
+		};
+		return mapNodes(orgResponse?.data || []);
+	}, [orgResponse]);
 
 	return (
 		<TreeSelect
-			{...props}
-			showSearch
-			style={{ width: "100%", ...props.style }}
+			style={{ width: "100%" }}
 			dropdownStyle={{ maxHeight: 400, overflow: "auto" }}
 			placeholder={placeholder}
-			allowClear
-			treeDefaultExpandAll
 			treeData={treeData}
+			treeDefaultExpandAll
 			loading={isLoading}
-			fieldNames={{ label: "title", value: "value", children: "children" }}
-			filterTreeNode={(input, treeNode) =>
-				(treeNode?.title as string)?.toLowerCase().indexOf(input.toLowerCase()) >= 0
-			}
+			allowClear
+			showSearch
+			treeNodeFilterProp="title"
+			{...rest}
 		/>
 	);
 };

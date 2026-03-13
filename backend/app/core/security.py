@@ -138,7 +138,8 @@ def verify_token(token: str) -> dict[str, Any] | None:
         )
         return payload
     except InvalidTokenError:
-        # 토큰이 변조되었거나, 만료되었거나, 형식이 잘못된 경우
+        return None
+    except Exception:
         return None
 
 

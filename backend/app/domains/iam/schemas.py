@@ -115,6 +115,8 @@ class UserWithPermissions(UserRead):
                     # DB의 'metadata' 컬럼 값(dict)을 'user_metadata' 필드에 매핑
                     meta_val = getattr(data, "metadata", {})
                     result[field] = meta_val if isinstance(meta_val, dict) else {}
+                elif field == "is_superuser":
+                    result[field] = getattr(data, "is_superuser", False)
                 elif hasattr(data, field):
                     result[field] = getattr(data, field)
             

@@ -110,8 +110,7 @@ class CodeService:
             if active_details:
                 raise BadRequestException(
                     domain=DOMAIN, 
-                    error_code=ErrorCode.RESOURCE_IN_USE,
-                    message="사용 중인 상세 코드가 존재하여 그룹을 중지할 수 없습니다. 상세 코드를 먼저 중지해 주세요."
+                    error_code=ErrorCode.RESOURCE_IN_USE
                 )
 
         for field, value in update_data.items():

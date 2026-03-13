@@ -24,7 +24,7 @@ from app.domains.usr.schemas import (
     UserRead,
     UserUpdate,
 )
-from app.domains.usr.services import OrgService, UserService
+from app.domains.usr.services import OrganizationService, UserService
 
 from . import DOMAIN
 
@@ -59,7 +59,7 @@ async def get_organizations(
         APIResponse[list[OrgRead]]: 최상위 부서부터 시작하는 트리 구조 리스트
 
     """
-    tree_data = await OrgService.get_organizations(db, is_active=is_active)
+    tree_data = await OrganizationService.get_organizations(db, is_active=is_active)
     return APIResponse(domain=DOMAIN, data=tree_data)
 
 
@@ -87,7 +87,7 @@ async def create_organization(
         APIResponse[OrgRead]: 생성 완료된 부서 정보
 
     """
-    new_org = await OrgService.create_organizations(
+    new_org = await OrganizationService.create_organizations(
         db, obj_in=org_in, actor_id=current_user.id
     )
     return APIResponse(
@@ -115,7 +115,7 @@ async def get_organization(
         APIResponse[OrgRead]: 조직 상세 정보
 
     """
-    org = await OrgService.get_organization(db, org_id=org_id)
+    org = await OrganizationService.get_organization(db, org_id=org_id)
     return APIResponse(domain=DOMAIN, data=org)
 
 
@@ -144,7 +144,7 @@ async def update_organization(
         APIResponse[OrgRead]: 수정 완료된 부서 정보
 
     """
-    updated_org = await OrgService.update_organizations(
+    updated_org = await OrganizationService.update_organizations(
         db, org_id=org_id, obj_in=org_in, actor_id=current_user.id
     )
     return APIResponse(
@@ -174,7 +174,7 @@ async def delete_organization(
         APIResponse[None]: 삭제 성공 응답
 
     """
-    await OrgService.delete_organizations(db, org_id=org_id)
+    await OrganizationService.delete_organizations(db, org_id=org_id)
     return APIResponse(
         domain=DOMAIN, data=None, success_code=SuccessCode.SUCCESS_DELETED
     )

@@ -197,7 +197,8 @@ class User(Base):
     def is_superuser(self) -> bool:
         """사용자가 관리자 권한을 가졌는지 확인하는 프로퍼티입니다.
 
-        'ADMIN' 또는 'SUPER_ADMIN' 역할 코드를 보유한 경우 True를 반환합니다.
+        권한 매트릭스(permissions)에 'ALL': ['*'] 또는 'all': ['*'] 설정이 포함된 
+        역할을 하나라도 보유한 경우 True를 반환합니다.
 
         Returns:
             bool: 관리자 여부
@@ -206,6 +207,17 @@ class User(Base):
         try:
             if not self.roles:
                 return False
-            return any(role.code in ["ADMIN", "SUPER_ADMIN"] for role in self.roles)
+            
+            for role in self.roles:
+                perms = role.permissions
+                if not isinstance(perms, dict):
+                    continue
+                
+                # 대소문자 구분 없이 'ALL' 리소스에 '*' 액션이 있는지 확인
+                all_actions = perms.get("ALL") or perms.get("all")
+                if all_actions and isinstance(all_actions, list) and "*" in all_actions:
+                    return True
+                    
+            return False
         except Exception:
             return False

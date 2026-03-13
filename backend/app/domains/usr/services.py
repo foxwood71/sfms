@@ -26,8 +26,6 @@ from app.core.storage import upload_file_stream
 # cmm 도메인 의존성 (프로필 이미지 연동용)
 from app.domains.cmm.schemas import AttachmentCreate
 from app.domains.cmm.services import AttachmentService
-from app.domains.sys.schemas import AuditLogCreate
-from app.domains.sys.services import AuditLogService
 from app.domains.usr.models import Organization, User
 from app.domains.usr.schemas import (
     OrgCreate,
@@ -41,7 +39,7 @@ from app.domains.usr.schemas import (
 from . import DOMAIN
 
 
-class OrgService:
+class OrganizationService:
     """조직(Organization) 및 부서 관리 관련 비즈니스 로직을 처리하는 서비스 클래스입니다.
 
     부서 간 계층 구조(Tree)를 조립하고, 순환 참조 방지 및 하위 부서 일괄 조회 기능을 제공합니다.
@@ -138,35 +136,39 @@ class OrgService:
         db: AsyncSession, org_id: int, obj_in: OrgUpdate, actor_id: int
     ) -> OrgRead:
         """기존 조직 정보를 수정합니다. 비활성화 제약 조건을 포함합니다."""
-        org = await OrgService.get_organization(db, org_id)
+        org = await OrganizationService.get_organization(db, org_id)
         update_data = obj_in.model_dump(exclude_unset=True)
 
         new_active_status = update_data.get("is_active")
         if new_active_status is False and org.is_active is True:
             child_stmt = select(Organization).where(
-                Organization.parent_id == org_id, 
-                Organization.is_active == True
+                Organization.parent_id == org_id, Organization.is_active
             )
             active_child = (await db.execute(child_stmt)).scalars().first()
             if active_child:
                 raise BadRequestException(
-                    domain=DOMAIN, 
-                    error_code=ErrorCode.ACTIVE_CHILDREN_EXIST,
-                    message="활성 상태인 하위 조직이 있어 비활성화할 수 없습니다."
+                    domain=DOMAIN,
+                    error_code=ErrorCode.ACTIVE_CHILDREN_EXIST
                 )
 
         new_parent_id = update_data.get("parent_id")
         if new_parent_id is not None and new_parent_id != org.parent_id:
             if new_parent_id == org.id:
-                raise BadRequestException(domain=DOMAIN, error_code=ErrorCode.USR_INVALID_PARENT)
-            
+                raise BadRequestException(
+                    domain=DOMAIN, error_code=ErrorCode.USR_INVALID_PARENT
+                )
+
             current_parent = await db.get(Organization, new_parent_id)
             if not current_parent:
-                raise BadRequestException(domain=DOMAIN, error_code=ErrorCode.USR_INVALID_PARENT)
+                raise BadRequestException(
+                    domain=DOMAIN, error_code=ErrorCode.USR_INVALID_PARENT
+                )
 
             while current_parent and current_parent.parent_id:
                 if current_parent.parent_id == org.id:
-                    raise BadRequestException(domain=DOMAIN, error_code=ErrorCode.USR_CIRCULAR_REF)
+                    raise BadRequestException(
+                        domain=DOMAIN, error_code=ErrorCode.USR_CIRCULAR_REF
+                    )
                 current_parent = await db.get(Organization, current_parent.parent_id)
 
         for field, value in update_data.items():
@@ -182,10 +184,12 @@ class OrgService:
     @staticmethod
     async def delete_organizations(db: AsyncSession, org_id: int) -> None:
         """조직 정보를 영구 삭제합니다."""
-        org = await OrgService.get_organization(db, org_id)
+        org = await OrganizationService.get_organization(db, org_id)
         child_stmt = select(Organization).where(Organization.parent_id == org_id)
         if (await db.execute(child_stmt)).scalars().first():
-            raise ConflictException(domain=DOMAIN, error_code=ErrorCode.ORG_HAS_CHILDREN)
+            raise ConflictException(
+                domain=DOMAIN, error_code=ErrorCode.ORG_HAS_CHILDREN
+            )
         user_stmt = select(User).where(User.org_id == org_id)
         if (await db.execute(user_stmt)).scalars().first():
             raise ConflictException(domain=DOMAIN, error_code=ErrorCode.ORG_HAS_USERS)
@@ -210,11 +214,10 @@ class UserService:
         """사용자 목록을 다양한 조건으로 검색하고 페이징 처리하여 반환합니다."""
         from sqlalchemy import func
         from sqlalchemy.orm import joinedload, selectinload
-        
+
         # 기본 쿼리 구성 (organization은 joinedload, roles는 selectinload로 즉시 로딩)
         stmt = select(User).options(
-            joinedload(User.organization),
-            selectinload(User.roles)
+            joinedload(User.organization), selectinload(User.roles)
         )
         if is_active is not None:
             stmt = stmt.where(User.is_active == is_active)
@@ -233,7 +236,7 @@ class UserService:
 
         if org_id is not None:
             if include_children:
-                descendant_org_ids = await OrgService.get_descendant_org_ids(db, org_id)
+                descendant_org_ids = await OrganizationService.get_descendant_org_ids(db, org_id)
                 stmt = stmt.where(User.org_id.in_(descendant_org_ids))
             else:
                 stmt = stmt.where(User.org_id == org_id)
@@ -251,7 +254,7 @@ class UserService:
                     column = Organization.name
                 else:
                     column = getattr(User, field, None)
-                
+
                 if column is not None:
                     if order.lower() == "desc":
                         stmt = stmt.order_by(column.desc())
@@ -267,7 +270,7 @@ class UserService:
         stmt = stmt.offset((page - 1) * size).limit(size)
         result = await db.execute(stmt)
         users = list(result.scalars().all())
-        
+
         return users, total
 
     @staticmethod
@@ -295,18 +298,28 @@ class UserService:
         user = User(**create_data)
         db.add(user)
         await db.flush()
-        
+
         if obj_in.role_ids:
             from app.domains.iam.services import UserRoleService
+
             await UserRoleService.assign_roles_to_user(
-                db, user_id=user.id, role_ids=obj_in.role_ids, actor_id=actor_id,
-                ip="system", user_agent="system"
+                db,
+                user_id=user.id,
+                role_ids=obj_in.role_ids,
+                actor_id=actor_id,
+                ip="system",
+                user_agent="system",
             )
 
         await db.commit()
-        
+
         from sqlalchemy.orm import joinedload, selectinload
-        stmt = select(User).options(joinedload(User.organization), selectinload(User.roles)).where(User.id == user.id)
+
+        stmt = (
+            select(User)
+            .options(joinedload(User.organization), selectinload(User.roles))
+            .where(User.id == user.id)
+        )
         result = await db.execute(stmt)
         return result.scalar_one()
 
@@ -335,7 +348,9 @@ class UserService:
         if new_email and new_email != user.email:
             stmt = select(User).where(User.email == new_email)
             if (await db.execute(stmt)).scalar_one_or_none():
-                raise ConflictException(domain=DOMAIN, error_code=ErrorCode.DUPLICATE_EMAIL)
+                raise ConflictException(
+                    domain=DOMAIN, error_code=ErrorCode.DUPLICATE_EMAIL
+                )
 
         # metadata -> user_metadata 명시적 매핑 및 병합
         if "metadata" in update_data:
@@ -350,9 +365,14 @@ class UserService:
 
         user.updated_by = actor_id
         await db.commit()
-        
+
         from sqlalchemy.orm import joinedload, selectinload
-        stmt = select(User).options(joinedload(User.organization), selectinload(User.roles)).where(User.id == user.id)
+
+        stmt = (
+            select(User)
+            .options(joinedload(User.organization), selectinload(User.roles))
+            .where(User.id == user.id)
+        )
         result = await db.execute(stmt)
         return result.scalar_one()
 
@@ -399,21 +419,28 @@ class UserService:
         await db.commit()
 
     @staticmethod
-    async def toggle_account_status(db: AsyncSession, user_id: int, actor_id: int) -> User:
+    async def toggle_account_status(
+        db: AsyncSession, user_id: int, actor_id: int
+    ) -> User:
         """사용자 계정 상태를 전환(ACTIVE <-> BLOCKED)합니다."""
         user = await UserService.get_user(db, user_id)
         if user.account_status == "ACTIVE":
             user.account_status = "BLOCKED"
         else:
             user.account_status = "ACTIVE"
-        
+
         user.updated_by = actor_id
         await db.commit()
         await db.refresh(user)
-        
+
         # organization 정보 포함하여 반환
         from sqlalchemy.orm import joinedload
-        stmt = select(User).options(joinedload(User.organization)).where(User.id == user.id)
+
+        stmt = (
+            select(User)
+            .options(joinedload(User.organization))
+            .where(User.id == user.id)
+        )
         result = await db.execute(stmt)
         return result.scalar_one()
 
@@ -421,11 +448,13 @@ class UserService:
     async def get_user(db: AsyncSession, user_id: int) -> User:
         """특정 사용자 정보를 ID로 조회합니다. (권한 정보 포함)"""
         from sqlalchemy.orm import joinedload, selectinload
-        stmt = select(User).options(
-            joinedload(User.organization),
-            selectinload(User.roles)
-        ).where(User.id == user_id)
-        
+
+        stmt = (
+            select(User)
+            .options(joinedload(User.organization), selectinload(User.roles))
+            .where(User.id == user_id)
+        )
+
         result = await db.execute(stmt)
         user = result.scalar_one_or_none()
         if not user:

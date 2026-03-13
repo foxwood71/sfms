@@ -1,152 +1,136 @@
 import { LockOutlined, UserOutlined } from "@ant-design/icons";
-import { useAuthStore } from "@/shared/stores/useAuthStore";
-import { App, Button, Card, Form, Input, Layout, Space, Typography, theme } from "antd";
-import type { AxiosError } from "axios";
-import { useState } from "react";
+import {
+	LoginForm,
+	ProFormCheckbox,
+	ProFormText,
+} from "@ant-design/pro-components";
+import { useMutation } from "@tanstack/react-query";
+import { App, theme } from "antd";
+import type React from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import type { APIErrorResponse } from "@/shared/api/types";
-import HealthIndicator from "@/shared/layout/components/HealthIndicator";
-import ThemeToggle from "@/shared/layout/components/ThemeToggle";
+import { http } from "@/shared/api/http";
+import { useAuthStore } from "@/shared/stores/useAuthStore";
 import { getMeApi, loginApi } from "../api/auth";
-
-const { Content, Header } = Layout;
+import type { LoginFormValues } from "../types";
 
 /**
- * 로그인 페이지 컴포넌트
- * - SFMS 시스템의 통합 인증 및 세션 관리를 담당합니다.
+ * 로그인 페이지 컴포넌트 (react-i18next 적용)
  */
 const LoginPage: React.FC = () => {
-	const [loading, setLoading] = useState(false);
-	const { setAuth } = useAuthStore();
-	const navigate = useNavigate();
+	const { t } = useTranslation();
 	const { token } = theme.useToken();
+	const navigate = useNavigate();
 	const { message } = App.useApp();
+	const setAuth = useAuthStore((state) => state.setAuth);
 
-	/**
-	 * 로그인 폼 제출 핸들러
-	 */
-	const onFinish = async (values: Record<string, string>) => {
-		setLoading(true);
-		try {
-			// 1. 로그인 요청
+	const loginMutation = useMutation({
+		mutationFn: async (values: LoginFormValues) => {
+			// 1. 로그인 실행 및 응답 획득 (이미 res.data가 반환됨)
 			const loginRes = await loginApi({
 				login_id: values.login_id,
 				password: values.password,
 			});
-			const { access_token, refresh_token } = loginRes;
+
+			// APIResponse 규격에 따라 loginRes.data 안에 토큰이 들어있음
+			const { access_token, refresh_token } = loginRes.data;
 
 			if (!access_token) {
-				throw new Error("서버로부터 토큰을 받지 못했습니다.");
+				throw new Error(t("auth.token_error"));
 			}
 
-			// 2. 토큰 저장
-			localStorage.setItem("accessToken", access_token);
-
-			// 3. 내 정보 가져오기 (인증 헤더가 필요한 API이므로 토큰 직접 전달)
-			const userData = await getMeApi(access_token);
-
-			// 4. 스토어 업데이트 (중요: 순서 엄수 - accessToken, refreshToken, user)
-			setAuth(access_token, refresh_token, userData);
+			// 2. HTTP 클라이언트에 토큰 즉시 강제 주입
+			http.defaults.headers.common.Authorization = `Bearer ${access_token}`;
 			
-			message.success(`${userData.name}님, 환영합니다!`);
-			navigate("/");
-		} catch (error: unknown) {
-			const err = error as AxiosError<APIErrorResponse>;
-			const errorMsg = err.response?.data?.message || err.message || "로그인에 실패했습니다.";
-			message.error(errorMsg);
-			console.error("Login failed:", err);
-		} finally {
-			setLoading(false);
-		}
-	};
+			// 3. 스토어 우선 업데이트
+			setAuth(access_token, refresh_token, null);
+
+			// 4. 내 정보 조회 (인터셉터가 동작하므로 토큰 따로 보낼 필요 없음)
+			const userRes = await getMeApi();
+
+			return {
+				accessToken: access_token,
+				refreshToken: refresh_token,
+				user: userRes.data,
+			};
+		},
+		onSuccess: (data) => {
+			// 5. 최종 인증 정보 완성
+			setAuth(data.accessToken, data.refreshToken, data.user as any);
+			message.success(t("auth.login_success"));
+
+			// [가장 확실한 방법] 강제 새로고침을 통해 상태 초기화 및 메인 이동
+			window.location.href = "/";
+		},
+		onError: (err: any) => {
+			console.error("Login Mutation Error:", err);
+			const status = err.response?.status;
+
+			// 에러 발생 시 주입했던 헤더 제거
+			delete http.defaults.headers.common["Authorization"];
+
+			if (status === 401) {
+				if (err.config?.url?.includes("/auth/login")) {
+					message.error(t("auth.login_failure"));
+				} else {
+					message.error(t("auth.info_fetch_failure"));
+				}
+			} else {
+				message.error(err.response?.data?.message || t("common.fetch_failure"));
+			}
+		},
+	});
 
 	return (
-		<Layout style={{ minHeight: "100vh" }}>
-			<Header
-				style={{
-					background: token.colorBgContainer,
-					padding: "0 24px",
-					display: "flex",
-					justifyContent: "space-between",
-					alignItems: "center",
-					boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
+		<div
+			style={{
+				backgroundColor: token.colorBgLayout,
+				height: "100vh",
+				display: "flex",
+				justifyContent: "center",
+				alignItems: "center",
+			}}
+		>
+			<style>{`body { overflow: hidden !important; }`}</style>
+			<LoginForm<LoginFormValues>
+				title="SFMS"
+				subTitle={t("auth.subtitle")}
+				onFinish={async (values) => {
+					await loginMutation.mutateAsync(values);
+					return true;
 				}}
+				submitter={{ searchConfig: { submitText: t("auth.login") } }}
 			>
-				<Typography.Title level={4} style={{ margin: 0, display: "flex", alignItems: "center" }}>
-					<Space size="small">
-						<span style={{ color: token.colorPrimary }}>SFMS</span>
-						<span style={{ fontSize: "14px", fontWeight: "normal", color: token.colorTextSecondary }}>
-							Facility Management System
-						</span>
-					</Space>
-				</Typography.Title>
-				<Space size="middle">
-					<HealthIndicator />
-					<ThemeToggle />
-				</Space>
-			</Header>
-
-			<Content
-				style={{
-					display: "flex",
-					justifyContent: "center",
-					alignItems: "center",
-					background: token.colorBgLayout,
-				}}
-			>
-				<Card
-					style={{
-						width: 420,
-						boxShadow: "0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 3px 6px -4px rgba(0, 0, 0, 0.12)",
-						borderRadius: 12,
+				<ProFormText
+					name="login_id"
+					fieldProps={{
+						size: "large",
+						prefix: <UserOutlined />,
+						autoComplete: "username",
 					}}
-				>
-					<div style={{ textAlign: "center", marginBottom: 32 }}>
-						<Typography.Title level={2} style={{ marginBottom: 8 }}>
-							Welcome Back
-						</Typography.Title>
-						<Typography.Text type="secondary">SFMS 통합 계정으로 로그인해 주세요</Typography.Text>
-					</div>
-
-					<Form
-						name="login"
-						size="large"
-						initialValues={{ remember: true }}
-						onFinish={onFinish}
-						layout="vertical"
-					>
-						<Form.Item
-							name="login_id"
-							rules={[{ required: true, message: "아이디를 입력해 주세요!" }]}
-						>
-							<Input prefix={<UserOutlined style={{ color: token.colorTextDisabled }} />} placeholder="아이디" />
-						</Form.Item>
-
-						<Form.Item
-							name="password"
-							rules={[{ required: true, message: "비밀번호를 입력해 주세요!" }]}
-						>
-							<Input.Password
-								prefix={<LockOutlined style={{ color: token.colorTextDisabled }} />}
-								placeholder="비밀번호"
-							/>
-						</Form.Item>
-
-						<Form.Item>
-							<Button type="primary" htmlType="submit" loading={loading} block style={{ height: 48, marginTop: 16 }}>
-								로그인
-							</Button>
-						</Form.Item>
-					</Form>
-
-					<div style={{ textAlign: "center", marginTop: 24 }}>
-						<Typography.Text type="secondary" style={{ fontSize: 12 }}>
-							© {new Date().getFullYear()} SFMS Project. All rights reserved.
-						</Typography.Text>
-					</div>
-				</Card>
-			</Content>
-		</Layout>
+					placeholder={t("auth.id_placeholder")}
+					rules={[{ required: true, message: t("auth.id_placeholder") }]}
+				/>
+				<ProFormText.Password
+					name="password"
+					fieldProps={{
+						size: "large",
+						prefix: <LockOutlined />,
+						autoComplete: "current-password",
+					}}
+					placeholder={t("auth.pwd_placeholder")}
+					rules={[{ required: true, message: t("auth.pwd_placeholder") }]}
+				/>
+				<div style={{ marginBottom: 24 }}>
+					<ProFormCheckbox noStyle name="remember">
+						{t("auth.remember_me")}
+					</ProFormCheckbox>
+					<a style={{ float: "right" }}>
+						{t("auth.forgot_password")}
+					</a>
+				</div>
+			</LoginForm>
+		</div>
 	);
 };
 

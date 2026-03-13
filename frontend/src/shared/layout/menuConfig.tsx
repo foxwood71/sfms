@@ -1,141 +1,181 @@
 import {
-    ApartmentOutlined,
-    AuditOutlined,
-    BankOutlined,
-    CodeOutlined,
-    DashboardOutlined,
-    SettingOutlined,
-    UserOutlined,
+	AppstoreOutlined,
+	AuditOutlined,
+	BuildOutlined,
+	DashboardOutlined,
+	EnvironmentOutlined,
+	SafetyCertificateOutlined,
+	SettingOutlined,
+	TeamOutlined,
+	UserOutlined,
 } from "@ant-design/icons";
-import type React from "react";
+import type { MenuProps } from "antd";
 
 /**
- * 메뉴 아이템 정의 인터페이스
+ * 메뉴 아이템 확장 타입 정의
  */
-export interface MenuItem {
-    path: string;
-    name: string;
-    icon?: React.ReactNode;
-    /** 접근에 필요한 리소스 권한 코드 (예: 'USR', 'FAC') */
-    resource?: string;
-    /** 접근에 필요한 액션 (예: 'READ', 'ADMIN') */
-    action?: string;
-    /** 하위 메뉴 */
-    routes?: MenuItem[];
-    /** 숨김 여부 */
-    hideInMenu?: boolean;
-}
+export type MenuItem = Required<MenuProps>["items"][number] & {
+	name?: string; // ProLayout 필수 속성
+	resource?: string;
+	action?: string;
+	children?: MenuItem[];
+	routes?: MenuItem[];
+	path?: string;
+};
 
 /**
- * SFMS 전체 메뉴 구성 설정
- *
- * @description 도메인별 메뉴 구조와 각 메뉴 접근에 필요한 권한(Resource)을 정의합니다.
+ * 시스템 전체 메뉴 구성 정의
+ * name과 label은 MainLayout에서 key를 기반으로 다국어(i18n) 번역되어 표시됩니다.
  */
 export const menuConfig: MenuItem[] = [
-    {
-        path: "/dashboard",
-        name: "대시보드",
-        icon: <DashboardOutlined />,
-    },
-    {
-        path: "/fac",
-        name: "시설 및 공간",
-        icon: <BankOutlined />,
-        resource: "FAC",
-        action: "READ",
-        routes: [
-            { path: "/fac/list", name: "시설 목록" },
-            { path: "/fac/register", name: "시설 등록", action: "CREATE" },
-        ],
-    },
-    {
-        path: "/usr",
-        name: "부서 및 사용자",
-        icon: <UserOutlined />,
-        resource: "USR",
-        action: "READ",
-        routes: [
-            {
-                path: "/usr/organizations",
-                name: "부서 관리",
-                icon: <ApartmentOutlined />,
-                resource: "ORG",
-            },
-            { path: "/usr/users", name: "사용자 관리" },
-        ],
-    },
-    {
-        path: "/sys",
-        name: "시스템 설정",
-        icon: <SettingOutlined />,
-        resource: "SYS",
-        routes: [
-            {
-                path: "/cmm/codes",
-                name: "공통 코드 관리",
-                icon: <CodeOutlined />,
-                resource: "CMM",
-            },
-            {
-                path: "/sys/audit-logs",
-                name: "감사 로그 조회",
-                icon: <AuditOutlined />,
-                resource: "SYS",
-                action: "READ_LOG",
-            },
-        ],
-    },
+	{
+		key: "dashboard",
+		path: "/dashboard",
+		icon: <DashboardOutlined />,
+		resource: "ALL",
+	},
+	{
+		key: "usr",
+		icon: <TeamOutlined />,
+		resource: "USR",
+		children: [
+			{
+				key: "usr/organizations",
+				path: "/usr/organizations",
+				icon: <EnvironmentOutlined />,
+				resource: "ORG",
+				action: "READ",
+			},
+			{
+				key: "usr/users",
+				path: "/usr/users",
+				icon: <UserOutlined />,
+				resource: "USR",
+				action: "READ",
+			},
+		],
+	},
+	{
+		key: "iam",
+		icon: <SafetyCertificateOutlined />,
+		resource: "IAM",
+		children: [
+			{
+				key: "iam/roles",
+				path: "/iam/roles",
+				icon: <AppstoreOutlined />,
+				resource: "IAM",
+				action: "READ",
+			},
+		],
+	},
+	{
+		key: "fac",
+		icon: <BuildOutlined />,
+		resource: "FAC",
+		children: [
+			{
+				key: "fac/spaces",
+				path: "/fac/spaces",
+				resource: "FAC",
+				action: "READ",
+			},
+			{
+				key: "fac/facilities",
+				path: "/fac/facilities",
+				resource: "FAC",
+				action: "READ",
+			},
+		],
+	},
+	{
+		key: "sys",
+		icon: <SettingOutlined />,
+		resource: "SYS",
+		children: [
+			{
+				key: "sys/audit-logs",
+				path: "/sys/audit-logs",
+				icon: <AuditOutlined />,
+				resource: "SYS",
+				action: "READ",
+			},
+			{
+				key: "sys/api-tester",
+				path: "/sys/api-tester",
+				resource: "SYS",
+				action: "ADMIN",
+			},
+		],
+	},
 ];
 
 /**
- * 사용자의 권한에 따라 메뉴를 필터링하는 함수
+ * 사용자의 권한 및 관리자 여부에 따라 메뉴 목록을 필터링합니다.
  */
 export const filterMenus = (
 	menus: MenuItem[],
-	permissions: Record<string, string[]> = {},
-	isSuperuser = false,
+	permissions: Record<string, string[]> | undefined,
+	isSuperuser?: boolean,
 ): MenuItem[] => {
-	// 1. 슈퍼유저 여부 확인 (대소문자 무관하게 ALL: ['*'] 확인)
-	const hasGlobalAdmin =
-		isSuperuser ||
-		Object.keys(permissions).some(
-			(key) => key.toUpperCase() === "ALL" && permissions[key].includes("*"),
-		);
+	const superUser = !!isSuperuser;
 
-	if (hasGlobalAdmin) return menus;
-
-	const filtered = menus
-		.filter((menu) => {
-			// 2. 권한 설정이 없는 메뉴는 누구나 접근 가능
-			if (!menu.resource) return true;
-
-			// 3. 해당 리소스에 대한 사용자의 권한 확인 (대소문자 구분 없이 찾기)
-			const resourceKey = Object.keys(permissions).find(
-				(key) => key.toUpperCase() === menu.resource?.toUpperCase(),
-			);
-			const userActions = resourceKey ? permissions[resourceKey] : [];
-
-			// 해당 도메인의 모든 권한('*')이 있거나, 특정 액션 권한이 있는지 확인
-			if (userActions.includes("*")) return true;
-
-			const requiredAction = menu.action || "READ";
-			return userActions.includes(requiredAction);
-		})
-		.map((menu) => {
-			if (menu.routes) {
-				const childRoutes = filterMenus(menu.routes, permissions, hasGlobalAdmin);
-				return {
-					...menu,
-					routes: childRoutes,
-				};
+	// 1. 슈퍼유저는 모든 메뉴 노출 (하위 메뉴까지 재귀적으로 처리)
+	if (superUser) {
+		return menus.map((m) => {
+			const newItem = { ...m };
+			if (newItem.children) {
+				newItem.children = filterMenus(newItem.children, permissions, true);
+				newItem.routes = newItem.children;
 			}
-			return menu;
+			return newItem;
 		});
+	}
 
-	// 자식이 있는 메뉴인데 필터링 후 자식이 하나도 없으면 대메뉴 제외 (대시보드 제외)
-	return filtered.filter((menu) => {
-		if (menu.path === "/dashboard") return true;
-		if (menu.routes && menu.routes.length === 0) return false;
-		return true;
-	});
+	// 2. 일반 사용자 필터링
+	return menus
+		.map((item) => {
+			// 대시보드(ALL)는 항상 허용
+			if (item.resource === "ALL" || !item.resource) {
+				const newItem = { ...item };
+				if (newItem.children) {
+					const filtered = filterMenus(
+						newItem.children,
+						permissions,
+						superUser,
+					);
+					newItem.children = filtered;
+					newItem.routes = filtered;
+				}
+				return newItem;
+			}
+
+			if (!permissions) return null;
+
+			const userActions = permissions[item.resource.toUpperCase()];
+			const requiredAction = (item.action || "READ").toUpperCase();
+			const isAllowed =
+				!!userActions &&
+				(userActions.includes("*") || userActions.includes(requiredAction));
+
+			if (!isAllowed) return null;
+
+			const newItem = { ...item };
+			if (newItem.children) {
+				const filteredChildren = filterMenus(
+					newItem.children,
+					permissions,
+					superUser,
+				);
+				// 자식이 있던 메뉴인데 자식이 모두 필터링되었다면 본인도 숨김 (단, path가 있는 경우는 예외)
+				if (filteredChildren.length === 0 && !item.path) {
+					return null;
+				}
+				newItem.children = filteredChildren;
+				newItem.routes = filteredChildren;
+			}
+
+			return newItem;
+		})
+		.filter((item): item is MenuItem => item !== null);
 };
