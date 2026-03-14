@@ -20,6 +20,7 @@
     "@ant-design/icons": "^6.1.0",
     "@ant-design/pro-components": "^2.8.10",
     "@ant-design/v5-patch-for-react-19": "^1.0.3",
+    "@pnpm/exe": "^10.32.1",
     "@tanstack/react-query": "^5.90.21",
     "antd": "^5.29.3",
     "axios": "^1.13.5",

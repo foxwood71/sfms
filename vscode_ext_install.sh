@@ -28,6 +28,7 @@ EXTENSIONS=(
     "davidWang.ini-for-vscode"
     "ms-python.python"
     "charliermarsh.ruff"
+    "LittleFoxTeam.vscode-python-test-adapter"
     "artinmajdi.code-dependency-visualizer"
     "biomejs.biome"
     "juanallo.vscode-dependency-cruiser"

@@ -29,8 +29,8 @@ const MainLayout: React.FC = () => {
 	const translateMenus = (items: any[]) => {
 		return items.map((item) => {
 			const newItem = { ...item };
-			// key가 'usr/organizations' 형태면 'menu.usr_organizations'로 변환 시도
-			const i18nKey = `menu.${item.key.replace(/\//g, "_")}`;
+			// key가 'usr/organizations' 형태면 'menu.usr-organizations'로 변환 시도
+			const i18nKey = `menu.${item.key.replace(/\//g, "-")}`;
 			newItem.name = t(i18nKey, item.name);
 			
 			if (newItem.children) {

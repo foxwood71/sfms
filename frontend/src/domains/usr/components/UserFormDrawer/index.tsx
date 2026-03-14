@@ -95,6 +95,18 @@ const UserFormDrawer: React.FC<UserFormDrawerProps> = ({
 
     const isReadOnly = mode === "view";
 
+    /**
+     * 읽기 모드일 때도 편집 모드와 동일한 높이를 유지하고 
+     * 텍스트 가독성을 확보하기 위한 공통 필드 스타일
+     */
+    const fieldStyle = useMemo(() => ({
+        style: {
+            height: "32px", // AntD 기본 높이 고정
+            color: isReadOnly ? token.colorText : undefined, // 읽기 모드일 때 글자색 명확하게
+            fontWeight: isReadOnly ? 500 : undefined,
+        }
+    }), [isReadOnly, token]);
+
     return (
         <>
             <DrawerForm<UserFormValues>
@@ -145,13 +157,26 @@ const UserFormDrawer: React.FC<UserFormDrawerProps> = ({
                               ],
                 }}
                 drawerProps={{
-                    destroyOnClose: true,
+                    destroyOnHidden: true,
                     maskClosable: isReadOnly,
                     width: 600,
                     styles: { body: { padding: "20px 24px" } },
                 }}
                 layout="vertical"
             >
+                <style>{`
+                    /* 읽기 모드일 때 Input 박스의 텍스트 가독성 강화 */
+                    .ant-input-disabled, .ant-select-disabled .ant-select-selection-item {
+                        color: ${token.colorText} !important;
+                        -webkit-text-fill-color: ${token.colorText} !important;
+                        font-weight: 500;
+                    }
+                    /* 읽기 모드일 때 배경색 미세 조정 */
+                    .ant-input-disabled, .ant-select-disabled .ant-select-selector {
+                        background-color: ${isReadOnly ? token.colorFillQuaternary : undefined} !important;
+                    }
+                `}</style>
+
                 {/* 1. 프로필 Identity 섹션 (분리됨) */}
                 <UserIdentitySection
                     user={editingUser}
@@ -182,12 +207,13 @@ const UserFormDrawer: React.FC<UserFormDrawerProps> = ({
                             name="login_id"
                             label="로그인 ID"
                             disabled={mode !== "add"}
+                            fieldProps={fieldStyle}
                             rules={mode === "add" ? [{ required: true, min: 4, message: "4자 이상 입력해주세요" }] : []}
                             placeholder={mode === "add" ? "사용할 ID 입력" : ""}
                         />
                     </Col>
                     <Col span={12}>
-                        <ProFormText name="name" label="성명" rules={[{ required: true }]} disabled={isReadOnly} />
+                        <ProFormText name="name" label="성명" rules={[{ required: true }]} disabled={isReadOnly} fieldProps={fieldStyle} />
                     </Col>
                 </Row>
                 <Row gutter={LAYOUT_CONSTANTS.FORM_GUTTER}>
@@ -200,6 +226,7 @@ const UserFormDrawer: React.FC<UserFormDrawerProps> = ({
                                 { pattern: /^[A-Z0-9_-]+$/, message: "영문 대문자, 숫자, _, -만 입력 가능합니다" },
                             ]}
                             fieldProps={{
+                                ...fieldStyle,
                                 placeholder: "예: GUMC-001",
                                 onChange: (e) => {
                                     const val = e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, "");
@@ -215,7 +242,7 @@ const UserFormDrawer: React.FC<UserFormDrawerProps> = ({
                                 name="password"
                                 label="초기 비밀번호"
                                 rules={[{ required: true, min: 8 }]}
-                                fieldProps={{ autoComplete: "new-password" }}
+                                fieldProps={{ ...fieldStyle, autoComplete: "new-password" }}
                             />
                         </Col>
                     )}
@@ -231,28 +258,28 @@ const UserFormDrawer: React.FC<UserFormDrawerProps> = ({
                 <Row gutter={LAYOUT_CONSTANTS.FORM_GUTTER}>
                     <Col span={24}>
                         <ProForm.Item name="org_id" label="소속 부서" rules={[{ required: true }]}>
-                            <OrgTreeSelect disabled={isReadOnly} />
+                            <OrgTreeSelect disabled={isReadOnly} style={{ height: "32px" }} />
                         </ProForm.Item>
                     </Col>
                 </Row>
                 <Row gutter={LAYOUT_CONSTANTS.FORM_GUTTER}>
                     <Col span={12}>
                         <ProForm.Item name="pos" label="직위/직급">
-                            <CodeSelect groupCode="POS_TYPE" disabled={isReadOnly} />
+                            <CodeSelect groupCode="POS_TYPE" disabled={isReadOnly} style={{ height: "32px" }} />
                         </ProForm.Item>
                     </Col>
                     <Col span={12}>
                         <ProForm.Item name="duty" label="직책">
-                            <CodeSelect groupCode="DUTY_TYPE" disabled={isReadOnly} />
+                            <CodeSelect groupCode="DUTY_TYPE" disabled={isReadOnly} style={{ height: "32px" }} />
                         </ProForm.Item>
                     </Col>
                 </Row>
                 <Row gutter={LAYOUT_CONSTANTS.FORM_GUTTER}>
                     <Col span={12}>
-                        <ProFormText name="email" label="이메일" rules={[{ type: "email" }]} disabled={isReadOnly} />
+                        <ProFormText name="email" label="이메일" rules={[{ type: "email" }]} disabled={isReadOnly} fieldProps={fieldStyle} />
                     </Col>
                     <Col span={12}>
-                        <ProFormText name="phone" label="연락처" disabled={isReadOnly} />
+                        <ProFormText name="phone" label="연락처" disabled={isReadOnly} fieldProps={fieldStyle} />
                     </Col>
                 </Row>
 
@@ -261,7 +288,8 @@ const UserFormDrawer: React.FC<UserFormDrawerProps> = ({
                     <Col span={12}>
                         <div
                             style={{
-                                height: "48px",
+                                boxSizing: "border-box",
+                                height: "46px", // 명시적인 고정 높이
                                 padding: "0 16px",
                                 borderRadius: token.borderRadiusLG,
                                 border: `1px solid ${watchedActive ? token.colorSuccessBorder : token.colorBorderSecondary}`,
@@ -271,25 +299,29 @@ const UserFormDrawer: React.FC<UserFormDrawerProps> = ({
                                 alignItems: "center",
                             }}
                         >
-                            <Space size={4}>
-                                <span style={{ fontSize: "13px", color: token.colorTextDescription }}>재직 상태:</span>
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                <span style={{ fontSize: "13px", color: token.colorTextDescription, lineHeight: "1" }}>재직 상태:</span>
                                 <span
                                     style={{
                                         fontSize: "13px",
                                         fontWeight: 700,
                                         color: watchedActive ? token.colorSuccess : token.colorTextDisabled,
+                                        lineHeight: "1",
                                     }}
                                 >
                                     {watchedActive ? "재직" : "퇴사"}
                                 </span>
-                            </Space>
-                            <ProFormSwitch name="is_active" noStyle fieldProps={{ size: "small", disabled: isReadOnly }} />
+                            </div>
+                            <ProForm.Item name="is_active" noStyle valuePropName="checked">
+                                <Switch size="small" disabled={isReadOnly} />
+                            </ProForm.Item>
                         </div>
                     </Col>
                     <Col span={12}>
                         <div
                             style={{
-                                height: "48px",
+                                boxSizing: "border-box",
+                                height: "46px", // 동일한 고정 높이
                                 padding: "0 16px",
                                 borderRadius: token.borderRadiusLG,
                                 border: `1px solid ${watchedStatus === "ACTIVE" ? token.colorInfoBorder : token.colorErrorBorder}`,
@@ -299,18 +331,19 @@ const UserFormDrawer: React.FC<UserFormDrawerProps> = ({
                                 alignItems: "center",
                             }}
                         >
-                            <Space size={4}>
-                                <span style={{ fontSize: "13px", color: token.colorTextDescription }}>계정 상태:</span>
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                <span style={{ fontSize: "13px", color: token.colorTextDescription, lineHeight: "1" }}>계정 상태:</span>
                                 <span
                                     style={{
                                         fontSize: "13px",
                                         fontWeight: 700,
                                         color: watchedStatus === "ACTIVE" ? token.colorInfo : token.colorError,
+                                        lineHeight: "1",
                                     }}
                                 >
                                     {watchedStatus === "ACTIVE" ? "정상" : "차단"}
                                 </span>
-                            </Space>
+                            </div>
                             <ProForm.Item
                                 name="account_status"
                                 noStyle

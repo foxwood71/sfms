@@ -2,7 +2,7 @@ import axios from "axios";
 import type { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from "axios";
 import { useAuthStore } from "../stores/useAuthStore";
 import type { APIErrorResponse } from "../types/api";
-import { MESSAGES, getErrorMessage } from "../locales/ko";
+import { MESSAGES, getErrorMessage } from "../locales/i18n-utils";
 import { message } from "antd";
 
 /**

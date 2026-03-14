@@ -3,7 +3,7 @@ import { ModalForm, ProFormText } from "@ant-design/pro-components";
 import { App, Space } from "antd";
 import type React from "react";
 import { changePasswordApi } from "@/domains/usr/api";
-import { MESSAGES } from "@/shared/locales/ko";
+import { MESSAGES } from "@/shared/locales/i18n-utils";
 
 interface PasswordChangeModalProps {
     userId: number;
@@ -31,7 +31,7 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
             open={open}
             onOpenChange={onOpenChange}
             width={360}
-            modalProps={{ destroyOnClose: true, centered: true, maskClosable: false }}
+            modalProps={{ destroyOnHidden: true, centered: true, maskClosable: false }}
             onFinish={async (values) => {
                 try {
                     await changePasswordApi(userId, { new_password: values.new_password });
