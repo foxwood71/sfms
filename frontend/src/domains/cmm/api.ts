@@ -53,6 +53,12 @@ export const getCodeDetails = async (groupCode: string) => {
 	return response.data?.data?.details || [];
 };
 
+/** 모든 상세 코드 목록을 조회합니다 (전체 데이터 백업용). */
+export const getAllCodeDetails = async () => {
+	const response = await http.get("/cmm/codes/details/all");
+	return response.data?.data || [];
+};
+
 /** 새로운 상세 코드를 생성합니다. */
 export const createCodeDetail = async (detailData: Partial<CodeDetail>) => {
 	const groupCode = detailData.group_code;

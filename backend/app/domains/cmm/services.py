@@ -54,7 +54,7 @@ class CodeService:
     async def list_active_codes(
         db: AsyncSession, domain_code: str | None = None
     ) -> list[CodeGroupRead]:
-        """전체 코드 목록을 조회합니다."""
+        """전역 코드 목록을 조회합니다."""
         stmt = (
             select(CodeGroup)
             .options(joinedload(CodeGroup.details))
@@ -66,6 +66,14 @@ class CodeService:
         result = await db.execute(stmt)
         groups = result.unique().scalars().all()
         return [CodeGroupRead.model_validate(g) for g in groups]
+
+    @staticmethod
+    async def list_all_details(db: AsyncSession) -> list[CodeDetailRead]:
+        """시스템의 모든 상세 코드를 조회합니다 (엑셀 백업용)."""
+        stmt = select(CodeDetail).order_by(CodeDetail.group_code, CodeDetail.sort_order)
+        result = await db.execute(stmt)
+        details = result.scalars().all()
+        return [CodeDetailRead.model_validate(d) for d in details]
 
 
     @staticmethod

@@ -27,6 +27,7 @@ import {
 	createCodeGroup,
 	deleteCodeDetail,
 	deleteCodeGroup,
+	getAllCodeDetails, // 추가
 	getCodeDetails,
 	getCodeGroups,
 	updateCodeDetail,
@@ -35,15 +36,33 @@ import {
 import type { CodeDetail, CodeGroup } from "../types";
 import CodeGroupDrawer from "../components/CodeGroupDrawer";
 import CodeDetailDrawer from "../components/CodeDetailDrawer";
+import ExcelActions from "@/shared/components/ExcelActions";
+import type { ExcelColumnMapping } from "@/shared/utils/excel";
 
 /**
  * 공통 코드 관리 페이지
- * Bento Standard v1.0 + Drawer 기반 (복원 버전)
+ * Bento Standard v1.0 + Drawer 기반
  */
 const CodeManagePage: React.FC = () => {
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
 	const { token } = theme.useToken();
+
+	// 엑셀 매핑 정의
+	const groupExcelColumns: ExcelColumnMapping[] = [
+		{ dataIndex: "group_code", title: "그룹 코드" },
+		{ dataIndex: "group_name", title: "그룹명" },
+		{ dataIndex: "description", title: "설명" },
+		{ dataIndex: "is_active", title: "사용여부" },
+	];
+
+	const detailExcelColumns: ExcelColumnMapping[] = [
+		{ dataIndex: "group_code", title: "그룹 코드" },
+		{ dataIndex: "detail_code", title: "상세 코드" },
+		{ dataIndex: "detail_name", title: "코드명" },
+		{ dataIndex: "sort_order", title: "정렬순서" },
+		{ dataIndex: "is_active", title: "사용여부" },
+	];
 
 	// 상태 관리
 	const [selectedGroup, setSelectedGroup] = useState<CodeGroup | null>(null);
@@ -83,6 +102,13 @@ const CodeManagePage: React.FC = () => {
 	const { data: groupResponse, isLoading: isGroupLoading } = useQuery({
 		queryKey: ["codeGroups"],
 		queryFn: () => getCodeGroups(),
+	});
+
+	// 전체 상세 코드 조회 (엑셀용)
+	const { data: allDetailsResponse } = useQuery({
+		queryKey: ["codeDetails", "all"],
+		queryFn: () => getAllCodeDetails(),
+		initialData: [],
 	});
 
 	const filteredGroups = useMemo(() => {
@@ -225,7 +251,32 @@ const CodeManagePage: React.FC = () => {
 
 	return (
 		<PageContainer 
-			header={{ title: "공통 코드 관리" }}
+			header={{ 
+				title: t("menu.cmm-codes"),
+				extra: [
+					<ExcelActions 
+						key="excel"
+						sheets={[
+							{ 
+								sheetName: t("common.sheet_name_groups"), 
+								data: groupResponse?.data || [], 
+								columns: groupExcelColumns 
+							},
+							{ 
+								sheetName: t("common.sheet_name_details"), 
+								data: allDetailsResponse || [], 
+								columns: detailExcelColumns 
+							},
+						]}
+						columns={detailExcelColumns} 
+						fileName={t("common.excel_filename_all_codes")}
+						uploadEnabled={!!selectedGroup}
+						onImport={(data) => {
+							console.log(t("common.excel_import_details"), data);
+						}}
+					/>
+				]
+			}}
 			childrenContentStyle={{ padding: 0, height: LAYOUT_CONSTANTS.CONTENT_HEIGHT, overflow: "hidden" }}
 		>
 			<style>{`
@@ -257,13 +308,13 @@ const CodeManagePage: React.FC = () => {
 							extra={
 								<Space>
 									<Button type="text" icon={<FilterOutlined style={{ color: showGroupFilter ? token.colorPrimary : undefined }} />} onClick={() => setShowGroupFilter(!showGroupFilter)} />
-									<Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => { setEditingGroup(null); setGroupDrawerOpen(true); }}>추가</Button>
+									<Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => { setEditingGroup(null); setGroupDrawerOpen(true); }}>{t("common.create")}</Button>
 								</Space>
 							}
 						>
 							{showGroupFilter && (
 								<div style={{ padding: "8px 16px", background: token.colorFillAlter, borderBottom: `1px solid ${token.colorBorderSecondary}`, borderRadius: 8, margin: "0 16px 8px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-									<Typography.Text size="small" type="secondary">사용중지 포함</Typography.Text>
+									<Typography.Text size="small" type="secondary">{t("org.include_inactive")}</Typography.Text>
 									<Switch size="small" checked={showInactiveGroup} onChange={setShowInactiveGroup} />
 								</div>
 							)}
@@ -299,7 +350,7 @@ const CodeManagePage: React.FC = () => {
 								selectedGroup && (
 									<Space>
 										<Button type="text" icon={<FilterOutlined style={{ color: showDetailFilter ? token.colorPrimary : undefined }} />} onClick={() => setShowDetailFilter(!showDetailFilter)} />
-										<Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => { setEditingDetail(null); setDetailDrawerOpen(true); }}>추가</Button>
+										<Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => { setEditingDetail(null); setDetailDrawerOpen(true); }}>{t("common.create")}</Button>
 									</Space>
 								)
 							}
@@ -308,7 +359,7 @@ const CodeManagePage: React.FC = () => {
 								<div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
 									{showDetailFilter && (
 										<div style={{ padding: "8px 16px", background: token.colorFillAlter, borderBottom: `1px solid ${token.colorBorderSecondary}`, borderRadius: 8, margin: "0 16px 8px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-											<Typography.Text size="small" type="secondary">사용중지 포함</Typography.Text>
+											<Typography.Text size="small" type="secondary">{t("org.include_inactive")}</Typography.Text>
 											<Switch size="small" checked={showInactiveDetail} onChange={setShowInactiveDetail} />
 										</div>
 									)}
@@ -328,7 +379,7 @@ const CodeManagePage: React.FC = () => {
 								</div>
 							) : (
 								<div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", color: token.colorTextDisabled, height: "100%" }}>
-									좌측에서 그룹을 선택해주세요.
+									{t("common.select_placeholder")}
 								</div>
 							)}
 						</ProCard>

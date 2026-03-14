@@ -80,6 +80,16 @@ async def get_code_group(
     return APIResponse(domain=DOMAIN, data=code_group)
 
 
+@router.get("/codes/details/all", response_model=APIResponse[list[CodeDetailRead]])
+async def list_all_code_details(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """시스템 전체의 상세 코드 목록을 조회합니다 (관리자 백업용)."""
+    details = await CodeService.list_all_details(db)
+    return APIResponse(domain=DOMAIN, data=details)
+
+
 @router.post(
     "/codes",
     response_model=APIResponse[CodeGroupRead],
