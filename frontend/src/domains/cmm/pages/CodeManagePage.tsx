@@ -1,4 +1,4 @@
-import { DeleteOutlined, EditOutlined, FilterOutlined, PlusOutlined } from "@ant-design/icons";
+import { DeleteOutlined, EditOutlined, FilterOutlined, PlusOutlined, SaveOutlined, CloseOutlined } from "@ant-design/icons";
 import type { ProColumns } from "@ant-design/pro-components";
 import {
 	PageContainer,
@@ -19,7 +19,7 @@ import {
 } from "antd";
 import axios from "axios";
 import type React from "react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { LAYOUT_CONSTANTS } from "@/shared/constants/layout";
 import {
@@ -27,9 +27,10 @@ import {
 	createCodeGroup,
 	deleteCodeDetail,
 	deleteCodeGroup,
-	getAllCodeDetails, // 추가
+	exportCodesApi,
 	getCodeDetails,
 	getCodeGroups,
+	importCodesApi,
 	updateCodeDetail,
 	updateCodeGroup,
 } from "../api";
@@ -37,7 +38,7 @@ import type { CodeDetail, CodeGroup } from "../types";
 import CodeGroupDrawer from "../components/CodeGroupDrawer";
 import CodeDetailDrawer from "../components/CodeDetailDrawer";
 import ExcelActions from "@/shared/components/ExcelActions";
-import type { ExcelColumnMapping } from "@/shared/utils/excel";
+import type { ExcelColumnMapping, ExcelSheetData } from "@/shared/utils/excel";
 
 /**
  * 공통 코드 관리 페이지
@@ -48,7 +49,7 @@ const CodeManagePage: React.FC = () => {
 	const queryClient = useQueryClient();
 	const { token } = theme.useToken();
 
-	// 엑셀 매핑 정의
+	// 엑셀 매핑 정의 (다운로드/업로드 공통)
 	const groupExcelColumns: ExcelColumnMapping[] = [
 		{ dataIndex: "group_code", title: "그룹 코드" },
 		{ dataIndex: "group_name", title: "그룹명" },
@@ -104,11 +105,11 @@ const CodeManagePage: React.FC = () => {
 		queryFn: () => getCodeGroups(),
 	});
 
-	// 전체 상세 코드 조회 (엑셀용)
-	const { data: allDetailsResponse } = useQuery({
-		queryKey: ["codeDetails", "all"],
-		queryFn: () => getAllCodeDetails(),
-		initialData: [],
+	// 전체 통합 데이터 조회 (target="all")
+	const { data: exportDataRaw } = useQuery({
+		queryKey: ["codeDetails", "export-full-data"],
+		queryFn: () => exportCodesApi("all"),
+		staleTime: 0,
 	});
 
 	const filteredGroups = useMemo(() => {
@@ -169,8 +170,21 @@ const CodeManagePage: React.FC = () => {
 			message.success(t("common.save_success"));
 			setDetailDrawerOpen(false);
 			queryClient.invalidateQueries({ queryKey: ["codeDetails", selectedGroup?.group_code] });
+			queryClient.invalidateQueries({ queryKey: ["codeDetails", "export-all-data"] });
 		},
 		onError: (err) => handleAxiosError(err, t("common.save_failure")),
+	});
+
+	const importMutation = useMutation({
+		mutationFn: (items: any[]) => importCodesApi(items),
+		onSuccess: (res) => {
+			const { groups_upserted, details_upserted } = res.data;
+			message.success(`업로드 성공 (그룹: ${groups_upserted}, 상세: ${details_upserted})`);
+			queryClient.invalidateQueries({ queryKey: ["codeGroups"] });
+			queryClient.invalidateQueries({ queryKey: ["codeDetails"] });
+			queryClient.invalidateQueries({ queryKey: ["codeDetails", "export-all-data"] });
+		},
+		onError: (err) => handleAxiosError(err, "엑셀 업로드 실패"),
 	});
 
 	// 3. 삭제 처리
@@ -189,6 +203,7 @@ const CodeManagePage: React.FC = () => {
 			await deleteCodeDetail(selectedGroup.group_code, detailCode);
 			message.success(t("common.delete_success"));
 			queryClient.invalidateQueries({ queryKey: ["codeDetails", selectedGroup.group_code] });
+			queryClient.invalidateQueries({ queryKey: ["codeDetails", "export-full-data"] });
 		} catch (err) { handleAxiosError(err, t("common.delete_failure")); }
 	};
 
@@ -249,6 +264,22 @@ const CodeManagePage: React.FC = () => {
 		},
 	];
 
+	// 엑셀 내보내기용 시트 데이터 구성
+	const excelSheets = useMemo<ExcelSheetData[]>(() => {
+		return [
+			{ 
+				sheetName: t("common.sheet_name_groups"), 
+				data: exportDataRaw?.groups || [], 
+				columns: groupExcelColumns 
+			},
+			{ 
+				sheetName: t("common.sheet_name_details"), 
+				data: exportDataRaw?.details || [], 
+				columns: detailExcelColumns 
+			},
+		];
+	}, [exportDataRaw, t]);
+
 	return (
 		<PageContainer 
 			header={{ 
@@ -256,23 +287,23 @@ const CodeManagePage: React.FC = () => {
 				extra: [
 					<ExcelActions 
 						key="excel"
-						sheets={[
-							{ 
-								sheetName: t("common.sheet_name_groups"), 
-								data: groupResponse?.data || [], 
-								columns: groupExcelColumns 
-							},
-							{ 
-								sheetName: t("common.sheet_name_details"), 
-								data: allDetailsResponse || [], 
-								columns: detailExcelColumns 
-							},
-						]}
+						sheets={excelSheets}
 						columns={detailExcelColumns} 
 						fileName={t("common.excel_filename_all_codes")}
-						uploadEnabled={!!selectedGroup}
+						uploadEnabled={true}
+						loading={importMutation.isPending} // 로딩 상태 전달
 						onImport={(data) => {
-							console.log(t("common.excel_import_details"), data);
+							const mappedData = data.map(item => ({
+								group_code: item["그룹 코드"] || item["group_code"],
+								group_name: item["그룹명"] || item["group_name"],
+								detail_code: item["상세 코드"] || item["detail_code"],
+								detail_name: item["코드명"] || item["detail_name"],
+								sort_order: Number(item["정렬순서"] || item["sort_order"]) || 0,
+								is_active: true,
+								domain_code: item["도메인"] || item["domain_code"],
+								description: item["설명"] || item["description"]
+							}));
+							importMutation.mutate(mappedData);
 						}}
 					/>
 				]
@@ -290,8 +321,8 @@ const CodeManagePage: React.FC = () => {
 				.ant-table-wrapper { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
 				.ant-spin-nested-loading, .ant-spin-container, .ant-table { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 				.ant-table-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-				.group-table .ant-table-body { flex: 1 !important; overflow-y: ${filteredGroups.length > 10 ? "auto" : "hidden"} !important; }
-				.detail-table .ant-table-body { flex: 1 !important; overflow-y: ${filteredDetails.length > 10 ? "auto" : "hidden"} !important; }
+				.group-table .ant-table-body { flex: 1 !important; overflow-y: ${(groupResponse?.data?.length || 0) > 10 ? "auto" : "hidden"} !important; }
+				.detail-table .ant-table-body { flex: 1 !important; overflow-y: ${(rawDetails?.length || 0) > 10 ? "auto" : "hidden"} !important; }
 				.ant-table-body::-webkit-scrollbar { width: 6px; }
 				.ant-table-body::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
 				.ant-table-body:hover::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.15); }

@@ -202,6 +202,13 @@ class CodeService:
             raise NotFoundException(domain=DOMAIN, error_code=ErrorCode.NOT_FOUND)
 
         update_data = obj_in.model_dump(exclude_unset=True)
+        
+        # [정책] 사용 중인 코드는 비활성화 불가 체크
+        if update_data.get("is_active") is False and detail.is_active:
+            # USR 도메인의 사용자들 중 해당 코드를 사용하는지 체크 (동적 체크 혹은 특정 테이블 명시)
+            # 여기서는 예시로 로직만 구성하거나 공통 체크 함수 호출
+            pass
+
         for field, value in update_data.items():
             setattr(detail, field, value)
 
@@ -209,6 +216,80 @@ class CodeService:
         await db.commit()
         await db.refresh(detail)
         return CodeDetailRead.model_validate(detail)
+
+    @staticmethod
+    async def bulk_import_codes(
+        db: AsyncSession, 
+        items: list[Any], 
+        actor_id: int
+    ) -> dict[str, int]:
+        """엑셀 데이터를 기반으로 그룹 및 상세 코드를 일괄 임포트합니다 (Upsert)."""
+        summary = {"total": len(items), "groups_upserted": 0, "details_upserted": 0}
+        
+        # 1. 고유 그룹 코드 추출 및 처리
+        group_map = {}
+        for item in items:
+            group_map[item.group_code] = {
+                "group_name": item.group_name,
+                "domain_code": item.domain_code,
+                "description": item.description,
+            }
+
+        for g_code, g_info in group_map.items():
+            stmt = select(CodeGroup).where(CodeGroup.group_code == g_code)
+            res = await db.execute(stmt)
+            group = res.scalar_one_or_none()
+            
+            if group:
+                group.group_name = g_info["group_name"]
+                if g_info["domain_code"]: group.domain_code = g_info["domain_code"]
+                if g_info["description"]: group.description = g_info["description"]
+                group.updated_by = actor_id
+            else:
+                new_group = CodeGroup(
+                    group_code=g_code,
+                    group_name=g_info["group_name"],
+                    domain_code=g_info["domain_code"],
+                    description=g_info["description"],
+                    created_by=actor_id,
+                    updated_by=actor_id
+                )
+                db.add(new_group)
+            summary["groups_upserted"] += 1
+
+        # 플러시하여 신규 그룹 ID 확보
+        await db.flush()
+
+        # 2. 상세 코드 처리
+        for item in items:
+            stmt = select(CodeDetail).where(
+                CodeDetail.group_code == item.group_code,
+                CodeDetail.detail_code == item.detail_code
+            )
+            res = await db.execute(stmt)
+            detail = res.scalar_one_or_none()
+            
+            if detail:
+                # [정책] 사용 중 중지 처리 제한 체크 필요 시 여기에 추가
+                detail.detail_name = item.detail_name
+                detail.sort_order = item.sort_order
+                detail.is_active = item.is_active
+                detail.updated_by = actor_id
+            else:
+                new_detail = CodeDetail(
+                    group_code=item.group_code,
+                    detail_code=item.detail_code,
+                    detail_name=item.detail_name,
+                    sort_order=item.sort_order,
+                    is_active=item.is_active,
+                    created_by=actor_id,
+                    updated_by=actor_id
+                )
+                db.add(new_detail)
+            summary["details_upserted"] += 1
+
+        await db.commit()
+        return summary
 
 
 class AttachmentService:

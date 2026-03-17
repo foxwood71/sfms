@@ -17,11 +17,13 @@ interface ExcelActionsProps {
 	onImport?: (data: any[]) => void;
 	/** 업로드 기능 활성화 여부 */
 	uploadEnabled?: boolean;
+	/** 처리 중 로딩 상태 */
+	loading?: boolean;
 }
 
 /**
  * 전역 공통 엑셀 액션 버튼 모듈
- * (Bento Standard UI 준수 + 안전 업로드 로직)
+ * (Bento Standard UI 준수 + 안전 업로드 로직 + 로딩 피드백)
  */
 const ExcelActions: React.FC<ExcelActionsProps> = ({
 	exportData = [],
@@ -30,6 +32,7 @@ const ExcelActions: React.FC<ExcelActionsProps> = ({
 	fileName,
 	onImport,
 	uploadEnabled = true,
+	loading = false,
 }) => {
 	const { t } = useTranslation();
 	const { message, modal } = App.useApp();
@@ -55,6 +58,8 @@ const ExcelActions: React.FC<ExcelActionsProps> = ({
 
 	// 엑셀 업로드 전 파싱 및 최종 확인
 	const handleBeforeUpload = async (file: File) => {
+		if (loading) return false;
+
 		try {
 			const data = await importFromExcel(file);
 			if (data.length === 0) {
@@ -78,7 +83,6 @@ const ExcelActions: React.FC<ExcelActionsProps> = ({
 				cancelText: t("common.cancel"),
 				onOk: () => {
 					onImport?.(data);
-					message.success(t("common.import_success"));
 				},
 			});
 		} catch (error) {
@@ -96,6 +100,7 @@ const ExcelActions: React.FC<ExcelActionsProps> = ({
 					type="text"
 					icon={<FileExcelOutlined />}
 					onClick={handleTemplateDownload}
+					disabled={loading}
 				/>
 			</Tooltip>
 
@@ -105,9 +110,10 @@ const ExcelActions: React.FC<ExcelActionsProps> = ({
 					accept=".xlsx, .xls"
 					showUploadList={false}
 					beforeUpload={handleBeforeUpload}
+					disabled={loading}
 				>
 					<Tooltip title={t("common.excel_upload")}>
-						<Button type="text" icon={<UploadOutlined />} />
+						<Button type="text" icon={<UploadOutlined />} loading={loading} />
 					</Tooltip>
 				</Upload>
 			)}
@@ -118,7 +124,7 @@ const ExcelActions: React.FC<ExcelActionsProps> = ({
 					type="text"
 					icon={<DownloadOutlined />}
 					onClick={handleDownload}
-					disabled={exportData.length === 0 && (!sheets || sheets.length === 0)}
+					disabled={loading || (exportData.length === 0 && (!sheets || sheets.length === 0))}
 				/>
 			</Tooltip>
 		</Space.Compact>
