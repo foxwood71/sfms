@@ -43,26 +43,26 @@ VALUES
 ('USR_STATUS', 'BLOCKED', '차단', '{"color": "red"}', 20),
 
 -- 직급 (POS_TYPE)
-('POS_TYPE', 'STAFF', '사원', NULL, 10),
-('POS_TYPE', 'ASSISTANT', '대리', NULL, 20),
-('POS_TYPE', 'MANAGER', '과장', NULL, 30),
-('POS_TYPE', 'DEPUTY', '차장', NULL, 40),
-('POS_TYPE', 'HEAD', '부장', NULL, 50),
-('POS_TYPE', 'SENIOR', '수석', NULL, 55), -- 추가됨
-('POS_TYPE', 'DIRECTOR', '이사', NULL, 60),
-('POS_TYPE', 'MD', '상무', NULL, 70),
-('POS_TYPE', 'SMD', '전무', NULL, 80),
-('POS_TYPE', 'EVP', '부사장', NULL, 90),
-('POS_TYPE', 'CEO', '사장', NULL, 100),
+('POS_TYPE', 'STAFF', '사원', '{}'::jsonb, 10),
+('POS_TYPE', 'ASSISTANT', '대리', '{}'::jsonb, 20),
+('POS_TYPE', 'MANAGER', '과장', '{}'::jsonb, 30),
+('POS_TYPE', 'DEPUTY', '차장', '{}'::jsonb, 40),
+('POS_TYPE', 'HEAD', '부장', '{}'::jsonb, 50),
+('POS_TYPE', 'SENIOR', '수석', '{}'::jsonb, 55),
+('POS_TYPE', 'DIRECTOR', '이사', '{}'::jsonb, 60),
+('POS_TYPE', 'MD', '상무', '{}'::jsonb, 70),
+('POS_TYPE', 'SMD', '전무', '{}'::jsonb, 80),
+('POS_TYPE', 'EVP', '부사장', '{}'::jsonb, 90),
+('POS_TYPE', 'CEO', '사장', '{}'::jsonb, 100),
 
 -- 직책 (DUTY_TYPE)
-('DUTY_TYPE', 'MEMBER', '팀원', NULL, 10),
-('DUTY_TYPE', 'LEADER', '팀장', NULL, 20),
-('DUTY_TYPE', 'HEAD', '부서장', NULL, 25), -- 추가됨
-('DUTY_TYPE', 'CHIEF', '실장', NULL, 30),
-('DUTY_TYPE', 'DIVISION_HEAD', '본부장', NULL, 40),
-('DUTY_TYPE', 'DIRECTOR_HEAD', '부문장', NULL, 50),
-('DUTY_TYPE', 'PRESIDENT', '대표이사', NULL, 60),
+('DUTY_TYPE', 'MEMBER', '팀원', '{}'::jsonb, 10),
+('DUTY_TYPE', 'LEADER', '팀장', '{}'::jsonb, 20),
+('DUTY_TYPE', 'HEAD', '부서장', '{}'::jsonb, 25),
+('DUTY_TYPE', 'CHIEF', '실장', '{}'::jsonb, 30),
+('DUTY_TYPE', 'DIVISION_HEAD', '본부장', '{}'::jsonb, 40),
+('DUTY_TYPE', 'DIRECTOR_HEAD', '부문장', '{}'::jsonb, 50),
+('DUTY_TYPE', 'PRESIDENT', '대표이사', '{}'::jsonb, 60),
 
 -- 파일 분류
 ('FILE_CATEGORY', 'DWG', 'CAD 도면', '{"icon": "FileDoneOutlined", "ext": "dwg"}', 1),

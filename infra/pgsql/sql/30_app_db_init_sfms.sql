@@ -9,7 +9,7 @@
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_catalog.pg_user WHERE usename = 'sfms_admin') THEN
-        CREATE USER sfms_admin WITH ENCRYPTED PASSWORD 'sfms_admin';
+        CREATE USER sfms_admin WITH ENCRYPTED PASSWORD 'pgpass';
 
 END IF;
 
@@ -20,7 +20,7 @@ ALTER USER sfms_admin WITH SUPERUSER;
 
 -- 3. 데이터베이스 생성
 -- (이미 존재하지 않을 경우에만 생성하는 안전한 스크립트)
-SELECT 'CREATE DATABASE sfms_db' 
+SELECT 'CREATE DATABASE sfms_db'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'sfms_db')\gexec
 
 GRANT ALL PRIVILEGES ON DATABASE sfms_db TO sfms_admin;
