@@ -1,0 +1,1 @@
+psql:02_sys_schema.pgsql:4: 알림:  "sys" 이름의 스키마(schema)가 이미 있음, 건너뜀

@@ -83,5 +83,8 @@ COMMENT ON COLUMN iam.user_roles.assigned_by IS '역할을 부여한 관리자 I
 -- 3. 초기 필수 데이터 (Seed Data)
 -- ========================================================
 INSERT INTO iam.roles (name, code, permissions, is_system) VALUES 
-('슈퍼 관리자', 'SUPER_ADMIN', '{"all": ["*"]}', true),
+('슈퍼 관리자', 'SUPER_USER', '{"all": ["*"]}', true),
 ('일반 사용자', 'USER', '{"dashboard": ["read"]}', true);
+
+-- [Default Role Assignment] 시스템 관리자(admin, ID 0)에게 슈퍼 관리자 역할(ID 1) 부여
+INSERT INTO iam.user_roles (user_id, role_id, assigned_by) VALUES (0, 1, 0);

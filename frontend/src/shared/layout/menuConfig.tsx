@@ -89,6 +89,19 @@ export const menuConfig: MenuItem[] = [
 		],
 	},
 	{
+		key: "cmm",
+		icon: <AppstoreOutlined />,
+		resource: "CMM",
+		children: [
+			{
+				key: "cmm/codes",
+				path: "/cmm/codes",
+				resource: "CMM",
+				action: "READ",
+			},
+		],
+	},
+	{
 		key: "sys",
 		icon: <SettingOutlined />,
 		resource: "SYS",

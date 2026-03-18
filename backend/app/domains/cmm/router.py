@@ -5,7 +5,7 @@
 """
 
 import uuid
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Query, UploadFile, status
 from fastapi.responses import RedirectResponse # 리다이렉트 응답 추가
@@ -58,6 +58,48 @@ async def list_codes(
     """
     codes = await CodeService.list_active_codes(db, domain_code=domain_code)
     return APIResponse(domain=DOMAIN, data=codes)
+
+
+@router.get("/export/codes/{target}", response_model=APIResponse[Any])
+async def export_codes(
+    target: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """공통 코드 데이터를 내보냅니다.
+    
+    Target:
+    - all: 그룹 및 상세 코드 전체
+    - groups: 코드 그룹 목록
+    - details: 상세 코드 목록
+    """
+    if target == "all":
+        # 전체 데이터 (그룹 + 상세)
+        groups = await CodeService.list_active_codes(db)
+        details = await CodeService.list_all_details(db)
+        return APIResponse(domain=DOMAIN, data={"groups": groups, "details": details})
+    
+    elif target == "groups":
+        data = await CodeService.list_active_codes(db)
+        return APIResponse(domain=DOMAIN, data=data)
+    
+    elif target == "details":
+        data = await CodeService.list_all_details(db)
+        return APIResponse(domain=DOMAIN, data=data)
+    
+    else:
+        raise NotFoundException(domain=DOMAIN, error_code=ErrorCode.NOT_FOUND)
+
+
+@router.post("/import/codes/all", response_model=APIResponse[dict[str, int]])
+async def import_codes(
+    request: CodeBulkImportRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_admin: Annotated[User, Depends(check_domain_admin("CMM"))],
+):
+    """엑셀 데이터를 기반으로 공통 코드(그룹/상세)를 일괄 임포트합니다."""
+    summary = await CodeService.bulk_import_codes(db, items=request.items, actor_id=current_admin.id)
+    return APIResponse(domain=DOMAIN, data=summary, success_code=SuccessCode.SUCCESS_CREATED)
 
 
 @router.get("/codes/{group_code}", response_model=APIResponse[CodeGroupRead])

@@ -53,6 +53,18 @@ export const getCodeDetails = async (groupCode: string) => {
 	return response.data?.data?.details || [];
 };
 
+/** 공통 코드 데이터를 내보내기 위해 조회합니다. (target: all | groups | details) */
+export const exportCodesApi = async (target: "all" | "groups" | "details") => {
+	const response = await http.get(`/cmm/export/codes/${target}`);
+	return response.data?.data;
+};
+
+/** 엑셀 데이터를 기반으로 공통 코드를 일괄 임포트합니다. */
+export const importCodesApi = async (items: any[]) => {
+	const response = await http.post("/cmm/import/codes/all", { items });
+	return response.data;
+};
+
 /** 새로운 상세 코드를 생성합니다. */
 export const createCodeDetail = async (detailData: Partial<CodeDetail>) => {
 	const groupCode = detailData.group_code;

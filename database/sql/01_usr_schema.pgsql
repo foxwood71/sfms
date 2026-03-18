@@ -10,20 +10,20 @@ COMMENT ON SCHEMA usr IS '사용자 및 조직 관리 도메인';
 -- ========================================================
 CREATE TABLE usr.organizations (
     id                  BIGSERIAL PRIMARY KEY,
-    
+
     name                VARCHAR(100) NOT NULL,          -- 조직 명칭 (예: 개발팀, 인사팀)
     code                VARCHAR(50) NOT NULL UNIQUE,    -- 조직 식별 코드 (고유값)
-    
+
     parent_id           BIGINT REFERENCES usr.organizations(id), -- [Self-Ref] 상위 조직 ID (NULL이면 최상위)
-    
+
     sort_order          INT DEFAULT 0,                  -- 트리 구조 내 정렬 순서
     description         TEXT,                           -- 조직 상세 설명
     is_active           BOOLEAN DEFAULT true,           -- 사용 여부 (폐쇄된 부서는 False)
-    
+
     -- [Migration] 레거시 시스템 데이터 이관용 필드
     legacy_id           INTEGER,                        -- 기존 시스템의 PK
     legacy_source       VARCHAR(20),                    -- 데이터 원천 (예: ERP, HR)
-    
+
     -- [Audit] 감사 로그 (FK 제약조건은 데이터 적재 후 ALTER로 추가)
     created_at          TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     created_by          BIGINT,                         -- 생성자 (users.id)
@@ -40,8 +40,8 @@ CREATE TABLE usr.organizations (
 CREATE INDEX idx_usr_org_parent ON usr.organizations (parent_id);
 
 -- [Trigger] 수정 시 updated_at 자동 갱신
-CREATE TRIGGER trg_updated_at_organizations 
-BEFORE UPDATE ON usr.organizations 
+CREATE TRIGGER trg_updated_at_organizations
+BEFORE UPDATE ON usr.organizations
 FOR EACH ROW EXECUTE FUNCTION sys.trg_set_updated_at();
 
 -- [Comments]
@@ -66,27 +66,27 @@ COMMENT ON COLUMN usr.organizations.updated_by IS '데이터 최종 수정자 ID
 -- ========================================================
 CREATE TABLE usr.users (
     id                  BIGSERIAL PRIMARY KEY,
-    
+
     org_id              BIGINT REFERENCES usr.organizations(id) ON UPDATE CASCADE ON DELETE SET NULL,
     profile_image_id    UUID,     -- 프로필 사진 (FK는 05_constraints.pgsql에서 추가됨)
-    
+
     login_id            VARCHAR(50) NOT NULL UNIQUE,    -- 시스템 로그인 ID
     password_hash       VARCHAR(255) NOT NULL,          -- 비밀번호 (BCrypt/Argon2 해시)
-    
+
     emp_code            VARCHAR(16) NOT NULL UNIQUE,    -- 사원 번호 (인사 시스템 연동 키)
     name                VARCHAR(100) NOT NULL,          -- 사용자 실명
     email               VARCHAR(100) NOT NULL UNIQUE,   -- 이메일 (계정 찾기 및 알림용)
     phone               VARCHAR(50),                    -- 연락처
-    
+
     is_active           BOOLEAN DEFAULT TRUE,           -- 재직 여부 (True: 재직, False: 퇴사)
     account_status      VARCHAR(20) DEFAULT 'ACTIVE' NOT NULL, -- 계정 상태 (ACTIVE: 정상, BLOCKED: 차단)
     last_login_at       TIMESTAMPTZ,                    -- 마지막 로그인 시간
     login_fail_count    INTEGER DEFAULT 0 NOT NULL,     -- 로그인 실패 횟수
-    
+
     -- [Migration] 레거시 데이터 매핑
     legacy_id           INTEGER,
     legacy_source       VARCHAR(20),
-    
+
     -- [Extension] 사용자별 설정, UI 테마 등 비정형 데이터
     -- 예: {"duty": "팀장", "theme": "dark", "sidebar": "collapsed"}
     metadata            JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -97,7 +97,7 @@ CREATE TABLE usr.users (
     updated_at          TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_by          BIGINT,
 
-    -- [Constraint] 
+    -- [Constraint]
     CONSTRAINT chk_users_login_id_lower CHECK (login_id = LOWER(login_id)),
     CONSTRAINT chk_users_email_lower CHECK (email = LOWER(email)),
     CONSTRAINT chk_users_email_format CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
@@ -106,13 +106,13 @@ CREATE TABLE usr.users (
 
 -- [Index]
 CREATE INDEX idx_usr_users_org_id ON usr.users (org_id);
-CREATE INDEX idx_usr_name_pg ON usr.users USING pgroonga (name) with (tokenizer='TokenMecab', normalizer='NormalizerAuto'); 
+CREATE INDEX idx_usr_name_pg ON usr.users USING pgroonga (name) with (tokenizer='TokenMecab', normalizer='NormalizerAuto');
 CREATE INDEX idx_usr_login_id ON usr.users (login_id);
 CREATE INDEX idx_usr_users_metadata_gin ON usr.users USING GIN (metadata);
 
 -- [Trigger]
-CREATE TRIGGER trg_updated_at_users 
-BEFORE UPDATE ON usr.users 
+CREATE TRIGGER trg_updated_at_users
+BEFORE UPDATE ON usr.users
 FOR EACH ROW EXECUTE FUNCTION sys.trg_set_updated_at();
 
 -- [Comments]
@@ -142,7 +142,7 @@ COMMENT ON COLUMN usr.users.updated_by IS '계정 정보 수정자 ID';
 -- 3. 시스템 초기 데이터 (Bootstrapping)
 -- ========================================================
 INSERT INTO usr.organizations (
-    id, name, code, sort_order, description, is_active, 
+    id, name, code, sort_order, description, is_active,
     created_at, created_by, updated_at, updated_by
 ) VALUES (
     0, '시스템 관리', 'SYSTEM', -1, '시스템 자동 생성 및 관리를 위한 가상 최상위 조직', true,
@@ -150,11 +150,11 @@ INSERT INTO usr.organizations (
 );
 
 INSERT INTO usr.users (
-    id, org_id, login_id, password_hash, emp_code, name, 
-    email, is_active, metadata, created_at, created_by, updated_at, updated_by
+    id, org_id, login_id, password_hash, emp_code, name,
+    email, is_active, account_status, metadata, created_at, created_by, updated_at, updated_by
 ) VALUES (
-    0, 0, 'system', '$6$SYSTEM_ACCOUNT_NO_LOGIN$', '0000', '시스템',
-    'system@sfms.local', true, '{"role": "internal_system"}',
+    0, 0, 'admin', '$2b$12$RgrL7.oDy4WZEoy5IOSrZu7.5ibAcrp80fuXGHHsMdCOZbzVrgZEu', '0000', '시스템',
+    'admin@sfms.local', true, 'ACTIVE', '{"role": "SUPER_USER"}',
     CURRENT_TIMESTAMP, 0, CURRENT_TIMESTAMP, 0
 );
 
@@ -164,10 +164,10 @@ SELECT setval('usr.users_id_seq', 1, false);
 -- ========================================================
 -- 4. 외래키(FK) 제약조건 추가 (Internal Circular Reference 해결)
 -- ========================================================
-ALTER TABLE usr.organizations 
+ALTER TABLE usr.organizations
     ADD CONSTRAINT fk_org_created_by FOREIGN KEY (created_by) REFERENCES usr.users (id),
     ADD CONSTRAINT fk_org_updated_by FOREIGN KEY (updated_by) REFERENCES usr.users (id);
 
-ALTER TABLE usr.users 
+ALTER TABLE usr.users
     ADD CONSTRAINT fk_usr_created_by FOREIGN KEY (created_by) REFERENCES usr.users (id),
     ADD CONSTRAINT fk_usr_updated_by FOREIGN KEY (updated_by) REFERENCES usr.users (id);

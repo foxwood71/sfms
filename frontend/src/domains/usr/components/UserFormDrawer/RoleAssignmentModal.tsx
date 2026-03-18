@@ -6,7 +6,7 @@ import type React from "react";
 import { useState, useEffect } from "react";
 import { assignUserRolesApi, getRolesApi } from "@/domains/iam/api/auth";
 import type { Role } from "@/domains/iam/types";
-import { MESSAGES } from "@/shared/locales/ko";
+import { MESSAGES } from "@/shared/locales/i18n-utils";
 
 const { Text } = Typography;
 
@@ -74,7 +74,7 @@ const RoleAssignmentModal: React.FC<RoleAssignmentModalProps> = ({
             open={open}
             onOpenChange={onOpenChange}
             width={420}
-            modalProps={{ destroyOnClose: true, centered: true, maskClosable: false }}
+            modalProps={{ destroyOnHidden: true, centered: true, maskClosable: false }}
             onFinish={async () => {
                 try {
                     await assignUserRolesApi(userId, tempRoleIds);

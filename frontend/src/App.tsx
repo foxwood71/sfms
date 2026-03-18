@@ -58,30 +58,38 @@ function App() {
 							<Route index element={<Navigate to="/dashboard" replace />} />
 							<Route
 								path="dashboard"
-								element={<PagePlaceholder title={t("common.dashboard")} />}
+								element={<PagePlaceholder title={t("menu.dashboard")} />}
 							/>
 
-							{/* 시설 관리 */}
-							<Route
-								path="fac/list"
-								element={<PagePlaceholder title={t("menu.fac_list")} />}
-							/>
-							<Route
-								path="fac/register"
-								element={<PagePlaceholder title={t("menu.fac_register")} />}
-							/>
-
-							{/* 시스템/공통 설정 */}
-							<Route path="cmm/codes" element={<CodeManagePage />} />
-							<Route path="usr/users" element={<UserListPage />} />
+							{/* 사용자 및 조직 */}
 							<Route path="usr/organizations" element={<OrganizationPage />} />
+							<Route path="usr/users" element={<UserListPage />} />
+
+							{/* 인증 및 권한 */}
+							<Route
+								path="iam/roles"
+								element={<PagePlaceholder title={t("menu.iam-roles")} />}
+							/>
+
+							{/* 시설 및 공간 */}
+							<Route
+								path="fac/spaces"
+								element={<PagePlaceholder title={t("menu.fac-spaces")} />}
+							/>
+							<Route
+								path="fac/facilities"
+								element={<PagePlaceholder title={t("menu.fac-facilities")} />}
+							/>
+
+							{/* 공통 설정 */}
+							<Route path="cmm/codes" element={<CodeManagePage />} />
+
+							{/* 시스템 관리 */}
 							<Route
 								path="sys/audit-logs"
-								element={<PagePlaceholder title={t("menu.sys_audit_logs")} />}
+								element={<PagePlaceholder title={t("menu.sys-audit-logs")} />}
 							/>
-
-							{/* 개발 도구 */}
-							<Route path="dev/tester" element={<ApiTester />} />
+							<Route path="sys/api-tester" element={<ApiTester />} />
 						</Route>
 
 						{/* 404 처리 */}

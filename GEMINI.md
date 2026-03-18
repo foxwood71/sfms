@@ -11,12 +11,24 @@
 *   **데이터 매핑**: Pydantic 스키마의 `metadata`(alias)와 SQLAlchemy 모델의 `user_metadata` 컬럼 간의 매핑을 서비스 레이어에서 명시적으로 처리하여 데이터 누락을 방지합니다.
 
 ### 2. 프론트엔드 (React 19 & Ant Design v5)
-*   **🚨 Zero Any Policy (중요)**: **더 이상 `any` 타입을 사용하지 않습니다.** 모든 타입은 인터페이스나 유니온 타입으로 구체화해야 합니다.
-*   **i18n 메시지 처리 (중요)**: 백엔드에서 받은 영문 코드를 키(Key)로 활용하여 로케일에 맞는 메시지를 출력합니다. `MESSAGES.ERRORS[code]` 형식을 따르며 UI 하드코딩을 금지합니다.
-*   **UI/UX 레이아웃 표준**:
-    *   **Fixed Layout**: 브라우저 전체 스크롤을 금지(`body { overflow: hidden }`)하고, `100vh` 기반의 독립 스크롤을 구현합니다.
-    *   **10-Row Rule**: 목록 테이블은 10개 행 기준 높이를 기본으로 하며, 초과 시에만 내부 스크롤이 활성화됩니다.
-    *   **Auto-Density**: 필터 박스 활성화 시 테이블 밀도를 자동으로 `small`로 전환하여 화면 표시 영역 초과를 방지합니다.
+*   **🚨 Zero Any Policy**: **더 이상 `any` 타입을 사용하지 않습니다.** 모든 타입은 인터페이스나 유니온 타입으로 구체화해야 합니다.
+*   **🚨 Zero Hardcoded Strings (중요)**: **모든 UI 문자열 및 에러 메시지에 대해 한글 하드코딩을 엄격히 금지합니다.** 모든 텍스트는 `messages.ts`에 정의하고 `t()` 함수나 `MESSAGES` 상수를 통해 가져와야 합니다. 
+*   **i18n 메시지 처리**: 백엔드에서 받은 영문 코드를 키(Key)로 활용하여 로케일에 맞는 메시지를 출력합니다. `MESSAGES.ERRORS[code]` 형식을 따르며 UI 하드코딩을 금지합니다.
+*   **UI/UX 벤또 표준 (Bento Standard v1.0)**:
+    *   **Layout**: 모든 페이지는 `100vh` 기반의 `Fixed Layout`이며, `Splitter`를 사용한 독립적 카드(벤또 박스) 구조를 가집니다.
+    *   **Splitter Persistence**: `Splitter`의 분할 비율은 `localStorage`에 저장하여 재접속 시 복구하며, 조절 범위는 `15% ~ 40%` 사이로 제한합니다.
+    *   **Bento Card Style**:
+        *   패널 내부 컨테이너는 `borderRadius: 12px`와 `overflow: hidden`을 적용하여 둥근 상자 모양을 완성합니다.
+        *   카드 본체는 `bordered={false}`로 설정하여 배경에 밀착시키고, `Splitter`의 `gap: 2`를 통해 구분감을 줍니다.
+        *   **Filter Box**: 트리나 테이블 상단의 필터 영역은 `borderRadius: 8px`를 적용하고, 상단 및 좌우에 적절한 `margin`을 주어 카드 내부에 떠 있는 듯한 플로팅(Floating) 느낌을 유지합니다.
+        *   모든 관리 카드의 높이는 `LAYOUT_CONSTANTS.CONTENT_HEIGHT` (`calc(100vh - 180px)`)로 통일합니다.
+    *   **Zero-Card-Scroll Policy (중요)**: 상위 카드 자체는 절대 스크롤되지 않아야 하며 (`overflow: hidden`), 스크롤은 오직 내부의 리스트 영역에만 허용합니다.
+    *   **Tree Standard**:
+        *   `showLine` 활성화, 헤더에 **전체 펼치기/접기** 버튼 배치.
+        *   **Smart Scroll**: 영역 초과 시에만 슬림 스크롤바가 나타나며 공간을 차지하지 않아야 합니다.
+    *   **ProTable 10-Row Rule**: 
+        *   Header(필터)와 Footer(페이징)는 카드 영역 내에 고정하고 데이터 영역만 스크롤합니다.
+        *   **10행 초과 시에만** 스크롤바를 활성화하고, 필터 박스가 열리면 테이블 밀도를 자동으로 `small`로 전환합니다.
 *   **이미지 처리**: 프로필 사진 등 비공개 파일은 정확한 API 경로와 쿼리 파라미터 기반 인증 토큰(`?token=...`)을 결합하여 로드합니다.
 
 ### 3. 데이터베이스 (PostgreSQL 16)

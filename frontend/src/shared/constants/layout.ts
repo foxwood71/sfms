@@ -4,8 +4,8 @@
 export const LAYOUT_CONSTANTS = {
 	/** 상단 네비게이션을 제외한 전체 페이지 헤더 높이 */
 	HEADER_HEIGHT: 56,
-	/** 페이지 컨테이너 내부의 실제 콘텐츠 영역 계산식 */
-	CONTENT_HEIGHT: "calc(100vh - 220px)",
+	/** 페이지 컨테이너 내부의 실제 콘텐츠 영역 계산식 (카드 높이 표준화) */
+	CONTENT_HEIGHT: "calc(100vh - 180px)",
 	/** 테이블 내부 스크롤 가용 높이 (필터 없을 때) */
 	TABLE_VIEW_HEIGHT: "calc(100vh - 400px)",
 	/** 테이블 내부 스크롤 가용 높이 (필터 있을 때) */

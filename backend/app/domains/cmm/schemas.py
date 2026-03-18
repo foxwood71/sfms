@@ -89,6 +89,23 @@ class CodeGroupRead(CodeGroupBase):
     )
 
 
+class CodeImportSchema(BaseModel):
+    """엑셀 임포트를 위한 통합 데이터 구조"""
+    group_code: str
+    group_name: str
+    domain_code: str | None = None
+    description: str | None = None
+    detail_code: str
+    detail_name: str
+    sort_order: int = 0
+    is_active: bool = True
+
+
+class CodeBulkImportRequest(BaseModel):
+    """일괄 임포트 요청 바디"""
+    items: list[CodeImportSchema]
+
+
 # --------------------------------------------------------
 # [Attachment] 첨부 파일 메타데이터 스키마
 # --------------------------------------------------------
