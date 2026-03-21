@@ -125,6 +125,27 @@ async def update_facility(
     return APIResponse(domain=DOMAIN, data=updated_facility)
 
 
+@router.delete("/facilities/{facility_id}", response_model=APIResponse[None])
+async def delete_facility(
+    facility_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_admin: Annotated[User, Depends(check_domain_admin("FAC"))],
+):
+    """특정 시설을 삭제합니다. 하위 공간이 있는 경우 삭제가 실패합니다.
+
+    Args:
+        facility_id (int): 삭제할 대상 시설 ID
+        db (AsyncSession): 데이터베이스 비동기 세션
+        current_admin (User): 행위 권한을 가진 관리자 정보
+
+    Returns:
+        APIResponse[None]: 삭제 성공 응답
+
+    """
+    await FacilityService.delete_facility(db, facility_id=facility_id)
+    return APIResponse(domain=DOMAIN, data=None)
+
+
 # --------------------------------------------------------
 # [Space] 공간 API
 # --------------------------------------------------------
@@ -210,3 +231,24 @@ async def update_space(
         db, space_id=space_id, obj_in=space_in, actor=current_user
     )
     return APIResponse(domain=DOMAIN, data=updated_space)
+
+
+@router.delete("/spaces/{space_id}", response_model=APIResponse[None])
+async def delete_space(
+    space_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_admin: Annotated[User, Depends(check_domain_admin("FAC"))],
+):
+    """특정 공간을 삭제합니다. 하위 공간이 존재하는 경우 삭제가 제한됩니다.
+
+    Args:
+        space_id (int): 삭제할 대상 공간 ID
+        db (AsyncSession): 데이터베이스 비동기 세션
+        current_admin (User): 행위 권한을 가진 관리자 정보
+
+    Returns:
+        APIResponse[None]: 삭제 성공 응답
+
+    """
+    await SpaceService.delete_space(db, space_id=space_id)
+    return APIResponse(domain=DOMAIN, data=None)

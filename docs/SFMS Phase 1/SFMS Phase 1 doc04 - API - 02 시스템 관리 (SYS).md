@@ -160,9 +160,33 @@ class SequenceRuleRead(SequenceRuleBase):
 
 * **URL:** `GET /sys/audit-logs`
 * **Permission:** **관리자 전용**
-* **Query Params:** `skip`, `limit`, `target_domain`, `action_type`
-* **Logic:** 시스템 전반에서 발생한 데이터 변경 및 주요 행위 이력을 조회합니다. `pgroonga` 인덱스를 통해 고속 조회를 지원합니다.
-* **참고:** 필터 조건에 맞는 로그가 없을 경우 **빈 리스트(`[]`)와 200 OK**를 반환합니다.
+* **Query Params:**
+    * `start_date` (datetime, 선택): 조회 시작 일시
+    * `end_date` (datetime, 선택): 조회 종료 일시
+    * `actor_user_id` (int, 선택): 행위 수행자 ID
+    * `target_domain` (str, 선택): 대상 업무 도메인 코드 (USR, FAC 등)
+    * `action_type` (str, 선택): 행위 유형 (CREATE, LOGIN_FAILURE 등)
+    * `keyword` (str, 선택): 설명(description) 키워드 검색
+    * `page` (int, 선택): 조회할 페이지 번호 (기본값: 1)
+    * `size` (int, 선택): 페이지당 레코드 수 (기본값: 20, 최대: 100)
+* **Success Response (AuditLogListRead):**
+    ```json
+    {
+      "data": {
+        "items": [
+          {
+            "id": 100,
+            "action_type": "UPDATE",
+            "target_domain": "USR",
+            "description": "사용자 'hong'의 정보 수정",
+            "created_at": "2026-03-21T15:00:00Z"
+          }
+        ],
+        "total": 1500
+      }
+    }
+    ```
+* **Logic:** 시스템 전반의 데이터 변경 및 보안 감사 이력을 통합 조회합니다.
 
 ---
 

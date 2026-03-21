@@ -54,6 +54,13 @@ class AuditLogRead(AuditLogBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class AuditLogListRead(BaseModel):
+    """페이징 처리가 포함된 감사 로그 목록 응답 스키마입니다."""
+
+    items: list[AuditLogRead] = Field(..., description="감사 로그 목록")
+    total: int = Field(..., description="전체 로그 건수")
+
+
 # --------------------------------------------------------
 # [SequenceRule] 채번 규칙 스키마
 # --------------------------------------------------------

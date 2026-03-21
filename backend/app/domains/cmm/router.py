@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, File, Query, UploadFile, status
 from fastapi.responses import RedirectResponse # 리다이렉트 응답 추가
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.codes import SuccessCode
+from app.core.codes import ErrorCode, SuccessCode
 from app.core.dependencies import check_domain_admin, get_current_user, get_db
 from app.core.exceptions import InternalServerErrorException, NotFoundException # 예외 추가
 from app.core.responses import APIResponse
@@ -19,6 +19,7 @@ from app.core.storage import upload_file_stream, get_presigned_url # 스토리�
 from app.domains.cmm.schemas import (
     AttachmentCreate,
     AttachmentRead,
+    CodeBulkImportRequest,
     CodeDetailCreate,
     CodeDetailRead,
     CodeDetailUpdate,

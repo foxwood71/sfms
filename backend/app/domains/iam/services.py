@@ -89,15 +89,61 @@ class AuthService:
         # 2. 사용자 조회
         user = await UserService.get_user_by_login_id(db, login_id=login_in.login_id)
 
-        # 3. 비밀번호 검증 및 실패 카운트 처리
+        # 3. 비밀번호 검증 및 실패 처리
         if not user or not verify_password(login_in.password, user.password_hash):
             if user:
                 user.login_fail_count += 1
+                
+                # 비밀번호 실패 로그
+                await AuditLogService.create_audit_log(
+                    db,
+                    AuditLogCreate(
+                        action_type="LOGIN_FAILURE",
+                        target_domain="IAM",
+                        target_table="users",
+                        target_id=str(user.id),
+                        actor_user_id=user.id,
+                        client_ip=ip,
+                        user_agent=user_agent,
+                        description=f"사용자 '{user.login_id}' 로그인 실패 (비밀번호 불일치, 누적: {user.login_fail_count}회)",
+                    ),
+                )
                 await db.commit()
+            else:
+                # 존재하지 않는 계정으로 접근 시도 로그
+                await AuditLogService.create_audit_log(
+                    db,
+                    AuditLogCreate(
+                        action_type="LOGIN_FAILURE",
+                        target_domain="IAM",
+                        target_table="users",
+                        target_id="unknown",
+                        actor_user_id=None,
+                        client_ip=ip,
+                        user_agent=user_agent,
+                        description=f"알 수 없는 계정('{login_in.login_id}')으로 로그인 시도",
+                    ),
+                )
+                await db.commit()
+                
             raise UnauthorizedException(domain=DOMAIN, error_code=ErrorCode.AUTH_FAILED)
 
-        # 4. 계정 잠금 상태 확인
+        # 4. 계정 상태 확인 (잠금/비활성화)
         if user.login_fail_count >= 5:
+            await AuditLogService.create_audit_log(
+                db,
+                AuditLogCreate(
+                    action_type="ACCOUNT_LOCKED",
+                    target_domain="IAM",
+                    target_table="users",
+                    target_id=str(user.id),
+                    actor_user_id=user.id,
+                    client_ip=ip,
+                    user_agent=user_agent,
+                    description=f"사용자 '{user.login_id}' 계정 잠금 (비밀번호 5회 실패)",
+                ),
+            )
+            await db.commit()
             raise ForbiddenException(domain=DOMAIN, error_code=ErrorCode.ACCOUNT_LOCKED)
 
         if not user.is_active:

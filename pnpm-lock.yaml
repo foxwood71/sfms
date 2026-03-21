@@ -13,13 +13,13 @@ importers:
         version: 10.30.3
     devDependencies:
       '@google/gemini-cli':
-        specifier: ^0.33.2
-        version: 0.33.2(express@5.2.1)
+        specifier: ^0.34.0
+        version: 0.34.0(express@5.2.1)
 
 packages:
 
-  '@a2a-js/sdk@0.3.10':
-    resolution: {integrity: sha512-t6w5ctnwJkSOMRl6M9rn95C1FTHCPqixxMR0yWXtzhZXEnF6mF1NAK0CfKlG3cz+tcwTxkmn287QZC3t9XPgrA==}
+  '@a2a-js/sdk@0.3.11':
+    resolution: {integrity: sha512-pXjjlL0ZYHgAxObov1J+W3ylfQV0rOrDBB8Eo4a9eCunqs7iNW5OIfMcV8YnZQdzeVSRomj8jHeudVz0zc4RNw==}
     engines: {node: '>=18'}
     peerDependencies:
       '@bufbuild/protobuf': ^2.10.2
@@ -49,6 +49,9 @@ packages:
   '@babel/helper-validator-identifier@7.28.5':
     resolution: {integrity: sha512-qSs4ifwzKJSV39ucNjsvc6WVHs6b7S03sOh2OcHF9UHfVPqWWALUsNUVzhSBiItjRZoLHx7nIarVjqKVusUZ1Q==}
     engines: {node: '>=6.9.0'}
+
+  '@bufbuild/protobuf@2.11.0':
+    resolution: {integrity: sha512-sBXGT13cpmPR5BMgHE6UEEfEaShh5Ror6rfN3yEK5si7QVrtZg8LEPQb0VVhiLRUslD2yLnXtnRzG035J/mZXQ==}
 
   '@google-cloud/common@5.0.2':
     resolution: {integrity: sha512-V7bmBKYQyu0eVG2BFejuUjlBt+zrya6vtsKdY+JxMM/dNntPF41vZ9+LhOshEUH01zOHEqBSvI7Dad7ZS6aUeA==}
@@ -99,12 +102,12 @@ packages:
     resolution: {integrity: sha512-Orxzlfb9c67A15cq2JQEyVc7wEsmFBmHjZWZYQMUyJ1qivXyMwdyNOs9odi79hze+2zqdTtu1E19IM/FtqZ10g==}
     engines: {node: '>=14'}
 
-  '@google/gemini-cli-core@0.33.2':
-    resolution: {integrity: sha512-uZJqueJ/W/VgHgnsmA5QTixZBNj61vXuDLmFN0t3WATLqYEM3dGcuPYIOYGHagH4RxIdXXOQ9K2B3b3mTN8Hug==}
+  '@google/gemini-cli-core@0.34.0':
+    resolution: {integrity: sha512-WIaX66NCw7UBscdQMMEOnwhRFYpDAe+UMNC5v/xJVHE6pRCCET7HNv93rh9t7YNvtIlVby2aL7CCT6WphSRCHQ==}
     engines: {node: '>=20'}
 
-  '@google/gemini-cli@0.33.2':
-    resolution: {integrity: sha512-66N3BA1K6MyOzFA4z2NkzqIYCROCpeMpHDzwXYR28jMur44onvut6293sYHmpdcroxwXNjYIif5r6fmg9TIiag==}
+  '@google/gemini-cli@0.34.0':
+    resolution: {integrity: sha512-dbrlpK6GSkQYLHZ43jcpjzTBSmUXOAdJcaBkKBAjAogFHfRoQmdXbDOeD8ETK/D+d6iCWI9dvaAcNVSyb34XZw==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -2278,10 +2281,11 @@ packages:
 
 snapshots:
 
-  '@a2a-js/sdk@0.3.10(@grpc/grpc-js@1.14.3)(express@5.2.1)':
+  '@a2a-js/sdk@0.3.11(@bufbuild/protobuf@2.11.0)(@grpc/grpc-js@1.14.3)(express@5.2.1)':
     dependencies:
       uuid: 11.1.0
     optionalDependencies:
+      '@bufbuild/protobuf': 2.11.0
       '@grpc/grpc-js': 1.14.3
       express: 5.2.1
 
@@ -2301,6 +2305,8 @@ snapshots:
       picocolors: 1.1.1
 
   '@babel/helper-validator-identifier@7.28.5': {}
+
+  '@bufbuild/protobuf@2.11.0': {}
 
   '@google-cloud/common@5.0.2':
     dependencies:
@@ -2388,9 +2394,10 @@ snapshots:
 
   '@google-cloud/promisify@4.0.0': {}
 
-  '@google/gemini-cli-core@0.33.2(express@5.2.1)':
+  '@google/gemini-cli-core@0.34.0(express@5.2.1)':
     dependencies:
-      '@a2a-js/sdk': 0.3.10(@grpc/grpc-js@1.14.3)(express@5.2.1)
+      '@a2a-js/sdk': 0.3.11(@bufbuild/protobuf@2.11.0)(@grpc/grpc-js@1.14.3)(express@5.2.1)
+      '@bufbuild/protobuf': 2.11.0
       '@google-cloud/logging': 11.2.1
       '@google-cloud/opentelemetry-cloud-monitoring-exporter': 0.21.0(@opentelemetry/api@1.9.0)(@opentelemetry/core@2.6.0(@opentelemetry/api@1.9.0))(@opentelemetry/resources@2.6.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-metrics@2.6.0(@opentelemetry/api@1.9.0))
       '@google-cloud/opentelemetry-cloud-trace-exporter': 3.0.0(@opentelemetry/api@1.9.0)(@opentelemetry/core@2.6.0(@opentelemetry/api@1.9.0))(@opentelemetry/resources@2.6.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.6.0(@opentelemetry/api@1.9.0))
@@ -2433,6 +2440,7 @@ snapshots:
       html-to-text: 9.0.5
       https-proxy-agent: 7.0.6
       ignore: 7.0.5
+      ipaddr.js: 1.9.1
       js-yaml: 4.1.1
       marked: 15.0.12
       mime: 4.0.7
@@ -2462,7 +2470,6 @@ snapshots:
       keytar: 7.9.0
       node-pty: 1.1.0
     transitivePeerDependencies:
-      - '@bufbuild/protobuf'
       - '@cfworker/json-schema'
       - '@types/emscripten'
       - bufferutil
@@ -2472,10 +2479,10 @@ snapshots:
       - tree-sitter
       - utf-8-validate
 
-  '@google/gemini-cli@0.33.2(express@5.2.1)':
+  '@google/gemini-cli@0.34.0(express@5.2.1)':
     dependencies:
       '@agentclientprotocol/sdk': 0.12.0(zod@3.25.76)
-      '@google/gemini-cli-core': 0.33.2(express@5.2.1)
+      '@google/gemini-cli-core': 0.34.0(express@5.2.1)
       '@google/genai': 1.30.0(@modelcontextprotocol/sdk@1.27.1(zod@3.25.76))
       '@iarna/toml': 2.2.5
       '@modelcontextprotocol/sdk': 1.27.1(zod@3.25.76)
@@ -2515,7 +2522,6 @@ snapshots:
       yargs: 17.7.2
       zod: 3.25.76
     transitivePeerDependencies:
-      - '@bufbuild/protobuf'
       - '@cfworker/json-schema'
       - '@types/emscripten'
       - '@types/react'

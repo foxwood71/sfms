@@ -1,77 +1,45 @@
-# 📘 SFMS Phase 1 DATABASE 설계서 - 시스템 관리 (SYS) (Revised v1.4)
+# 📘 SFMS Phase 1 DB - 02 시스템 관리 (SYS) 설계서
 
-* **문서 버전:** v1.4 (Actual Implementation Sync)
-* **최종 수정일:** 2026-03-07
-* **대상 스키마:** `sys`
-
----
-
-## 1. 🗺️ 설계 개요
-
-시스템 전반의 메타데이터, 보안 감사 로그, 문서 번호 채번 규칙을 관리하는 기반 도메인입니다.
-
-### 1.1 주요 역할
-
-* **도메인 관리**: 시스템 내 설치된 모듈(스키마) 정보 정의
-* **감사 로그**: 데이터 변경 이력(Snapshot) 및 행위 추적 (PGroonga 전문 검색 적용)
-* **자동 채번**: 문서 번호(INV-2024-001 등)의 규칙 정의 및 발급 로직 제공
+* **문서 버전:** v1.3 (Security Audit Policy Update)
+* **최종 수정일:** 2026-03-21
+* **도메인:** `SYS` (System)
+* **관련 스키마:** `sys`
 
 ---
 
-## 2. 🗄️ 상세 스키마 정의 (Schema Definition)
-
-### 2.1 Table Specification
-
-| Table Name | Description | PK Type | Remarks |
-| --- | --- | --- | --- |
-| `system_domains` | 시스템 모듈(도메인) 등록 | `BigSerial` | FAC, USR, CMM 등 |
-| `audit_logs` | 데이터 변경 및 시스템 행위 감사 로그 | `BigSerial` | JSONB Snapshot, PGroonga 인덱스 |
-| `sequence_rules` | 문서 번호 자동 채번 규칙 정의 | `BigSerial` | 도메인별/접두어별 관리 |
-
-### 2.2 주요 함수 (Functions)
-
-* **`sys.trg_set_updated_at()`**: 모든 테이블의 `updated_at` 필드를 자동 갱신하는 전역 트리거 함수.
-* **`sys.fn_get_next_sequence()`**: 동시성을 보장하며 규칙에 맞는 다음 문서 번호를 생성하는 함수.
+## 1. 🏗️ 도메인 개요
+시스템 전반의 인프라 성격의 데이터(감사 로그, 자동 채번 규칙, 도메인 메타데이터)를 관리합니다.
 
 ---
 
-## 3. 🗺️ ERD (Entity Relationship Diagram)
+## 2. 📊 테이블 명세
 
-```mermaid
-erDiagram
-    sys_system_domains ||--o{ sys_audit_logs : "1:N (도메인별 로그)"
-    sys_system_domains ||--o{ sys_sequence_rules : "1:N (도메인별 채번규칙)"
+### 2.1 감사 로그 (`sys.audit_logs`)
+시스템 내에서 발생하는 모든 데이터 변경 및 보안 이벤트를 기록합니다.
 
-    sys_system_domains {
-        bigint id PK
-        string domain_code UK "FAC, USR 등"
-        string schema_name UK
-        boolean is_active
-    }
-    sys_audit_logs {
-        bigint id PK
-        bigint actor_user_id FK "행위자"
-        string action_type "CREATE, UPDATE 등"
-        string target_table
-        jsonb snapshot "변경 데이터"
-        text description "전문검색 대상"
-    }
-    sys_sequence_rules {
-        bigint id PK
-        string domain_code FK
-        string prefix "접두어"
-        string current_year
-        bigint current_seq
-    }
+| 컬럼명 | 타입 | 제약 조건 | 설명 |
+| :--- | :--- | :---: | :--- |
+| `id` | BIGSERIAL | PK | 로그 고유 ID |
+| `actor_user_id` | BIGINT | FK (usr.users) | 행위 수행자 (시스템 시 NULL) |
+| `action_type` | VARCHAR(20) | NOT NULL | CREATE, UPDATE, DELETE, LOGIN, LOGIN_FAILURE, ACCOUNT_LOCKED |
+| `target_domain` | VARCHAR(3) | NOT NULL | 대상 업무 도메인 (USR, FAC 등) |
+| `target_table` | VARCHAR(50) | NOT NULL | 변경이 발생한 테이블명 |
+| `target_id` | VARCHAR(50) | NOT NULL | 대상 데이터의 식별자(PK) |
+| `snapshot` | JSONB | NOT NULL | 변경 데이터의 JSON 스냅샷 (기본값: '{}') |
+| `client_ip` | VARCHAR(50) | | 요청자 IP 주소 |
+| `user_agent` | TEXT | | 접속 브라우저/기기 정보 |
+| `description` | TEXT | | 행위에 대한 비즈니스적 설명 |
+| `created_at` | TIMESTAMPTZ | DEFAULT NOW() | 발생 일시 |
 
-    %% 스타일링
-    classDef sys fill:#ECEFF1,stroke:#607D8B,stroke-width:2px,color:#000
-    class sys_system_domains,sys_audit_logs,sys_sequence_rules sys
-```
+#### [인덱스 전략]
+*   `idx_audit_logs_created_at`: 로그 발생 일시 역순 조회 최적화 (DESC)
+*   `idx_audit_logs_actor_id`: 특정 사용자별 행위 추적 최적화
+*   `idx_audit_logs_description_pg`: `PGroonga`를 통한 상세 설명 전문 검색(Full-text Search) 지원
 
 ---
 
-## 4. 🚀 특이사항
+## 🛡️ 3. 보안 감사 정책 (Security Policy)
 
-* **보안 강화**: `audit_logs`는 사용자의 IP와 User-Agent를 기록하여 추적성을 보장합니다.
-* **검색 최적화**: 로그의 `description` 및 `snapshot` 필드에는 `pgroonga` 인덱스를 설정하여 대량의 로그에서도 고속 검색이 가능합니다.
+1.  **로그인 실패 기록**: 단순 오류 메시지 외에도 `LOGIN_FAILURE` 이벤트를 기록하여 브루트 포스 공격을 감시합니다.
+2.  **계정 잠금**: 연속 실패로 인한 계정 잠금 시 `ACCOUNT_LOCKED`를 기록하여 관리자 알림의 근거로 활용합니다.
+3.  **데이터 무결성**: `snapshot` 컬럼은 절대 `NULL`을 허용하지 않으며, 데이터가 없는 경우 반드시 빈 JSON 객체(`{}`)를 삽입합니다.

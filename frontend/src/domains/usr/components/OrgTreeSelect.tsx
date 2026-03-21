@@ -42,7 +42,11 @@ const OrgTreeSelect: React.FC<OrgTreeSelectProps> = ({
 	return (
 		<TreeSelect
 			style={{ width: "100%" }}
-			dropdownStyle={{ maxHeight: 400, overflow: "auto" }}
+			styles={{
+				popup: {
+					root: { maxHeight: 400, overflow: "auto" },
+				},
+			}}
 			placeholder={placeholder}
 			treeData={treeData}
 			treeDefaultExpandAll

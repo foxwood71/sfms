@@ -149,6 +149,32 @@ class FacilityService:
         await db.refresh(facility)
         return FacilityRead.model_validate(facility)
 
+    @staticmethod
+    async def delete_facility(db: AsyncSession, facility_id: int) -> None:
+        """시설을 삭제합니다. 하위 공간이 있는 경우 삭제가 제한될 수 있습니다.
+
+        Args:
+            db (AsyncSession): 데이터베이스 비동기 세션
+            facility_id (int): 삭제할 시설 ID
+
+        Raises:
+            NotFoundException: 대상 시설이 존재하지 않을 때 발생
+            BadRequestException: 하위 공간이 존재하여 삭제할 수 없을 때 발생
+
+        """
+        facility = await FacilityService.get_facility(db, facility_id)
+
+        # 하위 공간 존재 여부 확인
+        stmt = select(Space).where(Space.facility_id == facility_id)
+        result = await db.execute(stmt)
+        if result.scalars().first():
+            raise BadRequestException(
+                domain=DOMAIN, error_code=ErrorCode.HAS_CHILD_DATA
+            )
+
+        await db.delete(facility)
+        await db.commit()
+
 
 class SpaceService:
     """시설 내부의 공간(건물, 층, 호실 등) 계층 구조를 관리하는 서비스 클래스입니다.
@@ -310,3 +336,31 @@ class SpaceService:
         # 지연 로딩 방지
         data = {c.name: getattr(space, c.name) for c in space.__table__.columns}
         return SpaceRead.model_validate(data)
+
+    @staticmethod
+    async def delete_space(db: AsyncSession, space_id: int) -> None:
+        """공간을 삭제합니다. 하위 공간이 있는 경우 삭제가 제한됩니다.
+
+        Args:
+            db (AsyncSession): 데이터베이스 비동기 세션
+            space_id (int): 삭제할 공간 ID
+
+        Raises:
+            NotFoundException: 대상 공간이 존재하지 않을 때 발생
+            BadRequestException: 하위 공간이 존재하여 삭제할 수 없을 때 발생
+
+        """
+        space = await db.get(Space, space_id)
+        if not space:
+            raise NotFoundException(domain=DOMAIN, error_code=ErrorCode.NOT_FOUND)
+
+        # 하위 공간 존재 여부 확인
+        stmt = select(Space).where(Space.parent_id == space_id)
+        result = await db.execute(stmt)
+        if result.scalars().first():
+            raise BadRequestException(
+                domain=DOMAIN, error_code=ErrorCode.HAS_CHILD_DATA
+            )
+
+        await db.delete(space)
+        await db.commit()

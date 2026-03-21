@@ -75,14 +75,8 @@ export const menuConfig: MenuItem[] = [
 		resource: "FAC",
 		children: [
 			{
-				key: "fac/spaces",
-				path: "/fac/spaces",
-				resource: "FAC",
-				action: "READ",
-			},
-			{
-				key: "fac/facilities",
-				path: "/fac/facilities",
+				key: "fac/manage",
+				path: "/fac/manage",
 				resource: "FAC",
 				action: "READ",
 			},

@@ -1,126 +1,72 @@
-# 📘 SFMS Phase 1: 통합 설계서 (Foundation & Security)
+# 📗 SFMS Phase 1: 백엔드 아키텍처 및 DB 설계 표준
 
-* **프로젝트명:** SFMS (Sewage Facility Management System)
-* **최종 수정일:** 2026-03-08
-* **단계:** Phase 1 (기반 구축 및 보안)
+* **프로젝트명:** SFMS (Smart Facility Management System)
+* **최종 수정일:** 2026-03-21 (API 응답 및 페이징 표준 고도화)
+* **단계:** Phase 1 (Foundation & Core API)
 * **기술 스택:**
-    * **Backend:** Python 3.13, FastAPI, SQLAlchemy 2.0 (Async), Pydantic v2
-    * **Database:** PostgreSQL 16 + **PGroonga** (한글/JSONB 검색 최적화)
-    * **Caching:** Redis (Session, Blacklist, Sequence Lock)
-    * **Testing:** Pytest + **AnyIO** (pytest-asyncio 미사용)
+    * **Language:** Python 3.13 (with `uv` package manager)
+    * **Framework:** **FastAPI**
+    * **ORM:** SQLAlchemy 2.0 (Async mode)
+    * **Database:** **PostgreSQL 16** (with PGroonga), **Redis 7**
+    * **Validation:** Pydantic v2
 
 ---
 
-## 1. 🏗️ 프로젝트 구조 (Project Structure)
+## 1. 🏗️ API 설계 표준 (RESTful API)
 
-**Domain-Driven Design (DDD)**의 경량화 버전인 Modular Monolith 구조를 채택하여 도메인 간 독립성을 유지합니다.
+### 1.1 공통 응답 규격 (Global Response)
+모든 API 응답은 `APIResponse` 클래스로 래핑되어 일관된 본문을 반환합니다.
 
-```text
-backend/
-├── app/
-│   ├── core/               # 전역 설정 및 인프라 레이어
-│   │   ├── config.py       # 환경변수 및 전역 설정
-│   │   ├── database.py     # SQLAlchemy 엔진 및 세션 관리
-│   │   ├── security.py     # bcrypt(Python 3.13) 암호화 및 JWT 로직
-│   │   ├── responses.py    # APIResponse 표준 규격 정의
-│   │   ├── dependencies.py # Annotated 기반 공통 의존성
-│   │   ├── codes.py        # 시스템 공통 에러/성공 코드
-│   │   └── exceptions.py   # 커스텀 예외 클래스
-│   ├── api/v1/             # API 엔드포인트 통합 레이어
-│   │   └── api_router.py   # 모든 도메인 라우터 통합
-│   ├── domains/            # 비즈니스 로직 레이어 (도메인별 격리)
-│   │   ├── {domain}/       # cmm, sys, iam, usr, fac 등
-│   │   │   ├── __init__.py # 도메인 코드 정의 (DOMAIN = "FAC" 등)
-│   │   │   ├── models.py   # SQLAlchemy 테이블 모델
-│   │   │   ├── schemas.py  # Pydantic 데이터 검증 스키마
-│   │   │   ├── services.py # 핵심 비즈니스 로직 (Service Class)
-│   │   │   └── router.py   # FastAPI API 엔드포인트
-│   └── main.py             # FastAPI 애플리케이션 진입점
-├── database/               # PGSQL 스키마 DDL 및 시드 데이터
-├── scripts/                # 관리용 쉘/파이썬 스크립트
-└── tests/                  # AnyIO 기반 도메인/통합 테스트
-```
-
----
-
-## 📜 2. 코드 문서화 표준 (Python Docstrings)
-
-백엔드 모든 코드는 **Google Style Docstrings**를 표준으로 사용하며, VS Code 인텔리센스 지원을 극대화합니다.
-
-### 2.1 클래스 및 메서드 가이드
-* 모든 도메인 서비스(`Service`) 및 라우터(`Router`) 메서드는 독스트링을 필수로 포함합니다.
-* 클래스 상단에는 클래스의 역할과 책임을 기술합니다.
-
-```python
-class FacilityService:
-    """시설물 관련 비즈니스 로직을 처리하는 클래스입니다.
-    
-    이 클래스는 시설의 생성, 수정, 삭제 및 공간 계층 구조 조립을 담당합니다.
-    """
-
-    @staticmethod
-    async def create_facility(db: AsyncSession, obj_in: FacilityCreate, actor_id: int) -> FacilityRead:
-        """신규 시설을 데이터베이스에 등록합니다.
-
-        Args:
-            db (AsyncSession): 비동기 DB 세션
-            obj_in (FacilityCreate): 시설 생성 정보 스키마
-            actor_id (int): 행위 수행자의 고유 ID
-
-        Returns:
-            FacilityRead: 생성된 시설 정보 (지연 로딩 방지를 위해 스키마로 변환됨)
-
-        Raises:
-            ConflictException: 동일한 시설 코드가 이미 존재할 경우 발생
-        """
-        # ... 구현부
-```
-
----
-
-## 🗄️ 3. 데이터베이스 및 삭제 정책
-
-### 3.1 삭제 전략 (Delete Policy)
-
-데이터의 성격에 따라 삭제 방식을 이원화하여 데이터 무결성을 보장합니다.
-
-* **Soft Delete (논리 삭제)**: 참조 관계가 복잡하고 이력 보존이 중요한 엔티티.
-    * 대상: `User` (`is_active` 필드 사용), `Attachment` (`is_deleted` 필드 사용).
-* **Hard Delete (물리 삭제 + 제약)**: 구조적 틀을 형성하는 엔티티.
-    * 대상: `Organization`, `Space`, `Role`, `SequenceRule`.
-    * 제약: 하위 데이터(자식 노드 또는 소속 사용자)가 존재할 경우 삭제가 엄격히 차단됨 (`ConflictException`).
-
----
-
-## 🛠️ 4. 백엔드 개발 표준 (Engineering Standards)
-
-### 4.1 의존성 주입 (Dependency Injection)
-반드시 `Annotated` 문법을 사용하며, 기본값이 있는 인자(`Query` 등)는 매개변수 목록의 가장 뒤에 배치합니다.
-```python
-db: Annotated[AsyncSession, Depends(get_db)]
-```
-
-### 4.2 서비스 레이어 및 지연 로딩 방지 (중요)
-비동기 환경에서의 `MissingGreenlet` 에러를 원천 차단하기 위해, 서비스 레이어는 항상 **SQLAlchemy 모델 대신 Pydantic Read 스키마를 반환**해야 합니다.
-* **전략**: 트리 구조 조립 시 모델 데이터를 딕셔너리로 추출하여 스키마를 생성하거나, `joinedload`를 통해 관계를 즉시 로드합니다.
-
-### 4.3 보안 (Security)
-* **Password**: Python 3.13 호환성을 위해 `passlib` 대신 **`bcrypt` 라이브러리를 직접 호출**하여 해싱합니다.
-* **JWT**: 리프레시 토큰 로테이션(RTR) 및 Redis 기반 블랙리스트를 필수로 적용합니다.
-
----
-
-## 📡 5. 인터페이스 규격 (API Standard)
-
-### 5.1 공통 응답 (Envelope Pattern)
-모든 응답은 `APIResponse` 클래스를 사용하며, 생성 시 해당 도메인 코드를 인자로 전달합니다.
 ```json
 {
-  "success": true,
-  "domain": "FAC",
-  "code": 200,
-  "message": "성공",
+  "domain": "USR",
+  "success_code": 2000,
+  "message": "SUCCESS",
   "data": { ... }
 }
 ```
+
+### 1.2 목록 조회 및 페이징 표준
+대량의 데이터를 반환하는 목록 API는 반드시 페이징 처리를 수행하며, `data` 필드 내부에 목록과 전체 건수를 포함합니다.
+
+* **요청 파라미터**: `page` (1부터 시작), `size` (페이지 크기)
+* **응답 규격**: 
+  ```json
+  "data": {
+    "items": [ ... ],
+    "total": 1250
+  }
+  ```
+
+### 1.3 에러 처리 정책
+* 백엔드는 가독성을 위한 한글 메시지 대신 **영문 에러 코드**를 반환합니다. (예: `USER_NOT_FOUND`, `TOKEN_BLACKLISTED`)
+* 프론트엔드는 이 코드를 키로 사용하여 로케일에 맞는 언어로 치환하여 출력합니다.
+
 ---
+
+## 🔐 2. 보안 및 권한 정책
+
+### 2.1 인증 및 세션 (JWT)
+* **Refresh Token Rotation (RTR)**: 리프레시 토큰 사용 시마다 기존 토큰을 무효화하고 새 세트를 발급합니다.
+* **Token Blacklisting**: 로그아웃 시 Access/Refresh 토큰을 Redis에 등록하여 즉각적인 만료를 강제합니다.
+
+### 2.2 동적 슈퍼유저 권한 감지
+특정 역할 명칭(ADMIN 등)에 의존하지 않고, 역할에 부여된 **권한 매트릭스(JSONB)**를 기반으로 관리자 여부를 판별합니다.
+* **조건**: `permissions` 데이터 내에 `{"ALL": ["*"]}` 또는 `{"all": ["*"]}` 설정이 포함된 역할을 하나라도 보유한 경우 시스템 슈퍼유저로 자동 승격됩니다.
+
+---
+
+## 💾 3. 데이터베이스 설계 원칙
+
+### 3.1 스키마 구성
+* 모든 도메인은 독립된 **PostgreSQL Schema**를 사용합니다. (예: `sys`, `usr`, `fac`)
+* 테이블 간 참조는 외래키(FK)를 통해 무결성을 보장하며, 순환 참조 발생 시 `ALTER TABLE`을 통해 후행 선언합니다.
+
+### 3.2 감사 로그 (Auditing)
+모든 데이터의 C/U/D 행위는 `sys.audit_logs`에 기록되어야 합니다.
+* **필수 기록 항목**: 행위 유형, 대상 도메인, 스냅샷(JSON), 수행자 ID, IP 주소, User-Agent.
+* **보안 감사**: 로그인 성공/실패 및 계정 잠금 이벤트도 반드시 기록 범위에 포함합니다.
+
+### 3.3 JSONB 활용 가이드
+* 확장 속성(`props`, `metadata`)은 `JSONB` 타입을 사용합니다.
+* **무결성 유지**: 데이터가 없을 경우 `NULL` 대신 빈 객체 **`'{}'::jsonb`**를 기본값으로 할당하여 애플리케이션 단의 파싱 에러를 방지합니다.

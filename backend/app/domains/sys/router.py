@@ -4,6 +4,7 @@
 RESTful 인터페이스를 제공합니다.
 """
 
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, status
@@ -16,6 +17,7 @@ from app.core.dependencies import (
 )
 from app.core.responses import APIResponse
 from app.domains.sys.schemas import (
+    AuditLogListRead,
     AuditLogRead,
     SequenceRuleCreate,
     SequenceRuleRead,
@@ -85,52 +87,6 @@ async def create_sequence_rule(
     return APIResponse(domain=DOMAIN, data=new_rule)
 
 
-@router.patch("/sequences/{rule_id}", response_model=APIResponse[SequenceRuleRead])
-async def update_sequence_rule(
-    rule_id: int,
-    obj_in: SequenceRuleUpdate,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_admin: Annotated[User, Depends(get_current_active_superuser)],
-):
-    """기존 자동 채번 규칙의 속성을 수정합니다.
-
-    Args:
-        rule_id (int): 수정할 대상 규칙의 ID
-        obj_in (SequenceRuleUpdate): 업데이트할 필드 정보
-        db (AsyncSession): 데이터베이스 비동기 세션
-        current_admin (User): 행위 수행 권한을 가진 관리자 정보
-
-    Returns:
-        APIResponse[SequenceRuleRead]: 수정 완료된 채번 규칙 정보
-
-    """
-    updated_rule = await SequenceRuleService.update_rule(
-        db, rule_id=rule_id, obj_in=obj_in, actor_id=current_admin.id
-    )
-    return APIResponse(domain=DOMAIN, data=updated_rule)
-
-
-@router.delete("/sequences/{rule_id}", response_model=APIResponse[None])
-async def delete_sequence_rule(
-    rule_id: int,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_admin: Annotated[User, Depends(get_current_active_superuser)],
-):
-    """특정 자동 채번 규칙을 영구 삭제합니다.
-
-    Args:
-        rule_id (int): 삭제할 대상 규칙의 ID
-        db (AsyncSession): 데이터베이스 비동기 세션
-        current_admin (User): 행위 수행 권한을 가진 관리자 정보
-
-    Returns:
-        APIResponse[None]: 삭제 성공 응답
-
-    """
-    await SequenceRuleService.delete_rule(db, rule_id=rule_id)
-    return APIResponse(domain=DOMAIN, data=None)
-
-
 @router.get("/sequence/{domain_code}/{prefix}/next", response_model=APIResponse[str])
 async def get_next_sequence(
     domain_code: str,
@@ -164,18 +120,22 @@ async def get_next_sequence(
 # --------------------------------------------------------
 
 
-@router.get("/audit-logs", response_model=APIResponse[list[AuditLogRead]])
+@router.get("/audit-logs", response_model=APIResponse[AuditLogListRead])
 async def list_audit_logs(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_admin: Annotated[User, Depends(get_current_active_superuser)],
+    start_date: Annotated[datetime | None, Query(description="조회 시작 일시")] = None,
+    end_date: Annotated[datetime | None, Query(description="조회 종료 일시")] = None,
+    actor_user_id: Annotated[int | None, Query(description="수행자 ID")] = None,
     target_domain: Annotated[
         str | None, Query(description="대상 도메인 (USR, FAC 등)")
     ] = None,
     action_type: Annotated[
         str | None, Query(description="행위 유형 (CREATE, LOGIN 등)")
     ] = None,
-    skip: Annotated[int, Query(ge=0, description="건너뛸 레코드 수")] = 0,
-    limit: Annotated[int, Query(ge=1, le=1000, description="최대 조회 수")] = 100,
+    keyword: Annotated[str | None, Query(description="설명 키워드 검색")] = None,
+    page: Annotated[int, Query(ge=1, description="페이지 번호")] = 1,
+    size: Annotated[int, Query(ge=1, le=100, description="페이지 크기")] = 20,
 ):
     """시스템 감사 로그 목록을 통합 조회합니다.
 
@@ -185,16 +145,29 @@ async def list_audit_logs(
     Args:
         db (AsyncSession): 데이터베이스 비동기 세션
         current_admin (User): 행위 수행 권한을 가진 관리자 정보
-        target_domain (str | None, optional): 특정 도메인 필터. 기본값은 None.
-        action_type (str | None, optional): 특정 행위 유형 필터. 기본값은 None.
-        skip (int, optional): 페이징 오프셋. 기본값은 0.
-        limit (int, optional): 조회 제한 수. 기본값은 100.
+        start_date (datetime, optional): 시작 일시
+        end_date (datetime, optional): 종료 일시
+        actor_user_id (int, optional): 특정 사용자 필터
+        target_domain (str | None, optional): 특정 도메인 필터
+        action_type (str | None, optional): 특정 행위 유형 필터
+        keyword (str | None, optional): 검색어
+        page (int, optional): 페이지 번호
+        size (int, optional): 페이지 당 조회 수
 
     Returns:
-        APIResponse[list[AuditLogRead]]: 감사 로그 목록
+        APIResponse[AuditLogListRead]: 감사 로그 목록 및 전체 건수
 
     """
-    logs = await AuditLogService.list_audit_logs(
-        db, skip=skip, limit=limit, target_domain=target_domain, action_type=action_type
+    skip = (page - 1) * size
+    items, total = await AuditLogService.list_audit_logs(
+        db,
+        skip=skip,
+        limit=size,
+        start_date=start_date,
+        end_date=end_date,
+        actor_user_id=actor_user_id,
+        target_domain=target_domain,
+        action_type=action_type,
+        keyword=keyword,
     )
-    return APIResponse(domain=DOMAIN, data=logs)
+    return APIResponse(domain=DOMAIN, data=AuditLogListRead(items=items, total=total))

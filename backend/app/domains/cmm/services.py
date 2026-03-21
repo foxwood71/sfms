@@ -6,7 +6,7 @@
 
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,6 +29,9 @@ from app.domains.cmm.schemas import (
     CodeGroupUpdate,
     NotificationCreate,
 )
+
+if TYPE_CHECKING:
+    from app.domains.cmm.schemas import CodeImportSchema
 
 from . import DOMAIN
 
@@ -74,7 +77,6 @@ class CodeService:
         result = await db.execute(stmt)
         details = result.scalars().all()
         return [CodeDetailRead.model_validate(d) for d in details]
-
 
     @staticmethod
     async def create_code_group(db: AsyncSession, obj_in: CodeGroupCreate, actor_id: int) -> CodeGroupRead:
@@ -205,7 +207,6 @@ class CodeService:
         
         # [정책] 사용 중인 코드는 비활성화 불가 체크
         if update_data.get("is_active") is False and detail.is_active:
-            # USR 도메인의 사용자들 중 해당 코드를 사용하는지 체크 (동적 체크 혹은 특정 테이블 명시)
             # 여기서는 예시로 로직만 구성하거나 공통 체크 함수 호출
             pass
 
@@ -220,7 +221,7 @@ class CodeService:
     @staticmethod
     async def bulk_import_codes(
         db: AsyncSession, 
-        items: list[Any], 
+        items: list["CodeImportSchema"], 
         actor_id: int
     ) -> dict[str, int]:
         """엑셀 데이터를 기반으로 그룹 및 상세 코드를 일괄 임포트합니다 (Upsert)."""
@@ -270,7 +271,6 @@ class CodeService:
             detail = res.scalar_one_or_none()
             
             if detail:
-                # [정책] 사용 중 중지 처리 제한 체크 필요 시 여기에 추가
                 detail.detail_name = item.detail_name
                 detail.sort_order = item.sort_order
                 detail.is_active = item.is_active

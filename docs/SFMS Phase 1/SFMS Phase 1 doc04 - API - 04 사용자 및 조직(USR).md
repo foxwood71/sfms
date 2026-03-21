@@ -28,9 +28,35 @@
 ---
 
 ## 3. 👤 사용자(User) 관리 API
-(생략: 표준 REST 규격을 따름)
 
-### 3.1 주요 DTO 스키마 (v1.5 Update)
+### 3.1 사용자 목록 조회 (Paginated List)
+*   **URL:** `GET /api/v1/usr/users`
+*   **Query Parameters:**
+    *   `keyword` (string, 선택): 이름, ID, 이메일 통합 검색
+    *   `org_id` (int, 선택): 특정 부서 소속 사용자 필터
+    *   `include_children` (boolean, 선택): 하위 부서 사용자 포함 여부
+    *   `is_active` (boolean, 선택): 재직 여부 필터
+    *   `page` (int, 선택): 페이지 번호 (기본값: 1)
+    *   `size` (int, 선택): 페이지 크기 (기본값: 20)
+*   **Success Response (UserListRead):**
+    ```json
+    {
+      "data": {
+        "items": [
+          {
+            "id": 1,
+            "login_id": "hong",
+            "name": "홍길동",
+            "org_name": "개발팀",
+            "is_active": true
+          }
+        ],
+        "total": 42
+      }
+    }
+    ```
+
+### 3.2 주요 DTO 스키마 (v1.5 Update)
 
 #### [UserUpdate] 사용자 정보 수정
 기존 기본 필드 외에 다음 필드들이 수정 가능하도록 확장되었습니다.

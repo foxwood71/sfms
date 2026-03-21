@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	Button,
 	message,
+	Modal,
 	Popconfirm,
 	Space,
 	Splitter,
@@ -19,7 +20,7 @@ import {
 } from "antd";
 import axios from "axios";
 import type React from "react";
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { LAYOUT_CONSTANTS } from "@/shared/constants/layout";
 import {
@@ -42,7 +43,7 @@ import type { ExcelColumnMapping, ExcelSheetData } from "@/shared/utils/excel";
 
 /**
  * 공통 코드 관리 페이지
- * Bento Standard v1.0 + Drawer 기반
+ * Bento Standard v1.1 + 다중 선택 지원
  */
 const CodeManagePage: React.FC = () => {
 	const { t } = useTranslation();
@@ -67,6 +68,7 @@ const CodeManagePage: React.FC = () => {
 
 	// 상태 관리
 	const [selectedGroup, setSelectedGroup] = useState<CodeGroup | null>(null);
+	const [selectedDetailKeys, setSelectedDetailKeys] = useState<React.Key[]>([]);
 	const [showInactiveGroup, setShowInactiveGroup] = useState(true);
 	const [showInactiveDetail, setShowInactiveDetail] = useState(true);
 	const [showGroupFilter, setShowGroupFilter] = useState(false);
@@ -207,6 +209,28 @@ const CodeManagePage: React.FC = () => {
 		} catch (err) { handleAxiosError(err, t("common.delete_failure")); }
 	};
 
+	const handleBulkDeleteDetails = () => {
+		if (!selectedGroup || selectedDetailKeys.length === 0) return;
+		Modal.confirm({
+			title: t("common.delete"),
+			content: t("common.bulk_delete_confirm", { count: selectedDetailKeys.length }),
+			okText: t("common.delete"),
+			okType: "danger",
+			cancelText: t("common.cancel"),
+			onOk: async () => {
+				try {
+					await Promise.all(selectedDetailKeys.map((code) => deleteCodeDetail(selectedGroup.group_code, String(code))));
+					message.success(t("common.delete_success"));
+					setSelectedDetailKeys([]);
+					queryClient.invalidateQueries({ queryKey: ["codeDetails", selectedGroup.group_code] });
+					queryClient.invalidateQueries({ queryKey: ["codeDetails", "export-full-data"] });
+				} catch (err) {
+					handleAxiosError(err, t("common.delete_failure"));
+				}
+			},
+		});
+	};
+
 	// 4. 컬럼 정의
 	const groupColumns: ProColumns<CodeGroup>[] = [
 		{ title: "그룹 코드", dataIndex: "group_code", width: 140 },
@@ -291,7 +315,7 @@ const CodeManagePage: React.FC = () => {
 						columns={detailExcelColumns} 
 						fileName={t("common.excel_filename_all_codes")}
 						uploadEnabled={true}
-						loading={importMutation.isPending} // 로딩 상태 전달
+						loading={importMutation.isPending}
 						onImport={(data) => {
 							const mappedData = data.map(item => ({
 								group_code: item["그룹 코드"] || item["group_code"],
@@ -335,7 +359,7 @@ const CodeManagePage: React.FC = () => {
 						<ProCard
 							title="코드 그룹"
 							headerBordered
-							headStyle={{ height: LAYOUT_CONSTANTS.HEADER_HEIGHT }}
+							styles={{ header: { height: LAYOUT_CONSTANTS.HEADER_HEIGHT } }}
 							extra={
 								<Space>
 									<Button type="text" icon={<FilterOutlined style={{ color: showGroupFilter ? token.colorPrimary : undefined }} />} onClick={() => setShowGroupFilter(!showGroupFilter)} />
@@ -359,11 +383,19 @@ const CodeManagePage: React.FC = () => {
 									search={false}
 									options={false}
 									pagination={false}
-									scroll={{ y: filteredGroups.length > 10 ? "calc(100vh - 380px)" : undefined }}
 									onRow={(record) => ({
-										onClick: () => setSelectedGroup(record),
-										style: { cursor: "pointer", backgroundColor: selectedGroup?.group_code === record.group_code ? token.controlItemBgActive : "inherit" },
+										onClick: () => {
+											if (selectedGroup?.group_code !== record.group_code) {
+												setSelectedGroup(record);
+												setSelectedDetailKeys([]);
+											}
+										},
+										style: {
+											cursor: "pointer",
+											backgroundColor: selectedGroup?.group_code === record.group_code ? token.controlItemBgActive : undefined,
+										},
 									})}
+									scroll={{ y: filteredGroups.length > 10 ? "calc(100vh - 380px)" : undefined }}
 								/>
 							</div>
 						</ProCard>
@@ -374,9 +406,9 @@ const CodeManagePage: React.FC = () => {
 				<Splitter.Panel>
 					<div style={{ height: "100%", background: token.colorBgContainer, borderRadius: 12, overflow: "hidden" }}>
 						<ProCard
-							title={selectedGroup ? `[${selectedGroup.group_name}] 상세 코드` : "상세 코드"}
+							title={`상세 코드 ${selectedGroup ? `(${selectedGroup.group_name})` : ""}`}
 							headerBordered
-							headStyle={{ height: LAYOUT_CONSTANTS.HEADER_HEIGHT }}
+							styles={{ header: { height: LAYOUT_CONSTANTS.HEADER_HEIGHT } }}
 							extra={
 								selectedGroup && (
 									<Space>
@@ -404,6 +436,23 @@ const CodeManagePage: React.FC = () => {
 											search={false}
 											options={false}
 											pagination={false}
+											rowSelection={{
+												selectedRowKeys: selectedDetailKeys,
+												onChange: setSelectedDetailKeys,
+											}}
+											tableAlertRender={({ selectedRowKeys, onCleanSelected }) => (
+												<Space size={24}>
+													<span>{t("common.selected_count", { count: selectedRowKeys.length })}</span>
+													<a onClick={onCleanSelected}>{t("common.clear_selection")}</a>
+												</Space>
+											)}
+											tableAlertOptionRender={() => (
+												<Space size={16}>
+													<Button danger type="link" onClick={handleBulkDeleteDetails}>
+														{t("common.bulk_delete")}
+													</Button>
+												</Space>
+											)}
 											scroll={{ y: filteredDetails.length > 10 ? "calc(100vh - 380px)" : undefined }}
 										/>
 									</div>
@@ -418,7 +467,6 @@ const CodeManagePage: React.FC = () => {
 				</Splitter.Panel>
 			</Splitter>
 
-			{/* 드로어 컴포넌트 연결 */}
 			<CodeGroupDrawer 
 				open={groupDrawerOpen} 
 				onOpenChange={setGroupDrawerOpen} 

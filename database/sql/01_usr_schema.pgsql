@@ -153,7 +153,7 @@ INSERT INTO usr.users (
     id, org_id, login_id, password_hash, emp_code, name,
     email, is_active, account_status, metadata, created_at, created_by, updated_at, updated_by
 ) VALUES (
-    0, 0, 'admin', '$2b$12$RgrL7.oDy4WZEoy5IOSrZu7.5ibAcrp80fuXGHHsMdCOZbzVrgZEu', '0000', '시스템',
+    0, 0, 'admin', '$2b$12$bEs8G.YGwEAd9HVoNhBFFeBnF/mBD3y0wC9SSvg5mcwvReRuKKxVi', '0000', '시스템',
     'admin@sfms.local', true, 'ACTIVE', '{"role": "SUPER_USER"}',
     CURRENT_TIMESTAMP, 0, CURRENT_TIMESTAMP, 0
 );

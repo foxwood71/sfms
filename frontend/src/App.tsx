@@ -8,6 +8,8 @@ import CodeManagePage from "./domains/cmm/pages/CodeManagePage";
 import LoginPage from "./domains/iam/pages/LoginPage";
 import OrganizationPage from "./domains/usr/pages/OrganizationPage";
 import UserListPage from "./domains/usr/pages/UserListPage";
+import AuditLogPage from "./domains/sys/pages/AuditLogPage";
+import AssetManagePage from "./domains/fac/pages/AssetManagePage";
 import MainLayout from "./shared/layout/MainLayout";
 import { useAuthStore } from "./shared/stores/useAuthStore";
 import { useThemeStore } from "./shared/stores/useThemeStore";
@@ -71,15 +73,8 @@ function App() {
 								element={<PagePlaceholder title={t("menu.iam-roles")} />}
 							/>
 
-							{/* 시설 및 공간 */}
-							<Route
-								path="fac/spaces"
-								element={<PagePlaceholder title={t("menu.fac-spaces")} />}
-							/>
-							<Route
-								path="fac/facilities"
-								element={<PagePlaceholder title={t("menu.fac-facilities")} />}
-							/>
+							{/* 시설 및 공간 통합 관리 */}
+							<Route path="fac/manage" element={<AssetManagePage />} />
 
 							{/* 공통 설정 */}
 							<Route path="cmm/codes" element={<CodeManagePage />} />
@@ -87,7 +82,7 @@ function App() {
 							{/* 시스템 관리 */}
 							<Route
 								path="sys/audit-logs"
-								element={<PagePlaceholder title={t("menu.sys-audit-logs")} />}
+								element={<AuditLogPage />}
 							/>
 							<Route path="sys/api-tester" element={<ApiTester />} />
 						</Route>

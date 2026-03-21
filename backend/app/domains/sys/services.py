@@ -49,35 +49,66 @@ class AuditLogService:
         db: AsyncSession,
         skip: int = 0,
         limit: int = 100,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+        actor_user_id: int | None = None,
         target_domain: str | None = None,
         action_type: str | None = None,
-    ) -> list[AuditLog]:
-        """감사 로그 목록을 검색 및 조회합니다.
+        keyword: str | None = None,
+    ) -> tuple[list[AuditLog], int]:
+        """감사 로그 목록을 상세 검색 조건과 함께 조회합니다.
 
         Args:
             db (AsyncSession): 데이터베이스 비동기 세션
             skip (int, optional): 건너뛸 레코드 수. 기본값은 0.
             limit (int, optional): 최대 조회 레코드 수. 기본값은 100.
-            target_domain (str | None, optional): 특정 업무 도메인(예: 'FAC') 필터. 기본값은 None.
-            action_type (str | None, optional): 행위 유형(예: 'CREATE') 필터. 기본값은 None.
+            start_date (datetime | None, optional): 시작 일시 필터
+            end_date (datetime | None, optional): 종료 일시 필터
+            actor_user_id (int | None, optional): 수행자 ID 필터
+            target_domain (str | None, optional): 대상 도메인 필터
+            action_type (str | None, optional): 행위 유형 필터
+            keyword (str | None, optional): 설명(description) 내 키워드 검색
 
         Returns:
-            list[AuditLog]: 조회된 감사 로그 모델 리스트
+            tuple[list[AuditLog], int]: (조회된 로그 리스트, 전체 매칭 건수)
 
         """
-        stmt = (
-            select(AuditLog)
-            .order_by(AuditLog.created_at.desc())
-            .offset(skip)
-            .limit(limit)
-        )
-        if target_domain:
-            stmt = stmt.where(AuditLog.target_domain == target_domain)
-        if action_type:
-            stmt = stmt.where(AuditLog.action_type == action_type)
+        from sqlalchemy import func
 
+        # 1. 기본 쿼리 생성
+        stmt = select(AuditLog)
+        count_stmt = select(func.count()).select_from(AuditLog)
+
+        # 2. 필터 조건 적용
+        filters = []
+        if start_date:
+            filters.append(AuditLog.created_at >= start_date)
+        if end_date:
+            filters.append(AuditLog.created_at <= end_date)
+        if actor_user_id:
+            filters.append(AuditLog.actor_user_id == actor_user_id)
+        if target_domain:
+            filters.append(AuditLog.target_domain == target_domain)
+        if action_type:
+            filters.append(AuditLog.action_type == action_type)
+        if keyword:
+            filters.append(AuditLog.description.ilike(f"%{keyword}%"))
+
+        if filters:
+            stmt = stmt.where(*filters)
+            count_stmt = count_stmt.where(*filters)
+
+        # 3. 전체 건수 조회
+        total_result = await db.execute(count_stmt)
+        total = total_result.scalar() or 0
+
+        # 4. 정렬 및 페이징 적용
+        stmt = stmt.order_by(AuditLog.created_at.desc()).offset(skip).limit(limit)
+        
         result = await db.execute(stmt)
-        return list(result.scalars().all())
+        items = list(result.scalars().all())
+
+        return items, total
 
 
 class SequenceRuleService:
