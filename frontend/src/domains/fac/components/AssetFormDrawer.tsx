@@ -1,11 +1,13 @@
 import { SaveOutlined, BuildOutlined, ClusterOutlined } from "@ant-design/icons";
-import { DrawerForm, ProForm, ProFormText, ProFormTextArea, ProFormDigit, ProFormSwitch } from "@ant-design/pro-components";
-import { Button, Col, Row, Space, Typography, theme, TreeSelect, Form } from "antd";
+import { DrawerForm, ProForm, ProFormText, ProFormTextArea, ProFormDigit, ProFormSwitch, ProFormSelect } from "@ant-design/pro-components";
+import { Button, Col, Row, Space, Typography, theme, Form } from "antd";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import OrgTreeSelect from "@/domains/usr/components/OrgTreeSelect";
-import CodeSelect from "@/domains/usr/components/CodeSelect";
+import { getFacilityCategoriesApi, getSpaceTypesApi, getSpaceFunctionsApi } from "../api";
+import type { FacilityCategory, SpaceType, SpaceFunction } from "../types";
 
 const { Title, Text } = Typography;
 
@@ -17,7 +19,7 @@ interface AssetFormDrawerProps {
 }
 
 /**
- * 시설 및 공간 통합 등록/수정 드로어
+ * 시설 및 공간 통합 등록/수정 드로어 (SFMS 차세대 표준 적용)
  */
 const AssetFormDrawer: React.FC<AssetFormDrawerProps> = ({
     open,
@@ -30,10 +32,31 @@ const AssetFormDrawer: React.FC<AssetFormDrawerProps> = ({
     const [form] = Form.useForm();
     const [mode, setMode] = useState<"add" | "edit">("add");
 
-    // 폼 내부의 name 필드 실시간 감시 (경고 방지)
-    const nameValue = Form.useWatch("name", form);
+    // useWatch를 사용하여 "not connected" 경고 방지
+    const watchedName = Form.useWatch("name", form);
 
-    // 드로어가 열릴 때 폼 초기화
+    // 기초 코드 데이터 로딩
+    const { data: categories } = useQuery({
+        queryKey: ["fac-categories"],
+        queryFn: getFacilityCategoriesApi,
+        enabled: open,
+        staleTime: 5 * 60 * 1000,
+    });
+    
+    const { data: spaceTypes } = useQuery({
+        queryKey: ["space-types"],
+        queryFn: getSpaceTypesApi,
+        enabled: open,
+        staleTime: 5 * 60 * 1000,
+    });
+    
+    const { data: spaceFunctions } = useQuery({
+        queryKey: ["space-functions"],
+        queryFn: getSpaceFunctionsApi,
+        enabled: open,
+        staleTime: 5 * 60 * 1000,
+    });
+
     useEffect(() => {
         if (open) {
             if (editingNode?.data?.id) {
@@ -56,8 +79,7 @@ const AssetFormDrawer: React.FC<AssetFormDrawerProps> = ({
         ? (isFac ? t("fac.facility.new_facility") : t("fac.space.new_space"))
         : (isFac ? t("fac.facility.detail_title") : t("fac.space.detail_title"));
 
-    // 타이틀에 표시할 이름 결정
-    const displayHeaderName = nameValue || editingNode?.data?.name || (isFac ? t("fac.facility.name") : t("fac.space.name"));
+    const displayHeaderName = watchedName || editingNode?.data?.name || (isFac ? t("fac.facility.name") : t("fac.space.name"));
 
     return (
         <DrawerForm
@@ -69,9 +91,6 @@ const AssetFormDrawer: React.FC<AssetFormDrawerProps> = ({
             drawerProps={{ 
                 destroyOnClose: true, 
                 width: 550,
-                afterOpenChange: (visible) => {
-                    if (!visible) form.resetFields();
-                }
             }}
             layout="vertical"
         >
@@ -87,7 +106,13 @@ const AssetFormDrawer: React.FC<AssetFormDrawerProps> = ({
 
             <Row gutter={16}>
                 <Col span={12}>
-                    <ProFormText name="code" label={t("common.code")} rules={[{ required: true }]} disabled={mode === "edit"} />
+                    <ProFormText 
+                        name="code" 
+                        label={t("common.code")} 
+                        placeholder={t("fac.manage.auto_generated")}
+                        disabled={true} 
+                        tooltip={t("fac.manage.code_tooltip")}
+                    />
                 </Col>
                 <Col span={12}>
                     <ProFormText name="name" label={t("common.name")} rules={[{ required: true }]} />
@@ -95,21 +120,37 @@ const AssetFormDrawer: React.FC<AssetFormDrawerProps> = ({
             </Row>
 
             {isFac ? (
-                // 시설 전용 필드
-                <ProFormText name="address" label={t("fac.facility.address")} />
+                <>
+                    <Row gutter={16}>
+                        <Col span={24}>
+                            <ProFormSelect 
+                                name="category_code" 
+                                label={t("fac.facility.category")}
+                                options={categories?.data?.map((c: FacilityCategory) => ({ label: c.name, value: c.code })) || []}
+                                rules={[{ required: true }]}
+                            />
+                        </Col>
+                    </Row>
+                    <ProFormText name="address" label={t("fac.facility.address")} />
+                </>
             ) : (
-                // 공간 전용 필드
                 <>
                     <Row gutter={16}>
                         <Col span={12}>
-                            <ProForm.Item name="space_type_id" label={t("fac.space.type")}>
-                                <CodeSelect groupCode="SPACE_TYPE" />
-                            </ProForm.Item>
+                            <ProFormSelect 
+                                name="space_type_code" 
+                                label={t("fac.space.type")}
+                                options={spaceTypes?.data?.map((t: SpaceType) => ({ label: t.name, value: t.code })) || []}
+                                rules={[{ required: true }]}
+                            />
                         </Col>
                         <Col span={12}>
-                            <ProForm.Item name="space_function_id" label={t("fac.space.function")}>
-                                <CodeSelect groupCode="SPACE_FUNC" />
-                            </ProForm.Item>
+                            <ProFormSelect 
+                                name="space_func_code" 
+                                label={t("fac.space.function")}
+                                options={spaceFunctions?.data?.map((f: SpaceFunction) => ({ label: f.name, value: f.code })) || []}
+                                rules={[{ required: true }]}
+                            />
                         </Col>
                     </Row>
                     <Row gutter={16}>

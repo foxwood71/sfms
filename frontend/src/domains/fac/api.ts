@@ -6,6 +6,32 @@ import { http } from "@/shared/api/http";
 import type { APIResponse } from "@/shared/api/types";
 import type { Facility, FacilityParams, Space, SpaceParams } from "./types";
 
+// --- 0. 기초 코드 (Base Codes) 조회 ---
+
+/**
+ * 시설 카테고리 목록 조회
+ */
+export const getFacilityCategoriesApi = async () => {
+    const response = await http.get<APIResponse<any[]>>("/fac/categories");
+    return response.data;
+};
+
+/**
+ * 공간 물리적 유형 목록 조회
+ */
+export const getSpaceTypesApi = async () => {
+    const response = await http.get<APIResponse<any[]>>("/fac/space-types");
+    return response.data;
+};
+
+/**
+ * 공간 기능적 용도 목록 조회
+ */
+export const getSpaceFunctionsApi = async () => {
+    const response = await http.get<APIResponse<any[]>>("/fac/space-functions");
+    return response.data;
+};
+
 // --- 1. 시설물 (Facilities) 관리 ---
 
 /**

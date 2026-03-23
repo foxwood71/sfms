@@ -1,19 +1,14 @@
 /**
  * FAC (Facility & Space Management) 도메인 타입 정의
- * 백엔드 schemas.py 및 models.py와 동기화
  */
-
-import type { Attachment } from "../cmm/types";
 
 /**
- * 시설 카테고리 (WTP: 하수처리장, PS: 펌프장 등)
+ * 시설 카테고리 (공통 코드 통합 뷰)
  */
 export interface FacilityCategory {
-    id: number;
     code: string;
     name: string;
-    description?: string;
-    is_active: boolean;
+    sort_order: number;
 }
 
 /**
@@ -21,7 +16,7 @@ export interface FacilityCategory {
  */
 export interface Facility {
     id: number;
-    category_id?: number;
+    category_code: string;
     representative_image_id?: string;
     code: string;
     name: string;
@@ -34,23 +29,21 @@ export interface Facility {
 }
 
 /**
- * 공간 물리적 유형 (BLDG: 건물, FLOOR: 층, ROOM: 호실 등)
+ * 공간 물리적 유형 (공통 코드 통합 뷰)
  */
 export interface SpaceType {
-    id: number;
     code: string;
     name: string;
-    is_active: boolean;
+    sort_order: number;
 }
 
 /**
- * 공간 기능적 용도 (OFFICE: 사무실, ELEC: 전기실 등)
+ * 공간 기능적 용도 (공통 코드 통합 뷰)
  */
 export interface SpaceFunction {
-    id: number;
     code: string;
     name: string;
-    is_active: boolean;
+    sort_order: number;
 }
 
 /**
@@ -61,8 +54,8 @@ export interface Space {
     facility_id: number;
     parent_id?: number;
     representative_image_id?: string;
-    space_type_id?: number;
-    space_function_id?: number;
+    space_type_code: string;
+    space_func_code: string;
     code: string;
     name: string;
     area_size?: number;

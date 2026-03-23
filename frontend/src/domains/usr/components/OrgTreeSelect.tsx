@@ -13,7 +13,8 @@ interface OrgTreeSelectProps extends TreeSelectProps {
 }
 
 /**
- * 조직(부서) 구조를 트리 선택 목록으로 표시하는 컴포넌트 (Zero Any 적용)
+ * 조직(부서) 구조를 트리 선택 목록으로 표시하는 컴포넌트
+ * [FIX] ID 0(시스템 관리) 처리 오류 방지를 위해 모든 value를 문자열로 관리합니다.
  */
 const OrgTreeSelect: React.FC<OrgTreeSelectProps> = ({ 
 	includeInactive = false, 
@@ -25,13 +26,13 @@ const OrgTreeSelect: React.FC<OrgTreeSelectProps> = ({
 		queryFn: () => getOrganizationsApi("tree", includeInactive ? undefined : true),
 	});
 
-	// API 응답 데이터를 Ant Design TreeSelect 데이터 규격(DataNode)으로 변환
+	// [FIX] key와 value를 명시적으로 String으로 변환하여 숫자 0의 함정 회피
 	const treeData = useMemo(() => {
 		const mapNodes = (items: Organization[]): DataNode[] => {
 			return items.map((item) => ({
 				title: item.name,
-				value: item.id,
-				key: item.id,
+				value: String(item.id),
+				key: String(item.id),
 				disabled: !item.is_active,
 				children: item.children ? mapNodes(item.children) : [],
 			}));

@@ -48,7 +48,7 @@ export const deleteCodeGroup = async (groupCode: string) => {
 
 /** 특정 그룹의 상세 코드 목록을 조회합니다. */
 export const getCodeDetails = async (groupCode: string) => {
-	const response = await http.get(`/cmm/codes/${groupCode}`);
+	const response = await http.get<APIResponse<CodeGroup>>(`/cmm/codes/${groupCode}`);
 	// response.data는 APIResponse 객체이고, response.data.data가 실제 CodeGroup 객체입니다.
 	return response.data?.data?.details || [];
 };

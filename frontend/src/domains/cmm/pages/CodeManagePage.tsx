@@ -1,26 +1,14 @@
-import { DeleteOutlined, EditOutlined, FilterOutlined, PlusOutlined, SaveOutlined, CloseOutlined } from "@ant-design/icons";
-import type { ProColumns } from "@ant-design/pro-components";
+import { DeleteOutlined, EditOutlined, FilterOutlined, PlusOutlined, SaveOutlined, CloseOutlined, ReloadOutlined } from "@ant-design/icons";
+import type { ActionType, ProColumns } from "@ant-design/pro-components";
 import {
 	PageContainer,
 	ProCard,
 	ProTable,
 } from "@ant-design/pro-components";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-	Button,
-	message,
-	Modal,
-	Popconfirm,
-	Space,
-	Splitter,
-	Switch,
-	Tag,
-	Typography,
-	theme,
-} from "antd";
-import axios from "axios";
+import { App, Button, Empty, Space, Splitter, theme, Tooltip } from "antd";
 import type React from "react";
-import { useMemo, useState, useEffect } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LAYOUT_CONSTANTS } from "@/shared/constants/layout";
 import {
@@ -28,458 +16,162 @@ import {
 	createCodeGroup,
 	deleteCodeDetail,
 	deleteCodeGroup,
-	exportCodesApi,
 	getCodeDetails,
 	getCodeGroups,
-	importCodesApi,
 	updateCodeDetail,
 	updateCodeGroup,
 } from "../api";
-import type { CodeDetail, CodeGroup } from "../types";
-import CodeGroupDrawer from "../components/CodeGroupDrawer";
 import CodeDetailDrawer from "../components/CodeDetailDrawer";
-import ExcelActions from "@/shared/components/ExcelActions";
-import type { ExcelColumnMapping, ExcelSheetData } from "@/shared/utils/excel";
+import CodeGroupDrawer from "../components/CodeGroupDrawer";
+import type { CodeDetail, CodeGroup, CodeGroupParams } from "../types";
 
 /**
- * 공통 코드 관리 페이지
- * Bento Standard v1.1 + 다중 선택 지원
+ * 공통 코드 관리 페이지 (Refined Single Bento Standard)
  */
 const CodeManagePage: React.FC = () => {
 	const { t } = useTranslation();
+	const { message } = App.useApp();
 	const queryClient = useQueryClient();
 	const { token } = theme.useToken();
+	const groupActionRef = useRef<ActionType>();
+	const detailActionRef = useRef<ActionType>();
 
-	// 엑셀 매핑 정의 (다운로드/업로드 공통)
-	const groupExcelColumns: ExcelColumnMapping[] = [
-		{ dataIndex: "group_code", title: "그룹 코드" },
-		{ dataIndex: "group_name", title: "그룹명" },
-		{ dataIndex: "description", title: "설명" },
-		{ dataIndex: "is_active", title: "사용여부" },
-	];
-
-	const detailExcelColumns: ExcelColumnMapping[] = [
-		{ dataIndex: "group_code", title: "그룹 코드" },
-		{ dataIndex: "detail_code", title: "상세 코드" },
-		{ dataIndex: "detail_name", title: "코드명" },
-		{ dataIndex: "sort_order", title: "정렬순서" },
-		{ dataIndex: "is_active", title: "사용여부" },
-	];
-
-	// 상태 관리
 	const [selectedGroup, setSelectedGroup] = useState<CodeGroup | null>(null);
-	const [selectedDetailKeys, setSelectedDetailKeys] = useState<React.Key[]>([]);
-	const [showInactiveGroup, setShowInactiveGroup] = useState(true);
-	const [showInactiveDetail, setShowInactiveDetail] = useState(true);
-	const [showGroupFilter, setShowGroupFilter] = useState(false);
-	const [showDetailFilter, setShowDetailFilter] = useState(false);
-
-	// 드로어 상태
 	const [groupDrawerOpen, setGroupDrawerOpen] = useState(false);
 	const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
 	const [editingGroup, setEditingGroup] = useState<CodeGroup | null>(null);
 	const [editingDetail, setEditingDetail] = useState<CodeDetail | null>(null);
 
-	// Splitter 초기 크기 결정 (localStorage)
-	const initialSplitterSize = useMemo(() => {
-		const saved = localStorage.getItem("sfms_cmm_splitter_size");
-		return saved && !isNaN(Number(saved)) ? Number(saved) : "35%";
-	}, []);
-
-	const handleSplitterChange = (sizes: number[]) => {
-		if (sizes.length > 0) {
-			localStorage.setItem("sfms_cmm_splitter_size", String(sizes[0]));
-		}
-	};
-
-	// [공통 에러 핸들러]
-	const handleAxiosError = (error: unknown, prefix: string) => {
-		let detail = t("common.unknown_error");
-		if (axios.isAxiosError(error)) {
-			detail = error.response?.data?.message || error.message;
-		}
-		message.error(`${prefix}: ${detail}`);
-	};
-
-	// 1. 데이터 조회
-	const { data: groupResponse, isLoading: isGroupLoading } = useQuery({
+	const { data: groups, isFetching: isGroupsLoading } = useQuery({
 		queryKey: ["codeGroups"],
-		queryFn: () => getCodeGroups(),
+		queryFn: () => getCodeGroups(true),
 	});
 
-	// 전체 통합 데이터 조회 (target="all")
-	const { data: exportDataRaw } = useQuery({
-		queryKey: ["codeDetails", "export-full-data"],
-		queryFn: () => exportCodesApi("all"),
-		staleTime: 0,
-	});
-
-	const filteredGroups = useMemo(() => {
-		const allGroups = [...(groupResponse?.data || [])].sort((a, b) =>
-			a.group_code.localeCompare(b.group_code),
-		);
-		return showInactiveGroup ? allGroups : allGroups.filter((g) => g.is_active);
-	}, [groupResponse, showInactiveGroup]);
-
-	const { data: rawDetails, isLoading: isDetailLoading } = useQuery({
-		queryKey: ["codeDetails", selectedGroup?.group_code],
-		queryFn: () => {
-			if (!selectedGroup) return [];
-			return getCodeDetails(selectedGroup.group_code);
-		},
-		enabled: !!selectedGroup,
-	});
-
-	const filteredDetails = useMemo(() => {
-		if (!rawDetails) return [];
-		const sorted = [...rawDetails].sort(
-			(a, b) =>
-				(a.sort_order || 0) - (b.sort_order || 0) ||
-				a.detail_code.localeCompare(b.detail_code),
-		);
-		return showInactiveDetail ? sorted : sorted.filter((d) => d.is_active);
-	}, [rawDetails, showInactiveDetail]);
-
-	// 2. 뮤테이션
 	const groupMutation = useMutation({
-		mutationFn: (data: Partial<CodeGroup>) => {
-			const formattedData = { ...data, group_code: data.group_code?.toUpperCase() };
-			return editingGroup
-				? updateCodeGroup(editingGroup.group_code, formattedData)
-				: createCodeGroup(formattedData as CodeGroup);
-		},
-		onSuccess: () => {
-			message.success(t("common.save_success"));
-			setGroupDrawerOpen(false);
-			queryClient.invalidateQueries({ queryKey: ["codeGroups"] });
-		},
-		onError: (err) => handleAxiosError(err, t("common.save_failure")),
+		mutationFn: (values: CodeGroupParams) => editingGroup ? updateCodeGroup(editingGroup.group_code, values) : createCodeGroup(values),
+		onSuccess: () => { message.success(t("common.save_success")); setGroupDrawerOpen(false); queryClient.invalidateQueries({ queryKey: ["codeGroups"] }); },
 	});
 
 	const detailMutation = useMutation({
-		mutationFn: (data: Partial<CodeDetail>) => {
-			if (!selectedGroup) throw new Error("그룹 코드가 누락되었습니다.");
-			const formattedData = {
-				...data,
-				detail_code: data.detail_code?.toUpperCase(),
-				group_code: selectedGroup.group_code,
-			};
-			return editingDetail
-				? updateCodeDetail(selectedGroup.group_code, editingDetail.detail_code, formattedData)
-				: createCodeDetail(formattedData as CodeDetail);
-		},
-		onSuccess: () => {
-			message.success(t("common.save_success"));
-			setDetailDrawerOpen(false);
-			queryClient.invalidateQueries({ queryKey: ["codeDetails", selectedGroup?.group_code] });
-			queryClient.invalidateQueries({ queryKey: ["codeDetails", "export-all-data"] });
-		},
-		onError: (err) => handleAxiosError(err, t("common.save_failure")),
+		mutationFn: (values: any) => editingDetail ? updateCodeDetail(selectedGroup!.group_code, editingDetail.detail_code, values) : createCodeDetail({ ...values, group_code: selectedGroup!.group_code }),
+		onSuccess: () => { message.success(t("common.save_success")); setDetailDrawerOpen(false); queryClient.invalidateQueries({ queryKey: ["codeDetails", selectedGroup?.group_code] }); detailActionRef.current?.reload(); },
 	});
 
-	const importMutation = useMutation({
-		mutationFn: (items: any[]) => importCodesApi(items),
-		onSuccess: (res) => {
-			const { groups_upserted, details_upserted } = res.data;
-			message.success(`업로드 성공 (그룹: ${groups_upserted}, 상세: ${details_upserted})`);
-			queryClient.invalidateQueries({ queryKey: ["codeGroups"] });
-			queryClient.invalidateQueries({ queryKey: ["codeDetails"] });
-			queryClient.invalidateQueries({ queryKey: ["codeDetails", "export-all-data"] });
-		},
-		onError: (err) => handleAxiosError(err, "엑셀 업로드 실패"),
-	});
-
-	// 3. 삭제 처리
-	const onDeleteGroup = async (code: string) => {
-		try {
-			await deleteCodeGroup(code);
-			message.success(t("common.delete_success"));
-			if (selectedGroup?.group_code === code) setSelectedGroup(null);
-			queryClient.invalidateQueries({ queryKey: ["codeGroups"] });
-		} catch (err) { handleAxiosError(err, t("common.delete_failure")); }
-	};
-
-	const onDeleteDetail = async (detailCode: string) => {
-		if (!selectedGroup) return;
-		try {
-			await deleteCodeDetail(selectedGroup.group_code, detailCode);
-			message.success(t("common.delete_success"));
-			queryClient.invalidateQueries({ queryKey: ["codeDetails", selectedGroup.group_code] });
-			queryClient.invalidateQueries({ queryKey: ["codeDetails", "export-full-data"] });
-		} catch (err) { handleAxiosError(err, t("common.delete_failure")); }
-	};
-
-	const handleBulkDeleteDetails = () => {
-		if (!selectedGroup || selectedDetailKeys.length === 0) return;
-		Modal.confirm({
-			title: t("common.delete"),
-			content: t("common.bulk_delete_confirm", { count: selectedDetailKeys.length }),
-			okText: t("common.delete"),
-			okType: "danger",
-			cancelText: t("common.cancel"),
-			onOk: async () => {
-				try {
-					await Promise.all(selectedDetailKeys.map((code) => deleteCodeDetail(selectedGroup.group_code, String(code))));
-					message.success(t("common.delete_success"));
-					setSelectedDetailKeys([]);
-					queryClient.invalidateQueries({ queryKey: ["codeDetails", selectedGroup.group_code] });
-					queryClient.invalidateQueries({ queryKey: ["codeDetails", "export-full-data"] });
-				} catch (err) {
-					handleAxiosError(err, t("common.delete_failure"));
-				}
-			},
-		});
-	};
-
-	// 4. 컬럼 정의
 	const groupColumns: ProColumns<CodeGroup>[] = [
-		{ title: "그룹 코드", dataIndex: "group_code", width: 140 },
-		{ title: "그룹명", dataIndex: "group_name", ellipsis: true },
-		{
-			title: "상태",
-			dataIndex: "is_active",
-			width: 60,
-			align: "center",
-			render: (val) => <Tag color={val ? "green" : "red"}>{val ? "사용" : "중지"}</Tag>,
-		},
-		{
-			title: "작업",
-			width: 70,
-			align: "center",
-			render: (_, record) => (
-				<Space size={0}>
-					<EditOutlined
-						onClick={(e) => { e.stopPropagation(); setEditingGroup(record); setGroupDrawerOpen(true); }}
-						style={{ padding: 4, cursor: "pointer", color: token.colorPrimary }}
-					/>
-					<Popconfirm title={t("common.delete_confirm_msg")} onConfirm={() => onDeleteGroup(record.group_code)}>
-						<DeleteOutlined style={{ padding: 4, color: token.colorError, cursor: "pointer" }} />
-					</Popconfirm>
-				</Space>
-			),
-		},
+		{ title: t("cmm.code.group_name"), dataIndex: "group_name", ellipsis: true },
+		{ title: t("cmm.code.group_code"), dataIndex: "group_code", width: 120 },
 	];
 
 	const detailColumns: ProColumns<CodeDetail>[] = [
-		{ title: "상세 코드", dataIndex: "detail_code", width: 150 },
-		{ title: "코드명", dataIndex: "detail_name" },
-		{ title: "정렬", dataIndex: "sort_order", width: 60, align: "center" },
+		{ title: t("cmm.code.detail_name"), dataIndex: "detail_name", ellipsis: true },
+		{ title: t("cmm.code.detail_code"), dataIndex: "detail_code", width: 100 },
+		{ title: t("common.sort_order"), dataIndex: "sort_order", width: 80, hideInSearch: true },
+		{ title: t("common.status"), dataIndex: "is_active", width: 80, render: (active) => active ? t("common.active") : t("common.inactive") },
 		{
-			title: "상태",
-			dataIndex: "is_active",
-			width: 60,
-			render: (val) => <Tag color={val ? "green" : "red"}>{val ? "사용" : "중지"}</Tag>,
-		},
-		{
-			title: "작업",
-			width: 70,
-			align: "center",
-			render: (_, record) => (
-				<Space size={0}>
-					<EditOutlined
-						onClick={() => { setEditingDetail(record); setDetailDrawerOpen(true); }}
-						style={{ padding: 4, cursor: "pointer", color: token.colorPrimary }}
-					/>
-					<Popconfirm title={t("common.delete_confirm_msg")} onConfirm={() => onDeleteDetail(record.detail_code)}>
-						<DeleteOutlined style={{ padding: 4, color: token.colorError, cursor: "pointer" }} />
-					</Popconfirm>
-				</Space>
-			),
+			title: t("common.action"),
+			valueType: "option",
+			width: 80,
+			render: (_, record) => [
+				<Button key="edit" type="text" size="small" icon={<EditOutlined />} onClick={() => { setEditingDetail(record); setDetailDrawerOpen(true); }} />,
+			],
 		},
 	];
 
-	// 엑셀 내보내기용 시트 데이터 구성
-	const excelSheets = useMemo<ExcelSheetData[]>(() => {
-		return [
-			{ 
-				sheetName: t("common.sheet_name_groups"), 
-				data: exportDataRaw?.groups || [], 
-				columns: groupExcelColumns 
-			},
-			{ 
-				sheetName: t("common.sheet_name_details"), 
-				data: exportDataRaw?.details || [], 
-				columns: detailExcelColumns 
-			},
-		];
-	}, [exportDataRaw, t]);
-
 	return (
 		<PageContainer 
-			header={{ 
-				title: t("menu.cmm-codes"),
-				extra: [
-					<ExcelActions 
-						key="excel"
-						sheets={excelSheets}
-						columns={detailExcelColumns} 
-						fileName={t("common.excel_filename_all_codes")}
-						uploadEnabled={true}
-						loading={importMutation.isPending}
-						onImport={(data) => {
-							const mappedData = data.map(item => ({
-								group_code: item["그룹 코드"] || item["group_code"],
-								group_name: item["그룹명"] || item["group_name"],
-								detail_code: item["상세 코드"] || item["detail_code"],
-								detail_name: item["코드명"] || item["detail_name"],
-								sort_order: Number(item["정렬순서"] || item["sort_order"]) || 0,
-								is_active: true,
-								domain_code: item["도메인"] || item["domain_code"],
-								description: item["설명"] || item["description"]
-							}));
-							importMutation.mutate(mappedData);
-						}}
-					/>
-				]
-			}}
-			childrenContentStyle={{ padding: 0, height: LAYOUT_CONSTANTS.CONTENT_HEIGHT, overflow: "hidden" }}
+			header={{ title: t("cmm.code.title") }}
+			childrenContentStyle={{ padding: "0 24px 24px 24px", height: "calc(100vh - 140px)", overflow: "hidden" }}
 		>
 			<style>{`
-				.ant-pro-card-body { 
-					overflow: hidden !important; 
-					display: flex; 
-					flex-direction: column; 
-					height: 100%; 
-					padding: 12px 0 0 0 !important;
-				}
-				.ant-table-wrapper { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
-				.ant-spin-nested-loading, .ant-spin-container, .ant-table { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-				.ant-table-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-				.group-table .ant-table-body { flex: 1 !important; overflow-y: ${(groupResponse?.data?.length || 0) > 10 ? "auto" : "hidden"} !important; }
-				.detail-table .ant-table-body { flex: 1 !important; overflow-y: ${(rawDetails?.length || 0) > 10 ? "auto" : "hidden"} !important; }
-				.ant-table-body::-webkit-scrollbar { width: 6px; }
-				.ant-table-body::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
-				.ant-table-body:hover::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.15); }
+				.ant-pro-card-body { overflow: hidden !important; display: flex; flex-direction: column; height: 100%; padding: 0 !important; }
+                .ant-pro-card-header { 
+                    padding: 0 20px !important; 
+                    background: ${token.colorFillAlter} !important; 
+                    border-bottom: 1px solid ${token.colorBorderSecondary} !important;
+                    min-height: 56px !important;
+                }
+                .ant-pro-card-title { font-weight: 600 !important; }
+                .ant-splitter-bar { background: ${token.colorBorderSecondary} !important; width: 1px !important; }
+                .ant-splitter-bar:hover { background: ${token.colorPrimary} !important; }
 			`}</style>
 
-			<Splitter style={{ height: "100%", background: "transparent", gap: 2 }} onResizeEnd={handleSplitterChange}>
-				{/* 좌측 패널 */}
-				<Splitter.Panel defaultSize={initialSplitterSize} min="20%" max="50%">
-					<div style={{ height: "100%", background: token.colorBgContainer, borderRadius: 12, overflow: "hidden" }}>
-						<ProCard
-							title="코드 그룹"
-							headerBordered
-							styles={{ header: { height: LAYOUT_CONSTANTS.HEADER_HEIGHT } }}
-							extra={
-								<Space>
-									<Button type="text" icon={<FilterOutlined style={{ color: showGroupFilter ? token.colorPrimary : undefined }} />} onClick={() => setShowGroupFilter(!showGroupFilter)} />
-									<Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => { setEditingGroup(null); setGroupDrawerOpen(true); }}>{t("common.create")}</Button>
-								</Space>
-							}
-						>
-							{showGroupFilter && (
-								<div style={{ padding: "8px 16px", background: token.colorFillAlter, borderBottom: `1px solid ${token.colorBorderSecondary}`, borderRadius: 8, margin: "0 16px 8px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-									<Typography.Text size="small" type="secondary">{t("org.include_inactive")}</Typography.Text>
-									<Switch size="small" checked={showInactiveGroup} onChange={setShowInactiveGroup} />
-								</div>
-							)}
-							<div className="group-table" style={{ flex: 1, overflow: "hidden", padding: "0 16px" }}>
-								<ProTable<CodeGroup>
-									size="small"
-									rowKey="group_code"
-									columns={groupColumns}
-									dataSource={filteredGroups}
-									loading={isGroupLoading}
-									search={false}
-									options={false}
-									pagination={false}
-									onRow={(record) => ({
-										onClick: () => {
-											if (selectedGroup?.group_code !== record.group_code) {
-												setSelectedGroup(record);
-												setSelectedDetailKeys([]);
-											}
-										},
-										style: {
-											cursor: "pointer",
-											backgroundColor: selectedGroup?.group_code === record.group_code ? token.controlItemBgActive : undefined,
-										},
-									})}
-									scroll={{ y: filteredGroups.length > 10 ? "calc(100vh - 380px)" : undefined }}
-								/>
-							</div>
-						</ProCard>
-					</div>
-				</Splitter.Panel>
+            <div style={{ 
+                height: "100%", 
+                background: token.colorBgContainer, 
+                borderRadius: "12px", 
+                border: `1px solid ${token.colorBorderSecondary}`, 
+                overflow: "hidden",
+                display: "flex",
+                flexDirection: "column",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.05)"
+            }}>
+                <Splitter style={{ height: "100%", background: "transparent" }}>
+                    <Splitter.Panel defaultSize="35%" min="20%">
+                        <ProCard 
+                            title={t("cmm.code.group_list")}
+                            bordered={false}
+                            extra={
+                                <Space size={4}>
+                                    <Button type="text" size="small" icon={<ReloadOutlined />} onClick={() => queryClient.invalidateQueries({ queryKey: ["codeGroups"] })} loading={isGroupsLoading} />
+                                    <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => { setEditingGroup(null); setGroupDrawerOpen(true); }}>{t("common.create")}</Button>
+                                </Space>
+                            }
+                        >
+                            <ProTable<CodeGroup>
+                                columns={groupColumns}
+                                dataSource={groups}
+                                rowKey="group_code"
+                                search={false}
+                                options={false}
+                                pagination={false}
+                                scroll={{ y: "calc(100vh - 260px)" }}
+                                onRow={(record) => ({
+                                    onClick: () => setSelectedGroup(record),
+                                    style: { cursor: "pointer", background: selectedGroup?.group_code === record.group_code ? token.colorPrimaryBg : "inherit" }
+                                })}
+                            />
+                        </ProCard>
+                    </Splitter.Panel>
 
-				{/* 우측 패널 */}
-				<Splitter.Panel>
-					<div style={{ height: "100%", background: token.colorBgContainer, borderRadius: 12, overflow: "hidden" }}>
-						<ProCard
-							title={`상세 코드 ${selectedGroup ? `(${selectedGroup.group_name})` : ""}`}
-							headerBordered
-							styles={{ header: { height: LAYOUT_CONSTANTS.HEADER_HEIGHT } }}
-							extra={
-								selectedGroup && (
-									<Space>
-										<Button type="text" icon={<FilterOutlined style={{ color: showDetailFilter ? token.colorPrimary : undefined }} />} onClick={() => setShowDetailFilter(!showDetailFilter)} />
-										<Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => { setEditingDetail(null); setDetailDrawerOpen(true); }}>{t("common.create")}</Button>
-									</Space>
-								)
-							}
-						>
-							{selectedGroup ? (
-								<div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-									{showDetailFilter && (
-										<div style={{ padding: "8px 16px", background: token.colorFillAlter, borderBottom: `1px solid ${token.colorBorderSecondary}`, borderRadius: 8, margin: "0 16px 8px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-											<Typography.Text size="small" type="secondary">{t("org.include_inactive")}</Typography.Text>
-											<Switch size="small" checked={showInactiveDetail} onChange={setShowInactiveDetail} />
-										</div>
-									)}
-									<div className="detail-table" style={{ flex: 1, overflow: "hidden", padding: "0 16px" }}>
-										<ProTable<CodeDetail>
-											size="small"
-											rowKey="detail_code"
-											columns={detailColumns}
-											dataSource={filteredDetails}
-											loading={isDetailLoading}
-											search={false}
-											options={false}
-											pagination={false}
-											rowSelection={{
-												selectedRowKeys: selectedDetailKeys,
-												onChange: setSelectedDetailKeys,
-											}}
-											tableAlertRender={({ selectedRowKeys, onCleanSelected }) => (
-												<Space size={24}>
-													<span>{t("common.selected_count", { count: selectedRowKeys.length })}</span>
-													<a onClick={onCleanSelected}>{t("common.clear_selection")}</a>
-												</Space>
-											)}
-											tableAlertOptionRender={() => (
-												<Space size={16}>
-													<Button danger type="link" onClick={handleBulkDeleteDetails}>
-														{t("common.bulk_delete")}
-													</Button>
-												</Space>
-											)}
-											scroll={{ y: filteredDetails.length > 10 ? "calc(100vh - 380px)" : undefined }}
-										/>
-									</div>
-								</div>
-							) : (
-								<div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", color: token.colorTextDisabled, height: "100%" }}>
-									{t("common.select_placeholder")}
-								</div>
-							)}
-						</ProCard>
-					</div>
-				</Splitter.Panel>
-			</Splitter>
+                    <Splitter.Panel>
+                        <ProCard 
+                            title={selectedGroup ? `${selectedGroup.group_name} (${selectedGroup.group_code})` : t("cmm.code.detail_list")}
+                            bordered={false}
+                            extra={selectedGroup && (
+                                <Space size={8}>
+                                    <Button icon={<EditOutlined />} size="small" onClick={() => { setEditingGroup(selectedGroup); setGroupDrawerOpen(true); }}>{t("cmm.code.edit_group")}</Button>
+                                    <Button type="primary" icon={<PlusOutlined />} size="small" onClick={() => { setEditingDetail(null); setDetailDrawerOpen(true); }}>{t("cmm.code.add_detail")}</Button>
+                                </Space>
+                            )}
+                        >
+                            {selectedGroup ? (
+                                <div style={{ padding: "0 16px" }}>
+                                    <ProTable<CodeDetail>
+                                        actionRef={detailActionRef}
+                                        columns={detailColumns}
+                                        request={async () => {
+                                            const details = await getCodeDetails(selectedGroup.group_code);
+                                            return { data: details, success: true };
+                                        }}
+                                        params={{ groupCode: selectedGroup.group_code }}
+                                        rowKey="detail_code"
+                                        search={false}
+                                        options={false}
+                                        pagination={false}
+                                    />
+                                </div>
+                            ) : (
+                                <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: token.colorFillQuaternary }}>
+                                    <Empty description={t("cmm.code.select_group_prompt")} />
+                                </div>
+                            )}
+                        </ProCard>
+                    </Splitter.Panel>
+                </Splitter>
+            </div>
 
-			<CodeGroupDrawer 
-				open={groupDrawerOpen} 
-				onOpenChange={setGroupDrawerOpen} 
-				editingGroup={editingGroup} 
-				onFinish={async (values) => { await groupMutation.mutateAsync(values); return true; }} 
-			/>
-			<CodeDetailDrawer 
-				open={detailDrawerOpen} 
-				onOpenChange={setDetailDrawerOpen} 
-				editingDetail={editingDetail} 
-				groupName={selectedGroup?.group_name || ""} 
-				onFinish={async (values) => { await detailMutation.mutateAsync(values); return true; }} 
-			/>
+			<CodeGroupDrawer open={groupDrawerOpen} onOpenChange={setGroupDrawerOpen} editingGroup={editingGroup} onFinish={async (v) => { await groupMutation.mutateAsync(v); return true; }} />
+			<CodeDetailDrawer open={detailDrawerOpen} onOpenChange={setDetailDrawerOpen} editingDetail={editingDetail} groupName={selectedGroup?.group_name || ""} onFinish={async (v) => { await detailMutation.mutateAsync(v); return true; }} />
 		</PageContainer>
 	);
 };

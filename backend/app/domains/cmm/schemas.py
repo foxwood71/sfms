@@ -1,144 +1,156 @@
 """공통 관리(CMM) 도메인의 Pydantic 스키마를 정의하는 모듈입니다.
 
-이 모듈은 공통 코드, 첨부파일 메타데이터 및 사용자 알림 정보
-교환을 위한 데이터 구조를 정의합니다.
+이 모듈은 공통 코드 그룹, 상세 코드, 첨부파일 및 알림 처리를 위한
+요청(Request) 및 응답(Response) 데이터 규격을 정의합니다.
 """
 
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional, List
 
 from pydantic import BaseModel, ConfigDict, Field
 
-# --------------------------------------------------------
-# [Common Code] 공통 코드 관련 스키마
-# --------------------------------------------------------
 
+# --------------------------------------------------------
+# [CodeDetail] 공통 코드 상세 스키마
+# --------------------------------------------------------
 
 class CodeDetailBase(BaseModel):
-    """공통 코드 상세의 기본 필드를 정의합니다."""
+    """상세 코드의 공통 속성을 정의하는 기본 스키마입니다."""
 
-    detail_code: str = Field(..., max_length=30, description="상세 코드 값")
-    detail_name: str = Field(..., max_length=100, description="상세 코드 명칭")
-    props: dict[str, Any] = Field(default_factory=dict, description="추가 속성")
+    group_code: str = Field(..., description="소속 그룹 코드")
+    detail_code: str = Field(..., min_length=1, max_length=30, description="상세 식별 코드")
+    detail_name: str = Field(..., min_length=1, max_length=100, description="코드 명칭")
+    props: dict[str, Any] = Field(default_factory=dict, description="확장 속성")
     sort_order: int = Field(0, description="정렬 순서")
     is_active: bool = Field(True, description="활성화 여부")
 
 
 class CodeDetailCreate(CodeDetailBase):
-    """공통 코드 상세 생성을 위한 스키마입니다."""
+    """신규 상세 코드 생성을 위한 스키마입니다."""
 
     pass
 
 
 class CodeDetailUpdate(BaseModel):
-    """공통 코드 상세 수정을 위한 스키마입니다."""
+    """기존 상세 코드 수정을 위한 스키마입니다."""
 
-    detail_name: str | None = Field(None, max_length=100)
-    props: dict[str, Any] | None = None
-    sort_order: int | None = None
-    is_active: bool | None = None
+    detail_name: Optional[str] = Field(None, min_length=1, max_length=100)
+    props: Optional[dict[str, Any]] = None
+    sort_order: Optional[int] = None
+    is_active: Optional[bool] = None
 
 
 class CodeDetailRead(CodeDetailBase):
-    """공통 코드 상세 조회 응답을 위한 스키마입니다."""
+    """상세 코드 정보 조회 응답을 위한 스키마입니다."""
 
     id: int
-    group_code: str
+    created_at: datetime
+    updated_at: datetime
+    created_by: Optional[int] = None
+    updated_by: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
 
 
+# --------------------------------------------------------
+# [CodeGroup] 공통 코드 그룹 스키마
+# --------------------------------------------------------
+
 class CodeGroupBase(BaseModel):
-    """공통 코드 그룹의 기본 필드를 정의합니다."""
+    """코드 그룹의 공통 속성을 정의하는 기본 스키마입니다."""
 
-    group_code: str = Field(
-        ..., max_length=30, pattern=r"^[A-Z0-9_]+$", description="그룹 식별 코드"
-    )
-    group_name: str = Field(..., max_length=100, description="그룹 명칭")
-    domain_code: str | None = Field(None, max_length=3, description="도메인 구분")
-    description: str | None = Field(None, description="상세 설명")
+    group_code: str = Field(..., min_length=2, max_length=30, description="그룹 식별 코드")
+    domain_code: Optional[str] = Field(None, min_length=2, max_length=3, description="도메인 코드")
+    group_name: str = Field(..., min_length=2, max_length=100, description="그룹 명칭")
+    description: Optional[str] = Field(None, description="상세 설명")
+    
+    # [SFMS Standard] 코드 규격 관리 필드
+    code_length: int = Field(0, ge=0, description="권장 코드 길이 (0: 제한없음)")
+    is_seq_used: bool = Field(False, description="순번 생성 엔진 사용 여부")
+
+    is_system: bool = Field(False, description="시스템 필수 여부")
     is_active: bool = Field(True, description="활성화 여부")
-
-
-class CodeGroupCreate(CodeGroupBase):
-    """공통 코드 그룹 생성을 위한 스키마입니다."""
-
-    is_system: bool = Field(False, description="시스템 필수 코드 여부")
-
-
-class CodeGroupUpdate(BaseModel):
-    """공통 코드 그룹 수정을 위한 스키마입니다."""
-
-    group_name: str | None = Field(None, max_length=100)
-    description: str | None = None
-    is_active: bool | None = None
-
-
-class CodeGroupRead(CodeGroupBase):
-    """공통 코드 그룹 조회 응답을 위한 스키마입니다."""
-
-    id: int
-    is_system: bool
-    details: list[CodeDetailRead] = Field(default_factory=list)
-
-    model_config = ConfigDict(
-        from_attributes=True,
-        # 지연 로딩 필드가 로드되지 않았을 경우 무시하거나 에러 방지
-        arbitrary_types_allowed=True 
-    )
-
-
-class CodeImportSchema(BaseModel):
-    """엑셀 임포트를 위한 통합 데이터 구조"""
-    group_code: str
-    group_name: str
-    domain_code: str | None = None
-    description: str | None = None
-    detail_code: str
-    detail_name: str
-    sort_order: int = 0
-    is_active: bool = True
-
-
-class CodeBulkImportRequest(BaseModel):
-    """일괄 임포트 요청 바디"""
-    items: list[CodeImportSchema]
-
-
-# --------------------------------------------------------
-# [Attachment] 첨부 파일 메타데이터 스키마
-# --------------------------------------------------------
-
-
-class AttachmentBase(BaseModel):
-    """첨부 파일 메타데이터의 기본 필드를 정의합니다."""
-
-    domain_code: str = Field(..., max_length=3, description="업무 도메인")
-    resource_type: str = Field(..., max_length=50, description="리소스 유형")
-    ref_id: int = Field(..., description="연결 레코드 PK")
-    category_code: str = Field(..., max_length=20, description="분류 코드")
-    file_name: str = Field(..., max_length=255, description="원본파일명")
-    file_path: str = Field(..., max_length=500, description="저장 경로(Key)")
-    file_size: int = Field(0, description="파일 크기(Byte)")
-    content_type: str | None = Field(None, description="MIME 타입")
-    org_id: int | None = Field(None, description="소유 부서 ID")
     props: dict[str, Any] = Field(default_factory=dict, description="추가 메타데이터")
 
 
-class AttachmentCreate(AttachmentBase):
-    """첨부 파일 메타데이터 생성을 위한 스키마입니다."""
+class CodeGroupCreate(CodeGroupBase):
+    """신규 코드 그룹 생성을 위한 스키마입니다."""
 
-    id: uuid.UUID | None = Field(default_factory=uuid.uuid4)
-    created_by: int | None = None
+    pass
+
+
+class CodeGroupUpdate(BaseModel):
+    """기존 코드 그룹 수정을 위한 스키마입니다."""
+
+    group_name: Optional[str] = Field(None, min_length=2, max_length=100)
+    domain_code: Optional[str] = Field(None, min_length=2, max_length=3)
+    description: Optional[str] = None
+    code_length: Optional[int] = Field(None, ge=0)
+    is_seq_used: Optional[bool] = None
+    is_active: Optional[bool] = None
+    props: Optional[dict[str, Any]] = None
+
+
+class CodeGroupRead(CodeGroupBase):
+    """코드 그룹 정보 조회 응답을 위한 스키마입니다."""
+
+    id: int
+    # [Added] 하위 상세 코드 목록 (백엔드에서 joinedload로 채워짐)
+    details: List[CodeDetailRead] = Field(default_factory=list)
+    
+    created_at: datetime
+    updated_at: datetime
+    created_by: Optional[int] = None
+    updated_by: Optional[int] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --------------------------------------------------------
+# [Excel/Bulk] 대량 등록 관련 스키마
+# --------------------------------------------------------
+
+class CodeBulkImportRequest(BaseModel):
+    """공통 코드 엑셀 대량 업로드를 위한 요청 스키마입니다."""
+    
+    groups: List[CodeGroupCreate] = Field(default_factory=list)
+    details: List[CodeDetailCreate] = Field(default_factory=list)
+
+
+# --------------------------------------------------------
+# [Attachment] 첨부파일 관련 스키마
+# --------------------------------------------------------
+
+class AttachmentBase(BaseModel):
+    """첨부파일 메타데이터 기본 스키마입니다."""
+
+    domain_code: str
+    resource_type: str
+    ref_id: int
+    category_code: str
+    file_name: str
+    file_path: str
+    file_size: int
+    content_type: Optional[str] = None
+    org_id: Optional[int] = None
+    props: dict[str, Any] = Field(default_factory=dict)
+
+
+class AttachmentCreate(AttachmentBase):
+    """신규 첨부파일 등록을 위한 스키마입니다."""
+
+    pass
 
 
 class AttachmentRead(AttachmentBase):
-    """첨부 파일 메타데이터 조회 응답을 위한 스키마입니다."""
+    """첨부파일 정보 조회 응답을 위한 스키마입니다."""
 
     id: uuid.UUID
+    is_deleted: bool
     created_at: datetime
-    created_by: int | None = None
+    updated_at: datetime
+    created_by: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -147,33 +159,32 @@ class AttachmentRead(AttachmentBase):
 # [Notification] 알림 관련 스키마
 # --------------------------------------------------------
 
-
 class NotificationBase(BaseModel):
-    """사용자 알림의 기본 필드를 정의합니다."""
+    """사용자 알림 기본 스키마입니다."""
 
-    category: str = Field(..., description="알림 카테고리")
-    priority: str = Field("NORMAL", description="중요도")
-    title: str = Field(..., description="제목")
-    content: str | None = Field(None, description="본문")
-    link_url: str | None = Field(None, description="이동 링크")
-    props: dict[str, Any] = Field(default_factory=dict, description="추가 속성")
+    domain_code: Optional[str] = None
+    receiver_user_id: int
+    category: str
+    priority: str = "NORMAL"
+    title: str
+    content: Optional[str] = None
+    link_url: Optional[str] = None
+    props: dict[str, Any] = Field(default_factory=dict)
 
 
 class NotificationCreate(NotificationBase):
-    """알림 생성을 위한 스키마입니다."""
+    """신규 알림 생성을 위한 스키마입니다."""
 
-    receiver_user_id: int
-    sender_user_id: int | None = None
-    domain_code: str | None = None
+    pass
 
 
 class NotificationRead(NotificationBase):
-    """알림 조회 응답을 위한 스키마입니다."""
+    """알림 정보 조회 응답을 위한 스키마입니다."""
 
     id: int
-    sender_user_id: int | None = None
+    sender_user_id: Optional[int] = None
     is_read: bool
-    read_at: datetime | None = None
+    read_at: Optional[datetime] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

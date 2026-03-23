@@ -37,8 +37,14 @@ class CodeGroup(Base):
     group_name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # [SFMS Standard] 코드 규격 관리 필드 추가
+    code_length: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    is_seq_used: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+
     is_system: Mapped[bool] = mapped_column(Boolean, default=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    props: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="'{}'::jsonb")
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     created_by: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
