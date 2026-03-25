@@ -27,6 +27,8 @@ import {
 	theme,
     Form,
 } from "antd";
+import type { DataNode } from "antd/es/tree";
+import type { AxiosError } from "axios";
 import type React from "react";
 import { useMemo, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -39,6 +41,7 @@ import {
 } from "@/domains/usr/api";
 import OrgFormCard from "@/domains/usr/components/OrgFormCard";
 import type { CreateOrgParams, Organization, UpdateOrgParams } from "@/domains/usr/types";
+import type { APIErrorResponse } from "@/shared/api/types";
 
 /**
  * 부서(조직) 관리 페이지 (Final Integrated Master Standard)
@@ -136,7 +139,7 @@ const OrganizationPage: React.FC = () => {
 			setIsAdding(false);
 			queryClient.invalidateQueries({ queryKey: ["organizations"] });
 		},
-		onError: (err: any) => message.error(err.response?.data?.message || t("common.save_failure")),
+		onError: (err: AxiosError<APIErrorResponse>) => message.error(err.response?.data?.message || t("common.save_failure")),
 	});
 
 	const deleteMutation = useMutation({
@@ -146,12 +149,12 @@ const OrganizationPage: React.FC = () => {
 			setSelectedKey(null);
 			queryClient.invalidateQueries({ queryKey: ["organizations"] });
 		},
-		onError: (err: any) => message.error(err.response?.data?.message || t("common.delete_failure")),
+		onError: (err: AxiosError<APIErrorResponse>) => message.error(err.response?.data?.message || t("common.delete_failure")),
 	});
 
 	// 5. 트리 데이터 가공
-	const treeData = useMemo(() => {
-		const filterTree = (items: Organization[]): any[] => {
+	const treeData: DataNode[] = useMemo(() => {
+		const filterTree = (items: Organization[]): DataNode[] => {
 			return items
 				.map((item) => {
 					const children = item.children ? filterTree(item.children) : [];
@@ -162,9 +165,9 @@ const OrganizationPage: React.FC = () => {
 						title: item.is_active ? item.name : <span style={{ color: token.colorTextDisabled, textDecoration: "line-through" }}>{item.name}</span>,
 						icon: <ClusterOutlined />,
 						children,
-					};
+					} as DataNode;
 				})
-				.filter(Boolean);
+				.filter((node): node is DataNode => node !== null);
 		};
 		return [{ key: "root", title: t("user.root_org"), icon: <ApartmentOutlined />, children: filterTree(orgResponse?.data || []) }];
 	}, [orgResponse, searchValue, token, t]);
@@ -208,7 +211,7 @@ const OrganizationPage: React.FC = () => {
                                 </Tooltip>
                                 <Button type="text" size="small" icon={<FilterOutlined style={{ color: showFilter ? token.colorPrimary : undefined }} />} onClick={() => setShowFilter(!showFilter)} />
                                 <Button type="text" size="small" icon={<ReloadOutlined />} onClick={() => queryClient.invalidateQueries({ queryKey: ["organizations"] })} loading={isFetching} />
-                                
+
                                 {/* [FIX] 시스템 노드 가이드 적용 */}
                                 <Tooltip title={isSystemNode ? "시스템 전용 조직에는 하위 조직을 생성할 수 없습니다." : t("common.create")}>
                                     <Button 
@@ -232,10 +235,16 @@ const OrganizationPage: React.FC = () => {
                             </Space>
                         }>
                             <div style={{ flex: 1, overflowY: "auto", padding: "12px" }}>
-                                <Tree showIcon blockNode showLine={{ showLeafIcon: false }} expandedKeys={expandedKeys} 
+                                <Tree 
+                                    showIcon 
+                                    blockNode 
+                                    showLine={{ showLeafIcon: false }} 
+                                    expandedKeys={expandedKeys} 
                                     onExpand={(keys) => { setExpandedKeys(keys); setIsAllExpanded(keys.length > 1); }} 
-                                    treeData={treeData} selectedKeys={selectedKey !== null ? [selectedKey] : []}
-                                    onSelect={(keys) => { if (keys.length > 0) { setSelectedKey(keys[0]); setIsEditing(false); setIsAdding(false); } }} />
+                                    treeData={treeData} 
+                                    selectedKeys={selectedKey !== null ? [selectedKey] : []}
+                                    onSelect={(keys) => { if (keys.length > 0) { setSelectedKey(keys[0]); setIsEditing(false); setIsAdding(false); } }} 
+                                />
                             </div>
                         </ProCard>
                     </Splitter.Panel>
@@ -291,3 +300,4 @@ const OrganizationPage: React.FC = () => {
 };
 
 export default OrganizationPage;
+

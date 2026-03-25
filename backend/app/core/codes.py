@@ -29,10 +29,12 @@ class SuccessCode(IntEnum):
     # --- 코드별 메시지 매핑 ---
     @property
     def code(self) -> int:
+        """int: 성공 코드의 숫자 값을 반환합니다."""
         return self.value
 
     @property
     def message(self) -> str:
+        """str: 성공 코드의 영문 이름을 메시지로 반환합니다."""
         return self.name
 
 
@@ -70,13 +72,14 @@ class ErrorCode(IntEnum):
     DUPLICATE_EMAIL = 4093  # 이미 등록된 이메일 주소
     DUPLICATE_EMP_CODE = 4094  # 이미 등록된 사원 번호
     DUPLICATE_ORG_CODE = 4095  # 이미 사용 중인 조직 코드
-    
+
     # [USR/ORG 도메인 확장 코드 - 명세서 v1.4 기반]
     ACTIVE_CHILDREN_EXIST = 4003  # 비활성화 시 활성 자식 존재
     USR_INVALID_PARENT = 4001  # 유효하지 않은 상위 조직
     USR_CIRCULAR_REF = 4002  # 순환 참조 발생
     ORG_HAS_CHILDREN = 4090  # 하위 부서 존재 (삭제 불가)
     ORG_HAS_USERS = 4091  # 소속 사용자 존재 (삭제 불가)
+    HAS_CHILD_DATA = 4091  # 하위 데이터 존재 (삭제 불가) - FAC 등에서 공통 사용
 
     # [시스템 공통]
     SYSTEM_RESOURCE_MOD = 4099  # 시스템 필수 리소스 수정/삭제 불가
@@ -94,8 +97,10 @@ class ErrorCode(IntEnum):
     # --- 코드별 메시지 매핑 ---
     @property
     def code(self) -> int:
+        """int: 에러 코드의 숫자 값을 반환합니다."""
         return self.value
 
     @property
     def message(self) -> str:
+        """str: 에러 코드의 영문 이름을 메시지로 반환합니다."""
         return self.name

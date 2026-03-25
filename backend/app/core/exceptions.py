@@ -1,6 +1,7 @@
 """SFMS 전역 커스텀 예외 처리를 정의하는 모듈입니다."""
 
 import logging
+
 from fastapi import Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -8,6 +9,7 @@ from fastapi.responses import JSONResponse
 from app.core.codes import ErrorCode
 
 logger = logging.getLogger("app")
+
 
 class SFMSException[T](Exception):
     """SFMS 시스템의 최상위 커스텀 예외 클래스입니다.
@@ -299,7 +301,9 @@ def register_exception_handlers(app):
         )
 
     @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    async def validation_exception_handler(
+        request: Request, exc: RequestValidationError
+    ):
         logger.error(f"Validation error: {exc.errors()} | Body: {exc.body}")
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

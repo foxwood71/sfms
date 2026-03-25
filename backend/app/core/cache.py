@@ -26,7 +26,7 @@ async def set_cache(key: str, value: Any, expire: int | None = None) -> None:
 
     """
     try:
-        if isinstance(value, (dict, list)):
+        if isinstance(value, dict | list):
             value = json.dumps(value)
 
         if expire:

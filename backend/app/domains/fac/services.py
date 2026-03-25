@@ -7,17 +7,22 @@
 from __future__ import annotations
 
 import uuid
-from sqlalchemy import select, func
+
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-...
 
 from app.core.codes import ErrorCode
 from app.core.exceptions import (
     BadRequestException,
-    ConflictException,
     NotFoundException,
 )
-from app.domains.fac.models import Facility, FacilityCategory, Space, SpaceFunction, SpaceType
+from app.domains.fac.models import (
+    Facility,
+    FacilityCategory,
+    Space,
+    SpaceFunction,
+    SpaceType,
+)
 from app.domains.fac.schemas import (
     FacilityCategoryRead,
     FacilityCreate,
@@ -53,7 +58,7 @@ class FacilityService:
         return [FacilityRead.model_validate(f) for f in facilities]
 
     @staticmethod
-    async def get_facility_read(db: AsyncSession, facility_id: int) -> FacilityRead:
+    async def get_facility(db: AsyncSession, facility_id: int) -> FacilityRead:
         """특정 시설 정보를 상세 조회합니다."""
         facility = await db.get(Facility, facility_id)
         if not facility:
@@ -64,8 +69,7 @@ class FacilityService:
     async def create_facility(
         db: AsyncSession, obj_in: FacilityCreate, actor_id: int
     ) -> FacilityRead:
-        """새로운 최상위 시설을 등록합니다. (코드 자동 생성 로직 포함)"""
-        
+        """새로운 최상위 시설을 등록합니다(코드 자동 생성 로직 포함)."""
         # 1. 관리 코드 자동 생성 (분류3자 + 순번3자리)
         # 예: STP -> STP001, STP002 ...
         prefix = obj_in.category_code.upper()
@@ -73,7 +77,7 @@ class FacilityService:
         result = await db.execute(stmt)
         count = result.scalar() or 0
         new_code = f"{prefix}{str(count + 1).zfill(3)}"
-        
+
         # 중복 체크 (수동 입력 대비)
         existing = await db.execute(select(Facility).where(Facility.code == new_code))
         if existing.scalar_one_or_none():
@@ -82,7 +86,7 @@ class FacilityService:
 
         create_data = obj_in.model_dump()
         create_data["code"] = new_code
-        
+
         db_obj = Facility(**create_data, created_by=actor_id, updated_by=actor_id)
         db.add(db_obj)
         await db.commit()
@@ -97,7 +101,7 @@ class FacilityService:
         facility = await db.get(Facility, facility_id)
         if not facility:
             raise NotFoundException(domain=DOMAIN, error_code=ErrorCode.NOT_FOUND)
-            
+
         update_data = obj_in.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(facility, field, value)
@@ -117,7 +121,9 @@ class FacilityService:
         stmt = select(Space).where(Space.facility_id == facility_id)
         result = await db.execute(stmt)
         if result.scalars().first():
-            raise BadRequestException(domain=DOMAIN, error_code=ErrorCode.HAS_CHILD_DATA)
+            raise BadRequestException(
+                domain=DOMAIN, error_code=ErrorCode.HAS_CHILD_DATA
+            )
 
         await db.delete(facility)
         await db.commit()
@@ -143,7 +149,11 @@ class SpaceService:
     @staticmethod
     async def get_space_tree(db: AsyncSession, facility_id: int) -> list[SpaceRead]:
         """특정 시설의 공간을 트리 구조로 조회합니다."""
-        stmt = select(Space).where(Space.facility_id == facility_id).order_by(Space.sort_order.asc())
+        stmt = (
+            select(Space)
+            .where(Space.facility_id == facility_id)
+            .order_by(Space.sort_order.asc())
+        )
         result = await db.execute(stmt)
         spaces = result.scalars().all()
 
@@ -157,7 +167,8 @@ class SpaceService:
         for s in space_reads:
             if s.parent_id and s.parent_id in space_dict:
                 parent = space_dict[s.parent_id]
-                if parent.children is None: parent.children = []
+                if parent.children is None:
+                    parent.children = []
                 parent.children.append(s)
             else:
                 tree.append(s)
@@ -167,13 +178,11 @@ class SpaceService:
     async def create_space(
         db: AsyncSession, obj_in: SpaceCreate, actor_id: int
     ) -> SpaceRead:
-        """새로운 공간을 생성합니다. (코드 자동 생성 로직 포함)"""
-        
+        """새로운 공간을 생성합니다(코드 자동 생성 로직 포함)."""
         # 1. 공간 코드 자동 생성 (유형3자 + 순번3자리)
         prefix = obj_in.space_type_code.upper()
         stmt = select(func.count(Space.id)).where(
-            Space.facility_id == obj_in.facility_id,
-            Space.space_type_code == prefix
+            Space.facility_id == obj_in.facility_id, Space.space_type_code == prefix
         )
         result = await db.execute(stmt)
         count = result.scalar() or 0
@@ -181,12 +190,12 @@ class SpaceService:
 
         create_data = obj_in.model_dump()
         create_data["code"] = new_code
-        
+
         db_obj = Space(**create_data, created_by=actor_id, updated_by=actor_id)
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)
-        
+
         data = {c.name: getattr(db_obj, c.name) for c in db_obj.__table__.columns}
         return SpaceRead.model_validate(data)
 
@@ -207,7 +216,7 @@ class SpaceService:
         space.updated_by = actor.id
         await db.commit()
         await db.refresh(space)
-        
+
         data = {c.name: getattr(space, c.name) for c in space.__table__.columns}
         return SpaceRead.model_validate(data)
 
@@ -221,7 +230,9 @@ class SpaceService:
         stmt = select(Space).where(Space.parent_id == space_id)
         result = await db.execute(stmt)
         if result.scalars().first():
-            raise BadRequestException(domain=DOMAIN, error_code=ErrorCode.HAS_CHILD_DATA)
+            raise BadRequestException(
+                domain=DOMAIN, error_code=ErrorCode.HAS_CHILD_DATA
+            )
 
         await db.delete(space)
         await db.commit()

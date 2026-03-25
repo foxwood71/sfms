@@ -43,7 +43,9 @@ router = APIRouter(prefix="/usr", tags=["사용자 및 조직 관리 (USR)"])
 async def get_organizations(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
-    is_active: Annotated[bool | None, Query(description="활성 여부 필터 (None: 전체, True: 활성만)")] = None,
+    is_active: Annotated[
+        bool | None, Query(description="활성 여부 필터 (None: 전체, True: 활성만)")
+    ] = None,
 ):
     """전체 조직도(Tree)를 계층 구조로 조회합니다.
 
@@ -233,9 +235,12 @@ async def get_users(
         is_active=is_active,
     )
     return APIResponse(
-        domain=DOMAIN, 
-        data=UserListRead(items=users, total=total)
+        domain=DOMAIN,
+        data=UserListRead(
+            items=[UserRead.model_validate(item) for item in users], total=total
+        ),
     )
+
 
 
 @router.post(
@@ -422,7 +427,9 @@ async def toggle_user_status(
     updated_user = await UserService.toggle_account_status(
         db=db, user_id=user_id, actor_id=current_user.id
     )
-    return APIResponse(domain=DOMAIN, data=updated_user, success_code=SuccessCode.SUCCESS_UPDATED)
+    return APIResponse(
+        domain=DOMAIN, data=updated_user, success_code=SuccessCode.SUCCESS_UPDATED
+    )
 
 
 @router.post("/{user_id}/profile-image", response_model=APIResponse[UserRead])

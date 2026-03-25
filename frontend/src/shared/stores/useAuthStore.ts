@@ -36,7 +36,11 @@ interface AuthState {
 	isAuthenticated: boolean;
 
 	/** 로그인 처리 액션 */
-	setAuth: (accessToken: string, refreshToken: string, user: UserInfo | null) => void;
+	setAuth: (
+		accessToken: string,
+		refreshToken: string,
+		user: UserInfo | null,
+	) => void;
 	/** 로그아웃 처리 액션 (MainLayout.tsx에서 사용) */
 	clearAuth: () => void;
 	/** 사용자 정보만 업데이트 */

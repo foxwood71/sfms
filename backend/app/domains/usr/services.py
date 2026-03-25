@@ -147,8 +147,7 @@ class OrganizationService:
             active_child = (await db.execute(child_stmt)).scalars().first()
             if active_child:
                 raise BadRequestException(
-                    domain=DOMAIN,
-                    error_code=ErrorCode.ACTIVE_CHILDREN_EXIST
+                    domain=DOMAIN, error_code=ErrorCode.ACTIVE_CHILDREN_EXIST
                 )
 
         new_parent_id = update_data.get("parent_id")
@@ -236,7 +235,9 @@ class UserService:
 
         if org_id is not None:
             if include_children:
-                descendant_org_ids = await OrganizationService.get_descendant_org_ids(db, org_id)
+                descendant_org_ids = await OrganizationService.get_descendant_org_ids(
+                    db, org_id
+                )
                 stmt = stmt.where(User.org_id.in_(descendant_org_ids))
             else:
                 stmt = stmt.where(User.org_id == org_id)
@@ -446,7 +447,7 @@ class UserService:
 
     @staticmethod
     async def get_user(db: AsyncSession, user_id: int) -> User:
-        """특정 사용자 정보를 ID로 조회합니다. (권한 정보 포함)"""
+        """특정 사용자 정보를 ID로 조회합니다(권한 정보 포함)."""
         from sqlalchemy.orm import joinedload, selectinload
 
         stmt = (

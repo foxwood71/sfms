@@ -93,7 +93,7 @@ class AuthService:
         if not user or not verify_password(login_in.password, user.password_hash):
             if user:
                 user.login_fail_count += 1
-                
+
                 # 비밀번호 실패 로그
                 await AuditLogService.create_audit_log(
                     db,
@@ -125,7 +125,7 @@ class AuthService:
                     ),
                 )
                 await db.commit()
-                
+
             raise UnauthorizedException(domain=DOMAIN, error_code=ErrorCode.AUTH_FAILED)
 
         # 4. 계정 상태 확인 (잠금/비활성화)

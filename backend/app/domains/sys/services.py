@@ -104,7 +104,7 @@ class AuditLogService:
 
         # 4. 정렬 및 페이징 적용
         stmt = stmt.order_by(AuditLog.created_at.desc()).offset(skip).limit(limit)
-        
+
         result = await db.execute(stmt)
         items = list(result.scalars().all())
 

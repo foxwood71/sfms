@@ -10,8 +10,10 @@ from pydantic import BaseModel, ConfigDict, Field
 # [Base Codes] 기초 코드 관련 스키마 (공통 코드 통합)
 # --------------------------------------------------------
 
+
 class FacilityCategoryRead(BaseModel):
     """시설 카테고리 정보 조회 응답을 위한 스키마입니다."""
+
     code: str
     name: str
     sort_order: int = 0
@@ -20,6 +22,7 @@ class FacilityCategoryRead(BaseModel):
 
 class SpaceTypeRead(BaseModel):
     """공간 물리적 유형 조회 응답을 위한 스키마입니다."""
+
     code: str
     name: str
     sort_order: int = 0
@@ -28,6 +31,7 @@ class SpaceTypeRead(BaseModel):
 
 class SpaceFunctionRead(BaseModel):
     """공간 기능적 용도 조회 응답을 위한 스키마입니다."""
+
     code: str
     name: str
     sort_order: int = 0
@@ -38,9 +42,13 @@ class SpaceFunctionRead(BaseModel):
 # [Facility] 최상위 시설 관련 스키마
 # --------------------------------------------------------
 
+
 class FacilityBase(BaseModel):
     """시설의 공통 속성을 정의하는 기본 스키마입니다."""
-    category_code: str = Field(..., min_length=3, max_length=3, description="시설 분류 코드 (3자)")
+
+    category_code: str = Field(
+        ..., min_length=3, max_length=3, description="시설 분류 코드 (3자)"
+    )
     representative_image_id: uuid.UUID | None = None
     code: str = Field(..., min_length=2, max_length=50, description="시설 관리 코드")
     name: str = Field(..., min_length=2, max_length=100)
@@ -52,11 +60,13 @@ class FacilityBase(BaseModel):
 
 class FacilityCreate(FacilityBase):
     """신규 시설 등록을 위한 스키마입니다."""
+
     pass
 
 
 class FacilityUpdate(BaseModel):
     """시설 정보 수정을 위한 스키마입니다."""
+
     category_code: str | None = Field(None, min_length=3, max_length=3)
     representative_image_id: uuid.UUID | None = None
     name: str | None = None
@@ -68,6 +78,7 @@ class FacilityUpdate(BaseModel):
 
 class FacilityRead(FacilityBase):
     """시설 정보 조회 응답을 위한 스키마입니다."""
+
     id: int
     created_at: datetime
     updated_at: datetime
@@ -80,12 +91,18 @@ class FacilityRead(FacilityBase):
 # [Space] 공간 계층 관련 스키마
 # --------------------------------------------------------
 
+
 class SpaceBase(BaseModel):
     """공간의 공통 속성을 정의하는 기본 스키마입니다."""
+
     facility_id: int
     parent_id: int | None = None
-    space_type_code: str = Field(..., min_length=3, max_length=3, description="공간 유형 코드")
-    space_func_code: str = Field(..., min_length=3, max_length=3, description="공간 기능 코드")
+    space_type_code: str = Field(
+        ..., min_length=3, max_length=3, description="공간 유형 코드"
+    )
+    space_func_code: str = Field(
+        ..., min_length=3, max_length=3, description="공간 기능 코드"
+    )
     representative_image_id: uuid.UUID | None = None
     code: str = Field(..., min_length=1, max_length=50)
     name: str = Field(..., min_length=1, max_length=100)
@@ -99,11 +116,13 @@ class SpaceBase(BaseModel):
 
 class SpaceCreate(SpaceBase):
     """신규 공간 생성을 위한 스키마입니다."""
+
     pass
 
 
 class SpaceUpdate(BaseModel):
     """공간 정보 수정을 위한 스키마입니다."""
+
     parent_id: int | None = None
     space_type_code: str | None = Field(None, min_length=3, max_length=3)
     space_func_code: str | None = Field(None, min_length=3, max_length=3)
@@ -118,6 +137,7 @@ class SpaceUpdate(BaseModel):
 
 class SpaceRead(SpaceBase):
     """공간 정보 조회 응답을 위한 스키마입니다."""
+
     id: int
     children: list["SpaceRead"] | None = None
     created_at: datetime

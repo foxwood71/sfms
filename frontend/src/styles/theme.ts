@@ -53,15 +53,15 @@ export const navyTheme: ThemeConfig = {
 	},
 	components: {
 		Card: { borderRadiusLG: 12 },
-		Layout: { 
-			headerBg: "#0f172a", 
+		Layout: {
+			headerBg: "#0f172a",
 			bodyBg: "#020617",
-			siderBg: "#0f172a" 
+			siderBg: "#0f172a",
 		},
 		Table: {
 			headerBg: "#1e293b",
 			rowHoverBg: "#334155",
-		}
+		},
 	},
 };
 
@@ -79,16 +79,16 @@ export const govTheme: ThemeConfig = {
 	},
 	components: {
 		Card: { borderRadiusLG: 8 },
-		Layout: { 
-			headerBg: "#1a3a5f", 
+		Layout: {
+			headerBg: "#1a3a5f",
 			headerColor: "#ffffff",
 			bodyBg: "#f0f4f8",
-			siderBg: "#ffffff" 
+			siderBg: "#ffffff",
 		},
 		Table: {
 			headerBg: "#f8fafc",
 			borderColor: "#e2e8f0",
-		}
+		},
 	},
 };
 
@@ -107,15 +107,15 @@ export const macTheme: ThemeConfig = {
 	},
 	components: {
 		Card: { borderRadiusLG: 12 },
-		Layout: { 
-			headerBg: "rgba(255, 255, 255, 0.8)", 
+		Layout: {
+			headerBg: "rgba(255, 255, 255, 0.8)",
 			bodyBg: "#f5f5f7",
-			siderBg: "#ffffff" 
+			siderBg: "#ffffff",
 		},
 		Table: {
 			headerBg: "#fafafa",
 			rowHoverBg: "#f5f5f7",
-		}
+		},
 	},
 };
 
@@ -124,11 +124,17 @@ export const macTheme: ThemeConfig = {
  */
 export const getThemeConfig = (mode: ThemeMode): ThemeConfig => {
 	switch (mode) {
-		case "light": return lightTheme;
-		case "dark": return darkTheme;
-		case "navy": return navyTheme;
-		case "gov": return govTheme;
-		case "mac": return macTheme;
-		default: return navyTheme;
+		case "light":
+			return lightTheme;
+		case "dark":
+			return darkTheme;
+		case "navy":
+			return navyTheme;
+		case "gov":
+			return govTheme;
+		case "mac":
+			return macTheme;
+		default:
+			return navyTheme;
 	}
 };

@@ -16,7 +16,6 @@ from sqlalchemy import (
     Integer,
     Numeric,
     String,
-    Text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -28,8 +27,10 @@ from app.core.database import Base
 # [Base Views] 공통 코드 통합 조회용 뷰 모델
 # --------------------------------------------------------
 
+
 class FacilityCategory(Base):
     """시설물 유형 분류 뷰 (공통 코드 통합)."""
+
     __tablename__ = "v_facility_categories"
     __table_args__ = {"schema": "fac", "info": {"view": True}}
 
@@ -40,6 +41,7 @@ class FacilityCategory(Base):
 
 class SpaceType(Base):
     """공간 물리적 유형 뷰 (공통 코드 통합)."""
+
     __tablename__ = "v_space_types"
     __table_args__ = {"schema": "fac", "info": {"view": True}}
 
@@ -50,6 +52,7 @@ class SpaceType(Base):
 
 class SpaceFunction(Base):
     """공간 기능적 용도 뷰 (공통 코드 통합)."""
+
     __tablename__ = "v_space_functions"
     __table_args__ = {"schema": "fac", "info": {"view": True}}
 
@@ -62,6 +65,7 @@ class SpaceFunction(Base):
 # [Main Entities] 시설 및 공간 마스터
 # --------------------------------------------------------
 
+
 class Facility(Base):
     """최상위 시설물(사업소/처리장) 정보 모델입니다."""
 
@@ -69,9 +73,11 @@ class Facility(Base):
     __table_args__ = {"schema": "fac", "comment": "최상위 시설물 정보 테이블"}
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    
+
     # [SFMS Code Standard] 코드 기반 참조
-    category_group_code: Mapped[str] = mapped_column(String(30), server_default="FAC_CATEGORY")
+    category_group_code: Mapped[str] = mapped_column(
+        String(30), server_default="FAC_CATEGORY"
+    )
     category_code: Mapped[str] = mapped_column(String(3), nullable=False)
 
     representative_image_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -121,12 +127,16 @@ class Space(Base):
     representative_image_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), nullable=True
     )
-    
+
     # [SFMS Code Standard] 코드 기반 참조
-    space_type_group_code: Mapped[str] = mapped_column(String(30), server_default="SPACE_TYPE")
+    space_type_group_code: Mapped[str] = mapped_column(
+        String(30), server_default="SPACE_TYPE"
+    )
     space_type_code: Mapped[str] = mapped_column(String(3), nullable=False)
-    
-    space_func_group_code: Mapped[str] = mapped_column(String(30), server_default="SPACE_FUNC")
+
+    space_func_group_code: Mapped[str] = mapped_column(
+        String(30), server_default="SPACE_FUNC"
+    )
     space_func_code: Mapped[str] = mapped_column(String(3), nullable=False)
 
     code: Mapped[str] = mapped_column(String(50), nullable=False)
@@ -157,7 +167,10 @@ class Space(Base):
     # Relationships
     facility: Mapped["Facility"] = relationship("Facility", back_populates="spaces")
     children: Mapped[list["Space"]] = relationship(
-        "Space", back_populates="parent", cascade="all, delete-orphan", remote_side=[parent_id]
+        "Space",
+        back_populates="parent",
+        cascade="all, delete-orphan",
+        remote_side=[parent_id],
     )
     parent: Mapped[Optional["Space"]] = relationship(
         "Space", back_populates="children", remote_side=[id]

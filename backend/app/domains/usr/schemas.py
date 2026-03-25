@@ -21,7 +21,9 @@ class OrgBase(BaseModel):
     code: str = Field(..., min_length=2, max_length=50)
     parent_id: int | None = None
     sort_order: int = 10
-    description: str | None = Field(None, max_length=255, description="조직 상세 설명 (비고)")
+    description: str | None = Field(
+        None, max_length=255, description="조직 상세 설명 (비고)"
+    )
     is_active: bool = True
 
 
@@ -71,9 +73,13 @@ class UserBase(BaseModel):
     phone: str | None = Field(None, max_length=50)
     org_id: int | None = Field(None, description="소속 조직 ID")
     is_active: bool = True
-    account_status: str = Field("ACTIVE", description="계정 상태 (ACTIVE: 정상, BLOCKED: 차단)")
+    account_status: str = Field(
+        "ACTIVE", description="계정 상태 (ACTIVE: 정상, BLOCKED: 차단)"
+    )
     profile_image_id: uuid.UUID | None = Field(None, description="프로필 이미지 ID")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="추가 속성 (직급, 직책 등)")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="추가 속성 (직급, 직책 등)"
+    )
 
     @field_validator("email")
     @classmethod
@@ -151,7 +157,9 @@ class UserRead(UserBase):
             # 3. roles 매핑
             roles_list = []
             if hasattr(data, "roles") and data.roles:
-                roles_list = [{"id": r.id, "name": r.name, "code": r.code} for r in data.roles]
+                roles_list = [
+                    {"id": r.id, "name": r.name, "code": r.code} for r in data.roles
+                ]
 
             # 4. 명시적 딕셔너리 생성 (필드 누락 방지)
             return {

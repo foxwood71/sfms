@@ -13,11 +13,11 @@ export interface ExcelColumnMapping {
 /**
  * 엑셀 시트 데이터 구조
  */
-export interface ExcelSheetData {
+export interface ExcelSheetData<T = Record<string, unknown>> {
 	/** 시트 이름 */
 	sheetName: string;
 	/** 시트에 들어갈 데이터 */
-	data: any[];
+	data: T[];
 	/** 컬럼 매핑 */
 	columns: ExcelColumnMapping[];
 }
@@ -25,15 +25,15 @@ export interface ExcelSheetData {
 /**
  * 여러 개의 시트를 가진 엑셀 파일을 다운로드합니다.
  */
-export const exportMultiSheetExcel = (
-	sheets: ExcelSheetData[],
+export const exportMultiSheetExcel = <T extends Record<string, unknown>>(
+	sheets: ExcelSheetData<T>[],
 	fileName: string,
 ) => {
 	const workbook = XLSX.utils.book_new();
 
 	for (const sheet of sheets) {
 		const excelData = sheet.data.map((item) => {
-			const row: Record<string, any> = {};
+			const row: Record<string, unknown> = {};
 			for (const col of sheet.columns) {
 				row[col.title] = item[col.dataIndex];
 			}
@@ -43,7 +43,7 @@ export const exportMultiSheetExcel = (
 		XLSX.utils.book_append_sheet(workbook, worksheet, sheet.sheetName);
 	}
 
-	XLSX.writeFile(workbook, `${fileName}_${new Date().getTime()}.xlsx`);
+	XLSX.writeFile(workbook, `${fileName}_${Date.now()}.xlsx`);
 };
 
 /**
@@ -52,14 +52,14 @@ export const exportMultiSheetExcel = (
  * @param columns 컬럼 매핑 정보 (title, dataIndex)
  * @param fileName 저장될 파일명 (확장자 제외)
  */
-export const exportToExcel = (
-	data: any[],
+export const exportToExcel = <T extends Record<string, unknown>>(
+	data: T[],
 	columns: ExcelColumnMapping[],
 	fileName: string,
 ) => {
 	// 1. 매핑 정보를 바탕으로 엑셀용 데이터 재구성
 	const excelData = data.map((item) => {
-		const row: Record<string, any> = {};
+		const row: Record<string, unknown> = {};
 		for (const col of columns) {
 			row[col.title] = item[col.dataIndex];
 		}
@@ -74,7 +74,7 @@ export const exportToExcel = (
 	XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
 
 	// 4. 파일 다운로드 실행
-	XLSX.writeFile(workbook, `${fileName}_${new Date().getTime()}.xlsx`);
+	XLSX.writeFile(workbook, `${fileName}_${Date.now()}.xlsx`);
 };
 
 /**
@@ -82,7 +82,9 @@ export const exportToExcel = (
  * @param file 업로드된 엑셀 파일
  * @returns 파싱된 JSON 데이터 배열
  */
-export const importFromExcel = <T = any>(file: File): Promise<T[]> => {
+export const importFromExcel = <T = Record<string, unknown>>(
+	file: File,
+): Promise<T[]> => {
 	return new Promise((resolve, reject) => {
 		const reader = new FileReader();
 

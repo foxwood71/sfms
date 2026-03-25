@@ -35,21 +35,40 @@ async def get_current_user(
     db: Annotated[AsyncSession, Depends(get_db)],
     token: Annotated[str, Depends(oauth2_scheme)],
 ) -> User:
+    """요청 헤더의 JWT 토큰을 검증하여 현재 로그인된 사용자 정보를 반환합니다.
+
+    Args:
+        request (Request): FastAPI의 Request 객체.
+        db (AsyncSession): 데이터베이스 세션 종속성.
+        token (str): OAuth2 Bearer 토큰 종속성.
+
+    Returns:
+        User: 인증된 현재 사용자 ORM 모델 객체.
+
+    Raises:
+        UnauthorizedException: 토큰이 유효하지 않거나 사용자 정보를 찾을 수 없는 경우.
+
+    """
     payload = verify_token(token)
     if not payload:
         raise UnauthorizedException(domain=DOMAIN, error_code=ErrorCode.TOKEN_INVALID)
 
     user_id = payload.get("sub")
     if not user_id:
-        raise UnauthorizedException(domain=DOMAIN, error_code=ErrorCode.USER_NOT_IDENTIFIED)
+        raise UnauthorizedException(
+            domain=DOMAIN, error_code=ErrorCode.USER_NOT_IDENTIFIED
+        )
 
     from app.domains.usr.services import UserService
+
     try:
         user = await UserService.get_user(db, int(user_id))
         if user:
             return user
     except Exception:
-        raise UnauthorizedException(domain=DOMAIN, error_code=ErrorCode.NOT_FOUND) from None
+        raise UnauthorizedException(
+            domain=DOMAIN, error_code=ErrorCode.NOT_FOUND
+        ) from None
 
     raise UnauthorizedException(domain=DOMAIN, error_code=ErrorCode.NOT_FOUND)
 

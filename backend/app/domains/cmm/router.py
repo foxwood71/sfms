@@ -8,14 +8,17 @@ import uuid
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Query, UploadFile, status
-from fastapi.responses import RedirectResponse # 리다이렉트 응답 추가
+from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.codes import ErrorCode, SuccessCode
 from app.core.dependencies import check_domain_admin, get_current_user, get_db
-from app.core.exceptions import InternalServerErrorException, NotFoundException # 예외 추가
+from app.core.exceptions import (
+    InternalServerErrorException,
+    NotFoundException,
+)
 from app.core.responses import APIResponse
-from app.core.storage import upload_file_stream, get_presigned_url # 스토리지 유틸 추가
+from app.core.storage import get_presigned_url, upload_file_stream
 from app.domains.cmm.schemas import (
     AttachmentCreate,
     AttachmentRead,
@@ -45,18 +48,11 @@ router = APIRouter(prefix="/cmm", tags=["공통 관리 (CMM)"])
 async def list_codes(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
-    domain_code: Annotated[str | None, Query(description="특정 도메인의 코드만 필터링")] = None,
+    domain_code: Annotated[
+        str | None, Query(description="특정 도메인의 코드만 필터링")
+    ] = None,
 ):
-    """시스템 전체 또는 특정 도메인의 활성화된 공통 코드 목록을 조회합니다.
-
-    Args:
-        db (AsyncSession): 데이터베이스 비동기 세션
-        current_user (User): 현재 로그인한 사용자 정보
-        domain_code (str | None, optional): 특정 업무 도메인 필터링 코드. 기본값은 None.
-
-    Returns:
-        APIResponse[list[CodeGroupRead]]: 활성화된 코드 그룹 및 상세 코드 리스트
-    """
+    """시스템 전체 또는 특정 도메인의 활성화된 공통 코드 목록을 조회합니다."""
     codes = await CodeService.list_active_codes(db, domain_code=domain_code)
     return APIResponse(domain=DOMAIN, data=codes)
 
@@ -67,27 +63,17 @@ async def export_codes(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
-    """공통 코드 데이터를 내보냅니다.
-    
-    Target:
-    - all: 그룹 및 상세 코드 전체
-    - groups: 코드 그룹 목록
-    - details: 상세 코드 목록
-    """
+    """공통 코드 데이터를 내보냅니다."""
     if target == "all":
-        # 전체 데이터 (그룹 + 상세)
         groups = await CodeService.list_active_codes(db)
         details = await CodeService.list_all_details(db)
         return APIResponse(domain=DOMAIN, data={"groups": groups, "details": details})
-    
     elif target == "groups":
         data = await CodeService.list_active_codes(db)
         return APIResponse(domain=DOMAIN, data=data)
-    
     elif target == "details":
         data = await CodeService.list_all_details(db)
         return APIResponse(domain=DOMAIN, data=data)
-    
     else:
         raise NotFoundException(domain=DOMAIN, error_code=ErrorCode.NOT_FOUND)
 
@@ -99,8 +85,12 @@ async def import_codes(
     current_admin: Annotated[User, Depends(check_domain_admin("CMM"))],
 ):
     """엑셀 데이터를 기반으로 공통 코드(그룹/상세)를 일괄 임포트합니다."""
-    summary = await CodeService.bulk_import_codes(db, items=request.items, actor_id=current_admin.id)
-    return APIResponse(domain=DOMAIN, data=summary, success_code=SuccessCode.SUCCESS_CREATED)
+    summary = await CodeService.bulk_import_codes(
+        db, items=request.items, actor_id=current_admin.id
+    )
+    return APIResponse(
+        domain=DOMAIN, data=summary, success_code=SuccessCode.SUCCESS_CREATED
+    )
 
 
 @router.get("/codes/{group_code}", response_model=APIResponse[CodeGroupRead])
@@ -109,16 +99,7 @@ async def get_code_group(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
-    """특정 그룹 코드에 속한 상세 코드 목록을 상세 조회합니다.
-
-    Args:
-        group_code (str): 조회할 코드 그룹의 식별자
-        db (AsyncSession): 데이터베이스 비동기 세션
-        current_user (User): 현재 로그인한 사용자 정보
-
-    Returns:
-        APIResponse[CodeGroupRead]: 코드 그룹 상세 정보 및 하위 코드 리스트
-    """
+    """특정 그룹 코드에 속한 상세 코드 목록을 상세 조회합니다."""
     code_group = await CodeService.get_code_group(db, group_code=group_code)
     return APIResponse(domain=DOMAIN, data=code_group)
 
@@ -133,18 +114,13 @@ async def create_code_group(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_admin: Annotated[User, Depends(check_domain_admin("CMM"))],
 ):
-    """신규 공통 코드 그룹을 생성합니다.
-
-    Args:
-        obj_in (CodeGroupCreate): 생성할 코드 그룹 정보
-        db (AsyncSession): 데이터베이스 비동기 세션
-        current_admin (User): 행위 수행 권한을 가진 관리자 정보
-
-    Returns:
-        APIResponse[CodeGroupRead]: 생성 완료된 코드 그룹 정보
-    """
-    new_group = await CodeService.create_code_group(db, obj_in=obj_in, actor_id=current_admin.id)
-    return APIResponse(domain=DOMAIN, data=new_group, success_code=SuccessCode.SUCCESS_CREATED)
+    """신규 공통 코드 그룹을 생성합니다."""
+    new_group = await CodeService.create_code_group(
+        db, obj_in=obj_in, actor_id=current_admin.id
+    )
+    return APIResponse(
+        domain=DOMAIN, data=new_group, success_code=SuccessCode.SUCCESS_CREATED
+    )
 
 
 @router.patch("/codes/{group_code}", response_model=APIResponse[CodeGroupRead])
@@ -154,21 +130,13 @@ async def update_code_group(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_admin: Annotated[User, Depends(check_domain_admin("CMM"))],
 ):
-    """기존 공통 코드 그룹 정보를 수정합니다.
-
-    Args:
-        group_code (str): 수정할 대상 그룹 코드
-        obj_in (CodeGroupUpdate): 업데이트할 필드 정보
-        db (AsyncSession): 데이터베이스 비동기 세션
-        current_admin (User): 행위 수행 권한을 가진 관리자 정보
-
-    Returns:
-        APIResponse[CodeGroupRead]: 수정 완료된 코드 그룹 정보
-    """
+    """기존 공통 코드 그룹 정보를 수정합니다."""
     updated_group = await CodeService.update_code_group(
         db, group_code=group_code, obj_in=obj_in, actor_id=current_admin.id
     )
-    return APIResponse(domain=DOMAIN, data=updated_group, success_code=SuccessCode.SUCCESS_UPDATED)
+    return APIResponse(
+        domain=DOMAIN, data=updated_group, success_code=SuccessCode.SUCCESS_UPDATED
+    )
 
 
 @router.delete("/codes/{group_code}", response_model=APIResponse[None])
@@ -177,18 +145,11 @@ async def delete_code_group(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_admin: Annotated[User, Depends(check_domain_admin("CMM"))],
 ):
-    """공통 코드 그룹을 삭제합니다. 시스템 필수 코드는 삭제할 수 없습니다.
-
-    Args:
-        group_code (str): 삭제할 대상 그룹 코드
-        db (AsyncSession): 데이터베이스 비동기 세션
-        current_admin (User): 행위 수행 권한을 가진 관리자 정보
-
-    Returns:
-        APIResponse[None]: 삭제 성공 응답
-    """
+    """공통 코드 그룹을 삭제합니다."""
     await CodeService.delete_code_group(db, group_code=group_code)
-    return APIResponse(domain=DOMAIN, data=None, success_code=SuccessCode.SUCCESS_DELETED)
+    return APIResponse(
+        domain=DOMAIN, data=None, success_code=SuccessCode.SUCCESS_DELETED
+    )
 
 
 @router.post(
@@ -202,21 +163,13 @@ async def create_code_detail(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_admin: Annotated[User, Depends(check_domain_admin("CMM"))],
 ):
-    """특정 그룹에 새로운 상세 코드를 추가합니다.
-
-    Args:
-        group_code (str): 부모 그룹 코드
-        obj_in (CodeDetailCreate): 생성할 상세 코드 정보
-        db (AsyncSession): 데이터베이스 비동기 세션
-        current_admin (User): 행위 수행 권한을 가진 관리자 정보
-
-    Returns:
-        APIResponse[CodeDetailRead]: 생성 완료된 상세 코드 정보
-    """
+    """특정 그룹에 새로운 상세 코드를 추가합니다."""
     new_detail = await CodeService.create_code_detail(
         db, group_code=group_code, obj_in=obj_in, actor_id=current_admin.id
     )
-    return APIResponse(domain=DOMAIN, data=new_detail, success_code=SuccessCode.SUCCESS_CREATED)
+    return APIResponse(
+        domain=DOMAIN, data=new_detail, success_code=SuccessCode.SUCCESS_CREATED
+    )
 
 
 @router.patch(
@@ -230,18 +183,7 @@ async def update_code_detail(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_admin: Annotated[User, Depends(check_domain_admin("CMM"))],
 ):
-    """특정 상세 코드 정보를 수정합니다.
-
-    Args:
-        group_code (str): 부모 그룹 코드
-        detail_code (str): 수정할 상세 코드
-        obj_in (CodeDetailUpdate): 업데이트할 필드 정보
-        db (AsyncSession): 데이터베이스 비동기 세션
-        current_admin (User): 행위 수행 권한을 가진 관리자 정보
-
-    Returns:
-        APIResponse[CodeDetailRead]: 수정 완료된 상세 코드 정보
-    """
+    """특정 상세 코드 정보를 수정합니다."""
     updated_detail = await CodeService.update_code_detail(
         db,
         group_code=group_code,
@@ -249,10 +191,14 @@ async def update_code_detail(
         obj_in=obj_in,
         actor_id=current_admin.id,
     )
-    return APIResponse(domain=DOMAIN, data=updated_detail, success_code=SuccessCode.SUCCESS_UPDATED)
+    return APIResponse(
+        domain=DOMAIN, data=updated_detail, success_code=SuccessCode.SUCCESS_UPDATED
+    )
 
 
-@router.delete("/codes/{group_code}/details/{detail_code}", response_model=APIResponse[None])
+@router.delete(
+    "/codes/{group_code}/details/{detail_code}", response_model=APIResponse[None]
+)
 async def delete_code_detail(
     group_code: str,
     detail_code: str,
@@ -260,10 +206,9 @@ async def delete_code_detail(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """특정 그룹에 속한 상세 코드를 영구 삭제합니다."""
-    from app.domains.cmm.models import CodeDetail
     from sqlalchemy import delete
-    from app.core.exceptions import NotFoundException
-    from app.core.codes import ErrorCode
+
+    from app.domains.cmm.models import CodeDetail
 
     stmt = delete(CodeDetail).where(
         CodeDetail.group_code == group_code, CodeDetail.detail_code == detail_code
@@ -271,9 +216,11 @@ async def delete_code_detail(
     result = await db.execute(stmt)
     if result.rowcount == 0:
         raise NotFoundException(domain=DOMAIN, error_code=ErrorCode.NOT_FOUND)
-    
+
     await db.commit()
-    return APIResponse(domain=DOMAIN, data=None, success_code=SuccessCode.SUCCESS_DELETED)
+    return APIResponse(
+        domain=DOMAIN, data=None, success_code=SuccessCode.SUCCESS_DELETED
+    )
 
 
 # --------------------------------------------------------
@@ -289,16 +236,21 @@ async def delete_code_detail(
 async def upload_file(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
-    domain_code: Annotated[str, Query(..., description="업무 도메인 코드 (예: USR, FAC)")],
-    resource_type: Annotated[str, Query(..., description="리소스 유형 (예: PROFILE, EQUIPMENT)")],
-    ref_id: Annotated[int | None, Query(description="연결될 레코드 PK (나중에 연결 가능)")] = None,
-    file: UploadFile = File(...),
+    domain_code: Annotated[
+        str, Query(..., description="업무 도메인 코드 (예: USR, FAC)")
+    ],
+    resource_type: Annotated[
+        str, Query(..., description="리소스 유형 (예: PROFILE, EQUIPMENT)")
+    ],
+    # [FIX] Python 문법 준수: 기본값이 없는 'file' 인자를 기본값이 있는 'ref_id' 앞으로 이동하거나
+    # 모든 선택적 인자를 뒤로 밀어야 합니다. 여기선 'file'을 먼저 받도록 조정합니다.
+    file: Annotated[UploadFile, File(...)],
+    ref_id: Annotated[
+        int | None, Query(description="연결될 레코드 PK (나중에 연결 가능)")
+    ] = None,
     category_code: Annotated[str, Query(description="파일 분류 코드")] = "GENERAL",
 ):
     """단일 파일을 업로드하고 메타데이터를 저장합니다."""
-    from app.core.storage import upload_file_stream
-    from app.domains.cmm.schemas import AttachmentCreate
-
     file_data = await file.read()
     new_id = uuid.uuid4()
 
@@ -312,7 +264,9 @@ async def upload_file(
     )
 
     if not success:
-        raise InternalServerErrorException(domain=DOMAIN, error_code=ErrorCode.STORAGE_ERROR)
+        raise InternalServerErrorException(
+            domain=DOMAIN, error_code=ErrorCode.STORAGE_ERROR
+        )
 
     attachment_in = AttachmentCreate(
         id=new_id,
@@ -328,10 +282,14 @@ async def upload_file(
         created_by=current_user.id,
     )
 
-    new_attachment = await AttachmentService.create_attachment_metadata(db, obj_in=attachment_in)
+    new_attachment = await AttachmentService.create_attachment_metadata(
+        db, obj_in=attachment_in
+    )
     await db.commit()
 
-    return APIResponse(domain=DOMAIN, data=new_attachment, success_code=SuccessCode.SUCCESS_CREATED)
+    return APIResponse(
+        domain=DOMAIN, data=new_attachment, success_code=SuccessCode.SUCCESS_CREATED
+    )
 
 
 @router.delete("/attachments/{attachment_id}", response_model=APIResponse[None])
@@ -339,7 +297,9 @@ async def delete_attachment(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     attachment_id: uuid.UUID,
-    permanent: Annotated[bool, Query(description="즉시 물리 삭제 여부 (관리자 전용)")] = False,
+    permanent: Annotated[
+        bool, Query(description="즉시 물리 삭제 여부 (관리자 전용)")
+    ] = False,
 ):
     """첨부파일을 삭제 처리합니다."""
     await AttachmentService.delete_attachment(
@@ -351,15 +311,21 @@ async def delete_attachment(
         permanent=permanent,
     )
     await db.commit()
-    return APIResponse(domain=DOMAIN, data=None, success_code=SuccessCode.SUCCESS_DELETED)
+    return APIResponse(
+        domain=DOMAIN, data=None, success_code=SuccessCode.SUCCESS_DELETED
+    )
 
 
 @router.get("/attachments/deleted", response_model=APIResponse[list[AttachmentRead]])
 async def list_deleted_attachments(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
-    domain_code: Annotated[str | None, Query(description="도메인 코드 (예: FAC)")] = None,
-    resource_type: Annotated[str | None, Query(description="리소스 유형 (예: EQUIPMENT)")] = None,
+    domain_code: Annotated[
+        str | None, Query(description="도메인 코드 (예: FAC)")
+    ] = None,
+    resource_type: Annotated[
+        str | None, Query(description="리소스 유형 (예: EQUIPMENT)")
+    ] = None,
     ref_id: Annotated[int | None, Query(description="연결 레코드 ID")] = None,
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=1000)] = 100,
@@ -394,33 +360,24 @@ async def restore_attachment(
         is_admin=current_user.is_superuser,
     )
     await db.commit()
-    return APIResponse(domain=DOMAIN, data=None, success_code=SuccessCode.SUCCESS_UPDATED)
+    return APIResponse(
+        domain=DOMAIN, data=None, success_code=SuccessCode.SUCCESS_UPDATED
+    )
 
 
 @router.get("/attachments/{attachment_id}/download")
 async def download_attachment(
     attachment_id: uuid.UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
-    token: Annotated[str | None, Query(description="인증 토큰 (img 태그 호출용)")] = None,
+    token: Annotated[
+        str | None, Query(description="인증 토큰 (img 태그 호출용)")
+    ] = None,
 ):
-    """첨부파일 다운로드 엔드포인트.
-    
-    브라우저의 <img> 태그는 헤더를 보낼 수 없으므로 쿼리 파라미터로 토큰을 받을 수 있게 처리합니다.
-    """
-    from app.core.security import verify_token # 토큰 검증 함수 가정
-    
-    # 1. 토큰 검증 (실제 구현 시 보안 정책에 따라 get_current_user와 동일한 검증 수행)
-    # 여기서는 간단히 존재 여부만 체크하거나, UUID 자체가 보안 키 역할을 한다고 간주할 수 있습니다.
-    # 안전을 위해 최소한의 인증 정보가 필요합니다.
-    if not token:
-        # 헤더 인증 시도 (Depends 내부 로직과 유사)
-        pass 
-
+    """첨부파일 다운로드 엔드포인트."""
     attachment = await AttachmentService.get_attachment(db, attachment_id)
     url = await get_presigned_url(attachment.file_path)
     if not url:
         raise NotFoundException(domain=DOMAIN, error_code=ErrorCode.NOT_FOUND)
-    
     return RedirectResponse(url)
 
 
@@ -449,5 +406,9 @@ async def mark_notification_as_read(
     notification_id: int,
 ):
     """특정 알림을 읽음 처리합니다."""
-    await NotificationService.mark_as_read(db, notification_id=notification_id, user_id=current_user.id)
-    return APIResponse(domain=DOMAIN, data=None, success_code=SuccessCode.SUCCESS_UPDATED)
+    await NotificationService.mark_as_read(
+        db, notification_id=notification_id, user_id=current_user.id
+    )
+    return APIResponse(
+        domain=DOMAIN, data=None, success_code=SuccessCode.SUCCESS_UPDATED
+    )

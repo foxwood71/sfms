@@ -9,6 +9,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.domains.usr.schemas import UserRead
+
 # --------------------------------------------------------
 # [Auth] 인증 관련 스키마
 # --------------------------------------------------------
@@ -92,8 +94,6 @@ class UserRoleUpdate(BaseModel):
     )
 
 
-from app.domains.usr.schemas import UserRead
-
 class UserWithPermissions(UserRead):
     """사용자 정보와 함께 할당된 역할 및 통합 권한 목록을 담는 스키마입니다."""
 
@@ -119,7 +119,7 @@ class UserWithPermissions(UserRead):
                     result[field] = getattr(data, "is_superuser", False)
                 elif hasattr(data, field):
                     result[field] = getattr(data, field)
-            
+
             # 추가 필드들 명시적 주입
             result["roles"] = getattr(data, "roles", [])
             result["permissions"] = getattr(data, "permissions", {})

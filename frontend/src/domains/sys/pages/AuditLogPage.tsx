@@ -5,6 +5,7 @@ import {
 	FilterOutlined,
 	ReloadOutlined,
 } from "@ant-design/icons";
+import type { ProColumns } from "@ant-design/pro-components";
 import { PageContainer, ProCard, ProTable } from "@ant-design/pro-components";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -32,6 +33,20 @@ import dayjs from "dayjs";
 
 const { RangePicker } = DatePicker;
 
+interface AuditLogFilters {
+	action_type?: string;
+	target_domain?: string;
+	actor_user_id?: string;
+	keyword?: string;
+	dateRange?: [dayjs.Dayjs, dayjs.Dayjs] | null;
+}
+
+interface FilterTag {
+	key: keyof AuditLogFilters;
+	label: string;
+	value: string;
+}
+
 /**
  * 시스템 감사 로그 조회 페이지 (Refined Single Bento Standard)
  */
@@ -45,13 +60,7 @@ const AuditLogPage: React.FC = () => {
 	const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
 	const [modalVisible, setModalVisible] = useState(false);
 
-	const [filters, setFilters] = useState<{
-		action_type?: string;
-		target_domain?: string;
-		actor_user_id?: string;
-		keyword?: string;
-		dateRange?: [dayjs.Dayjs, dayjs.Dayjs] | null;
-	}>({});
+	const [filters, setFilters] = useState<AuditLogFilters>({});
 
 	const getActionColor = (action: string) => {
 		const upperAction = action.toUpperCase();
@@ -64,7 +73,7 @@ const AuditLogPage: React.FC = () => {
 	};
 
 	const filterTags = useMemo(() => {
-		const tags: { key: string; label: string; value: any }[] = [];
+		const tags: FilterTag[] = [];
 		if (filters.action_type) tags.push({ key: "action_type", label: t("sys.audit.action_type"), value: filters.action_type });
 		if (filters.target_domain) tags.push({ key: "target_domain", label: t("sys.audit.domain"), value: filters.target_domain });
 		if (filters.actor_user_id) tags.push({ key: "actor_user_id", label: t("sys.audit.actor"), value: filters.actor_user_id });
@@ -77,17 +86,17 @@ const AuditLogPage: React.FC = () => {
 		return tags;
 	}, [filters, t]);
 
-	const removeFilter = (key: string) => {
+	const removeFilter = (key: keyof AuditLogFilters) => {
 		const newFilters = { ...filters };
-		delete (newFilters as any)[key];
+		delete newFilters[key];
 		setFilters(newFilters);
 	};
 
-	const columns = [
+	const columns: ProColumns<AuditLog>[] = [
 		{ title: "ID", dataIndex: "id", width: 80 },
-		{ title: t("sys.audit.action_type"), dataIndex: "action_type", width: 120, render: (val: string) => <Tag color={getActionColor(val)}>{val}</Tag> },
+		{ title: t("sys.audit.action_type"), dataIndex: "action_type", width: 120, render: (val) => <Tag color={getActionColor(String(val))}>{val}</Tag> },
 		{ title: t("sys.audit.domain"), dataIndex: "target_domain", width: 100 },
-		{ title: t("sys.audit.actor"), dataIndex: "actor_user_id", width: 100, render: (val: any) => val || t("common.none") },
+		{ title: t("sys.audit.actor"), dataIndex: "actor_user_id", width: 100, render: (val) => (val as string | number) || t("common.none") },
 		{ title: t("sys.audit.description"), dataIndex: "description", ellipsis: true },
 		{ title: t("sys.audit.client_ip"), dataIndex: "client_ip", width: 130 },
 		{ title: t("sys.audit.created_at"), dataIndex: "created_at", width: 180, valueType: "dateTime" },
@@ -95,7 +104,7 @@ const AuditLogPage: React.FC = () => {
 			title: t("common.action"),
 			valueType: "option",
 			width: 80,
-			render: (_: any, record: AuditLog) => [
+			render: (_, record) => [
 				<Tooltip key="view-tip" title={t("common.detail_info")}><Button key="view" type="text" size="small" icon={<CameraOutlined />} onClick={() => { setSelectedLog(record); setModalVisible(true); }} /></Tooltip>,
 			],
 		},
@@ -162,7 +171,7 @@ const AuditLogPage: React.FC = () => {
                             )}
 
                             <ProTable<AuditLog>
-                                columns={columns as any}
+                                columns={columns}
                                 cardBordered={false}
                                 rowKey="id"
                                 search={false}

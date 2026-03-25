@@ -48,7 +48,8 @@ export const KO_MESSAGES = {
 		excel_import_details: "상세 코드 대량 등록",
 		excel_import_groups: "코드 그룹 대량 등록",
 		excel_import_confirm_title: "엑셀 업로드 확인",
-		excel_import_confirm_msg: "업로드된 데이터로 기존 정보가 변경되거나 신규 등록됩니다. 정말 진행하시겠습니까?",
+		excel_import_confirm_msg:
+			"업로드된 데이터로 기존 정보가 변경되거나 신규 등록됩니다. 정말 진행하시겠습니까?",
 		excel_import_summary: "총 {{count}}건의 데이터를 불러왔습니다.",
 		excel_filename_all_codes: "SFMS_공통코드_전체",
 		sheet_name_groups: "코드 그룹",
@@ -139,7 +140,7 @@ export const KO_MESSAGES = {
 			file_type: "구분",
 			upload_date: "등록일",
 			uploader: "등록자",
-		}
+		},
 	},
 	sys: {
 		audit: {
@@ -197,12 +198,14 @@ export const KO_MESSAGES = {
 		remember_me: "로그인 상태 유지",
 		forgot_password: "비밀번호 찾기",
 		token_error: "토큰 발급에 실패했습니다.",
-		info_fetch_failure: "인증 정보를 가져오는 데 실패했습니다. 다시 시도해 주세요.",
+		info_fetch_failure:
+			"인증 정보를 가져오는 데 실패했습니다. 다시 시도해 주세요.",
 	},
 	errors: {
 		INVALID_PARENT_ORG: "상위 조직 정보가 유효하지 않거나 자기 참조입니다.",
 		CIRCULAR_REFERENCE: "조직 계층 구조에 순환 참조가 발생했습니다.",
-		ACTIVE_CHILDREN_EXIST: "활성 상태인 하위 조직이 있어 비활성화할 수 없습니다.",
+		ACTIVE_CHILDREN_EXIST:
+			"활성 상태인 하위 조직이 있어 비활성화할 수 없습니다.",
 		ORG_HAS_CHILDREN: "하위 부서가 존재하여 삭제할 수 없습니다.",
 		ORG_HAS_USERS: "소속 사용자가 있어 삭제할 수 없습니다.",
 		DUPLICATE_ORG_CODE: "이미 사용 중인 조직 코드입니다.",

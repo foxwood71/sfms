@@ -143,7 +143,10 @@ class User(Base):
         Boolean, default=True, comment="재직 여부 (True: 재직, False: 퇴사)"
     )
     account_status: Mapped[str] = mapped_column(
-        String(20), default="ACTIVE", nullable=False, comment="계정 상태 (ACTIVE: 정상, BLOCKED: 차단)"
+        String(20),
+        default="ACTIVE",
+        nullable=False,
+        comment="계정 상태 (ACTIVE: 정상, BLOCKED: 차단)",
     )
     login_fail_count: Mapped[int] = mapped_column(
         Integer, default=0, nullable=False, comment="로그인 실패 횟수"
@@ -197,7 +200,7 @@ class User(Base):
     def is_superuser(self) -> bool:
         """사용자가 관리자 권한을 가졌는지 확인하는 프로퍼티입니다.
 
-        권한 매트릭스(permissions)에 'ALL': ['*'] 또는 'all': ['*'] 설정이 포함된 
+        권한 매트릭스(permissions)에 'ALL': ['*'] 또는 'all': ['*'] 설정이 포함된
         역할을 하나라도 보유한 경우 True를 반환합니다.
 
         Returns:
@@ -207,17 +210,17 @@ class User(Base):
         try:
             if not self.roles:
                 return False
-            
+
             for role in self.roles:
                 perms = role.permissions
                 if not isinstance(perms, dict):
                     continue
-                
+
                 # 대소문자 구분 없이 'ALL' 리소스에 '*' 액션이 있는지 확인
                 all_actions = perms.get("ALL") or perms.get("all")
                 if all_actions and isinstance(all_actions, list) and "*" in all_actions:
                     return True
-                    
+
             return False
         except Exception:
             return False

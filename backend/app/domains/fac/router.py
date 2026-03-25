@@ -69,6 +69,7 @@ async def get_facility(
     return APIResponse(domain=DOMAIN, data=facility)
 
 
+
 @router.post(
     "/facilities",
     response_model=APIResponse[FacilityRead],

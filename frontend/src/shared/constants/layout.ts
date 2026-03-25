@@ -1,3 +1,5 @@
+import type { GlobalToken } from "antd";
+
 /**
  * SFMS UI/UX 레이아웃 표준 상수
  */
@@ -17,7 +19,7 @@ export const LAYOUT_CONSTANTS = {
 /**
  * 벤토(Bento) 스타일 공통 디자인 토큰
  */
-export const BENTO_STYLE = (token: any) => ({
+export const BENTO_STYLE = (token: GlobalToken) => ({
 	padding: "12px 16px",
 	background: token.colorFillAlter,
 	borderRadius: token.borderRadiusLG,

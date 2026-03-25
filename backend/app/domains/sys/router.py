@@ -21,7 +21,6 @@ from app.domains.sys.schemas import (
     AuditLogRead,
     SequenceRuleCreate,
     SequenceRuleRead,
-    SequenceRuleUpdate,
 )
 from app.domains.sys.services import AuditLogService, SequenceRuleService
 from app.domains.usr.models import User
@@ -170,4 +169,9 @@ async def list_audit_logs(
         action_type=action_type,
         keyword=keyword,
     )
-    return APIResponse(domain=DOMAIN, data=AuditLogListRead(items=items, total=total))
+    return APIResponse(
+        domain=DOMAIN,
+        data=AuditLogListRead(
+            items=[AuditLogRead.model_validate(item) for item in items], total=total
+        ),
+    )

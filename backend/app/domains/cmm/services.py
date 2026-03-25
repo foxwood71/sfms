@@ -6,9 +6,9 @@
 
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -19,7 +19,7 @@ from app.core.exceptions import (
     NotFoundException,
 )
 from app.domains.cmm.models import Attachment, CodeDetail, CodeGroup, Notification
-from app.domains.cmm.schemas import (
+from .schemas import (
     AttachmentCreate,
     CodeDetailCreate,
     CodeDetailRead,
@@ -27,7 +27,7 @@ from app.domains.cmm.schemas import (
     CodeGroupCreate,
     CodeGroupRead,
     CodeGroupUpdate,
-    NotificationCreate,
+    CodeImportSchema,
 )
 
 if TYPE_CHECKING:
@@ -79,7 +79,9 @@ class CodeService:
         return [CodeDetailRead.model_validate(d) for d in details]
 
     @staticmethod
-    async def create_code_group(db: AsyncSession, obj_in: CodeGroupCreate, actor_id: int) -> CodeGroupRead:
+    async def create_code_group(
+        db: AsyncSession, obj_in: CodeGroupCreate, actor_id: int
+    ) -> CodeGroupRead:
         """신규 코드 그룹을 생성합니다."""
         existing = await db.execute(
             select(CodeGroup).where(CodeGroup.group_code == obj_in.group_code)
@@ -87,10 +89,12 @@ class CodeService:
         if existing.scalar_one_or_none():
             raise ConflictException(domain=DOMAIN, error_code=ErrorCode.DUPLICATE_CODE)
 
-        db_obj = CodeGroup(**obj_in.model_dump(), created_by=actor_id, updated_by=actor_id)
+        db_obj = CodeGroup(
+            **obj_in.model_dump(), created_by=actor_id, updated_by=actor_id
+        )
         db.add(db_obj)
         await db.commit()
-        
+
         stmt = (
             select(CodeGroup)
             .options(selectinload(CodeGroup.details))
@@ -100,7 +104,9 @@ class CodeService:
         return CodeGroupRead.model_validate(result.scalar_one())
 
     @staticmethod
-    async def update_code_group(db: AsyncSession, group_code: str, obj_in: CodeGroupUpdate, actor_id: int) -> CodeGroupRead:
+    async def update_code_group(
+        db: AsyncSession, group_code: str, obj_in: CodeGroupUpdate, actor_id: int
+    ) -> CodeGroupRead:
         """기존 코드 그룹 정보를 수정합니다."""
         stmt = (
             select(CodeGroup)
@@ -109,18 +115,17 @@ class CodeService:
         )
         result = await db.execute(stmt)
         group = result.scalar_one_or_none()
-        
+
         if not group:
             raise NotFoundException(domain=DOMAIN, error_code=ErrorCode.NOT_FOUND)
 
         update_data = obj_in.model_dump(exclude_unset=True)
-        
+
         if update_data.get("is_active") is False:
             active_details = [d for d in group.details if d.is_active]
             if active_details:
                 raise BadRequestException(
-                    domain=DOMAIN, 
-                    error_code=ErrorCode.RESOURCE_IN_USE
+                    domain=DOMAIN, error_code=ErrorCode.RESOURCE_IN_USE
                 )
 
         for field, value in update_data.items():
@@ -128,7 +133,7 @@ class CodeService:
 
         group.updated_by = actor_id
         await db.commit()
-        
+
         stmt = (
             select(CodeGroup)
             .options(selectinload(CodeGroup.details))
@@ -143,12 +148,14 @@ class CodeService:
         stmt = select(CodeGroup).where(CodeGroup.group_code == group_code)
         result = await db.execute(stmt)
         group = result.scalar_one_or_none()
-        
+
         if not group:
             raise NotFoundException(domain=DOMAIN, error_code=ErrorCode.NOT_FOUND)
-            
+
         if group.is_system:
-            raise ConflictException(domain=DOMAIN, error_code=ErrorCode.SYSTEM_RESOURCE_MOD)
+            raise ConflictException(
+                domain=DOMAIN, error_code=ErrorCode.SYSTEM_RESOURCE_MOD
+            )
 
         # 하위 코드 체크
         stmt_detail = select(CodeDetail).where(CodeDetail.group_code == group_code)
@@ -165,7 +172,7 @@ class CodeService:
     ) -> CodeDetailRead:
         """특정 그룹에 새로운 상세 코드를 추가합니다."""
         await CodeService.get_code_group(db, group_code)
-        
+
         existing = await db.execute(
             select(CodeDetail).where(
                 CodeDetail.group_code == group_code,
@@ -204,7 +211,7 @@ class CodeService:
             raise NotFoundException(domain=DOMAIN, error_code=ErrorCode.NOT_FOUND)
 
         update_data = obj_in.model_dump(exclude_unset=True)
-        
+
         # [정책] 사용 중인 코드는 비활성화 불가 체크
         if update_data.get("is_active") is False and detail.is_active:
             # 여기서는 예시로 로직만 구성하거나 공통 체크 함수 호출
@@ -220,13 +227,11 @@ class CodeService:
 
     @staticmethod
     async def bulk_import_codes(
-        db: AsyncSession, 
-        items: list["CodeImportSchema"], 
-        actor_id: int
+        db: AsyncSession, items: list["CodeImportSchema"], actor_id: int
     ) -> dict[str, int]:
         """엑셀 데이터를 기반으로 그룹 및 상세 코드를 일괄 임포트합니다 (Upsert)."""
         summary = {"total": len(items), "groups_upserted": 0, "details_upserted": 0}
-        
+
         # 1. 고유 그룹 코드 추출 및 처리
         group_map = {}
         for item in items:
@@ -240,11 +245,13 @@ class CodeService:
             stmt = select(CodeGroup).where(CodeGroup.group_code == g_code)
             res = await db.execute(stmt)
             group = res.scalar_one_or_none()
-            
+
             if group:
                 group.group_name = g_info["group_name"]
-                if g_info["domain_code"]: group.domain_code = g_info["domain_code"]
-                if g_info["description"]: group.description = g_info["description"]
+                if g_info["domain_code"]:
+                    group.domain_code = g_info["domain_code"]
+                if g_info["description"]:
+                    group.description = g_info["description"]
                 group.updated_by = actor_id
             else:
                 new_group = CodeGroup(
@@ -253,7 +260,7 @@ class CodeService:
                     domain_code=g_info["domain_code"],
                     description=g_info["description"],
                     created_by=actor_id,
-                    updated_by=actor_id
+                    updated_by=actor_id,
                 )
                 db.add(new_group)
             summary["groups_upserted"] += 1
@@ -265,11 +272,11 @@ class CodeService:
         for item in items:
             stmt = select(CodeDetail).where(
                 CodeDetail.group_code == item.group_code,
-                CodeDetail.detail_code == item.detail_code
+                CodeDetail.detail_code == item.detail_code,
             )
             res = await db.execute(stmt)
             detail = res.scalar_one_or_none()
-            
+
             if detail:
                 detail.detail_name = item.detail_name
                 detail.sort_order = item.sort_order
@@ -283,7 +290,7 @@ class CodeService:
                     sort_order=item.sort_order,
                     is_active=item.is_active,
                     created_by=actor_id,
-                    updated_by=actor_id
+                    updated_by=actor_id,
                 )
                 db.add(new_detail)
             summary["details_upserted"] += 1
@@ -416,7 +423,9 @@ class NotificationService:
         return list(result.scalars().all())
 
     @staticmethod
-    async def mark_as_read(db: AsyncSession, notification_id: int, user_id: int) -> None:
+    async def mark_as_read(
+        db: AsyncSession, notification_id: int, user_id: int
+    ) -> None:
         """특정 알림을 읽음 상태로 변경합니다."""
         stmt = select(Notification).where(
             Notification.id == notification_id, Notification.receiver_user_id == user_id

@@ -29,6 +29,8 @@ import {
 	theme,
 } from "antd";
 import type { SizeType } from "antd/es/config-provider/SizeContext";
+import type { DataNode } from "antd/es/tree";
+import type { AxiosError } from "axios";
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -45,6 +47,7 @@ import {
 import UserFormDrawer from "../components/UserFormDrawer";
 import type { CreateUserParams, Organization, UpdateUserParams, User, UserFormValues } from "../types";
 import { getUserTableColumns } from "./UserTableColumns";
+import type { APIErrorResponse } from "@/shared/api/types";
 
 /**
  * 사용자 목록 관리 페이지 (Refined Single Bento Standard - Sync with Org Page)
@@ -141,7 +144,7 @@ const UserListPage: React.FC = () => {
 			return createUserApi(payload as CreateUserParams);
 		},
 		onSuccess: () => { message.success(t("common.save_success")); setDrawerVisible(false); actionRef.current?.reload(); queryClient.invalidateQueries({ queryKey: ["users"] }); },
-		onError: (err: any) => message.error(err.response?.data?.message || t("common.save_failure")),
+		onError: (err: AxiosError<APIErrorResponse>) => message.error(err.response?.data?.message || t("common.save_failure")),
 	});
 
 	const columns = useMemo(() => getUserTableColumns({
@@ -152,8 +155,8 @@ const UserListPage: React.FC = () => {
 		onDelete: (id) => {}, // 기능 미구현 시 빈 함수
 	}), [posMap, dutyMap]);
 
-	const treeData = useMemo(() => {
-		const mapToTree = (items: Organization[], parentMatched = false): any[] => {
+	const treeData: DataNode[] = useMemo(() => {
+		const mapToTree = (items: Organization[], parentMatched = false): DataNode[] => {
 			if (!items) return [];
 			return items.map((item) => {
 				const isMatched = !orgSearchValue || item.name.toLowerCase().includes(orgSearchValue.toLowerCase());
@@ -164,8 +167,8 @@ const UserListPage: React.FC = () => {
 					title: item.is_active ? item.name : <span style={{ color: token.colorTextDisabled, textDecoration: "line-through" }}>{item.name}</span>,
 					icon: <ClusterOutlined />,
 					children: childrenNodes,
-				};
-			}).filter(Boolean);
+				} as DataNode;
+			}).filter((node): node is DataNode => node !== null);
 		};
 		return [{ key: "root", title: t("user.root_org"), icon: <ApartmentOutlined />, children: mapToTree(orgResponse?.data || []) }];
 	}, [orgResponse, orgSearchValue, token, t]);
