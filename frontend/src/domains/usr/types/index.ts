@@ -25,7 +25,7 @@ export interface User {
     updated_at: string;
     /** JSONB로 관리되는 추가 속성 */
     metadata?: {
-        pos?: string;  // 직위/직급 코드
+        pos?: string; // 직위/직급 코드
         duty?: string; // 직책 코드
         [key: string]: any; // 추후 확장을 위해 허용 (메타데이터 특성)
     };

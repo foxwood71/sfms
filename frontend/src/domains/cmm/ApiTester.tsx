@@ -1,7 +1,7 @@
+import { Button, Card, message, Space } from "antd";
+import type React from "react";
 import { http } from "@/shared/api/http";
 import type { APIErrorResponse } from "@/shared/api/types";
-import { Button, Card, Space, message } from "antd";
-import type React from "react";
 
 const ApiTester: React.FC = () => {
 	const testHealth = async () => {

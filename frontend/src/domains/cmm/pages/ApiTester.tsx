@@ -58,7 +58,12 @@ const ApiTester: React.FC = () => {
 							placeholder="/api/v1/..."
 							onPressEnter={handleTest}
 						/>
-						<Button type="primary" icon={<SendOutlined />} loading={loading} onClick={handleTest}>
+						<Button
+							type="primary"
+							icon={<SendOutlined />}
+							loading={loading}
+							onClick={handleTest}
+						>
 							전송
 						</Button>
 					</Space.Compact>
@@ -66,20 +71,24 @@ const ApiTester: React.FC = () => {
 
 				<ProCard title="응답 결과" headerBordered style={{ marginTop: 16 }}>
 					{loading ? (
-						<div style={{ textAlign: "center", padding: 40 }}>요청 처리 중...</div>
+						<div style={{ textAlign: "center", padding: 40 }}>
+							요청 처리 중...
+						</div>
 					) : response ? (
 						<div>
 							<Space style={{ marginBottom: 16 }}>
 								<Tag color="green">SUCCESS</Tag>
 								<Text type="secondary">Status: {response.status}</Text>
 							</Space>
-							<pre style={{ 
-								padding: 16, 
-								background: token.colorBgLayout, 
-								borderRadius: token.borderRadius,
-								overflow: "auto",
-								maxHeight: 500
-							}}>
+							<pre
+								style={{
+									padding: 16,
+									background: token.colorBgLayout,
+									borderRadius: token.borderRadius,
+									overflow: "auto",
+									maxHeight: 500,
+								}}
+							>
 								{JSON.stringify(response, null, 2)}
 							</pre>
 						</div>
@@ -89,18 +98,26 @@ const ApiTester: React.FC = () => {
 								<Tag color="error">ERROR</Tag>
 								<BugOutlined style={{ color: token.colorError }} />
 							</Space>
-							<pre style={{ 
-								padding: 16, 
-								background: "#fff1f0", 
-								color: token.colorError,
-								borderRadius: token.borderRadius,
-								border: "1px solid #ffa39e"
-							}}>
+							<pre
+								style={{
+									padding: 16,
+									background: "#fff1f0",
+									color: token.colorError,
+									borderRadius: token.borderRadius,
+									border: "1px solid #ffa39e",
+								}}
+							>
 								{JSON.stringify(error, null, 2)}
 							</pre>
 						</div>
 					) : (
-						<div style={{ color: token.colorTextDisabled, textAlign: "center", padding: 40 }}>
+						<div
+							style={{
+								color: token.colorTextDisabled,
+								textAlign: "center",
+								padding: 40,
+							}}
+						>
 							상단에서 API를 호출하면 결과가 여기에 표시됩니다.
 						</div>
 					)}

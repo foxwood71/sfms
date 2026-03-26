@@ -21,6 +21,14 @@
 		"files.insertFinalNewline": true,
 		"files.trimTrailingWhitespace": true,
 		"files.trimFinalNewlines": true,
+		//"files.autoSave": "onFocusChange", // 포커스 이동 시 자동 저장 (선택 사항)
+		// 자동 저장 방식을 좀 더 안정적으로 변경 (또는 "off")
+		"files.autoSave": "afterDelay",
+		"files.autoSaveDelay": 1500, // 1.5초 후 저장
+
+		// 붙여넣기 시 자동 포맷팅 끄기 (AI 도구 사용 시 필수)
+		"editor.formatOnPaste": false,
+		"editor.formatOnType": false,
 
 		// 탐색기에서 불필요한 파일/폴더 숨기기 (작업 환경 최적화)
 		"files.exclude": {
@@ -105,8 +113,8 @@
 			"editor.defaultFormatter": "biomejs.biome",
 			"editor.formatOnSave": true,
 			"editor.codeActionsOnSave": {
-				"source.fixAll.biome": "explicit",
-				"source.organizeImports.biome": "explicit"
+				// fixAll이 "source.organizeImports.biome": "explicit"를 포함하므로 하나만 집중적으로 사용
+				"source.fixAll.biome": "explicit"
 			}
 		},
 

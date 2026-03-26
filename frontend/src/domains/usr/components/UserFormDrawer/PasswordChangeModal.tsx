@@ -12,12 +12,7 @@ interface PasswordChangeModalProps {
     onOpenChange: (open: boolean) => void;
 }
 
-const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
-    userId,
-    userName,
-    open,
-    onOpenChange,
-}) => {
+const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ userId, userName, open, onOpenChange }) => {
     const { message } = App.useApp();
 
     return (

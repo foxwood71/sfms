@@ -9,87 +9,89 @@ export type PropsRecord = Record<string, PropValue>;
 
 // 2. 시스템 도메인 인터페이스
 export interface SystemDomain {
-    domain_code: string; 
-    domain_name: string;
-    description?: string;
-    is_active: boolean;
-    created_at: string;
+	domain_code: string;
+	domain_name: string;
+	description?: string;
+	is_active: boolean;
+	created_at: string;
 }
 
 // 3. 코드 그룹 인터페이스 (신규 규격 필드 반영)
 export interface CodeGroup {
-    id: number;
-    group_code: string; 
-    group_name: string;
-    domain_code?: string;
-    description?: string;
-    
-    // [SFMS Standard] 코드 규격 관리
-    code_length: number;    // 권장 코드 길이
-    is_seq_used: boolean;   // 순번 생성 엔진 사용 여부
+	id: number;
+	group_code: string;
+	group_name: string;
+	domain_code?: string;
+	description?: string;
 
-    is_system: boolean;
-    is_active: boolean;
-    props: PropsRecord;
-    created_at: string;
-    updated_at: string;
+	// [SFMS Standard] 코드 규격 관리
+	code_length: number; // 권장 코드 길이
+	is_seq_used: boolean; // 순번 생성 엔진 사용 여부
+
+	is_system: boolean;
+	is_active: boolean;
+	props: PropsRecord;
+	created_at: string;
+	updated_at: string;
 }
 
 // 4. 코드 그룹 생성/수정 파라미터
-export interface CodeGroupParams extends Partial<Omit<CodeGroup, "id" | "created_at" | "updated_at">> {
-    group_code: string;
-    group_name: string;
+export interface CodeGroupParams
+	extends Partial<Omit<CodeGroup, "id" | "created_at" | "updated_at">> {
+	group_code: string;
+	group_name: string;
 }
 
 // 5. 상세 코드 인터페이스
 export interface CodeDetail<T = PropsRecord> {
-    id: number;
-    group_code: string; 
-    detail_code: string; 
-    detail_name: string;
-    props: T; 
-    sort_order: number;
-    is_active: boolean;
-    created_at: string;
-    updated_at: string;
+	id: number;
+	group_code: string;
+	detail_code: string;
+	detail_name: string;
+	props: T;
+	sort_order: number;
+	is_active: boolean;
+	created_at: string;
+	updated_at: string;
 }
 
 // 6. 상세 코드 생성/수정 파라미터
-export interface CodeDetailParams extends Partial<Omit<CodeDetail, "id" | "created_at" | "updated_at">> {
-    group_code: string;
-    detail_code: string;
-    detail_name: string;
+export interface CodeDetailParams
+	extends Partial<Omit<CodeDetail, "id" | "created_at" | "updated_at">> {
+	group_code: string;
+	detail_code: string;
+	detail_name: string;
 }
 
 // 7. 첨부파일 인터페이스
 export interface Attachment {
-    id: string; // UUID
-    domain_code: string;
-    resource_type: string;
-    ref_id: number;
-    category_code: string;
-    file_name: string;
-    file_path: string;
-    file_size: number;
-    content_type?: string;
-    org_id?: number;
-    props: PropsRecord;
-    is_deleted: boolean;
-    created_at: string;
+	id: string; // UUID
+	domain_code: string;
+	resource_type: string;
+	ref_id: number;
+	category_code: string;
+	file_name: string;
+	file_path: string;
+	file_size: number;
+	content_type?: string;
+	org_id?: number;
+	props: PropsRecord;
+	is_deleted: boolean;
+	created_at: string;
 }
 
 // 8. 알림 인터페이스
 export interface Notification {
-    id: number;
-    domain_code?: string;
-    receiver_user_id: number;
-    category: string;
-    priority: string;
-    title: string;
-    content?: string;
-    link_url?: string;
-    props: PropsRecord;
-    is_read: boolean;
-    read_at?: string;
-    created_at: string;
+	id: number;
+	domain_code?: string;
+	receiver_user_id: number;
+	category: string;
+	priority: string;
+	title: string;
+	content?: string;
+	link_url?: string;
+	props: PropsRecord;
+	is_read: boolean;
+	read_at?: string;
+	created_at: string;
 }

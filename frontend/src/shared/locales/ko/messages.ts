@@ -67,6 +67,7 @@ export const KO_MESSAGES = {
 		bulk_delete_confirm: "선택한 {{count}}개 항목을 정말 삭제하시겠습니까?",
 		upload: "업로드",
 		description: "설명",
+		sort_order: "정렬 순서",
 	},
 	menu: {
 		dashboard: "대시보드",
@@ -200,6 +201,25 @@ export const KO_MESSAGES = {
 		token_error: "토큰 발급에 실패했습니다.",
 		info_fetch_failure:
 			"인증 정보를 가져오는 데 실패했습니다. 다시 시도해 주세요.",
+	},
+	cmm: {
+		code: {
+			title: "공통 코드 관리",
+			list_title: "공통 코드 목록",
+			new_code: "신규 공통 코드 등록",
+			detail_title: "공통 코드 상세 정보",
+			group_list: "공통 코드 그룹 목록",
+			new_group: "신규 공통 코드 그룹 등록",
+			group_code: "그룹 코드",
+			group_name: "그룹 명칭",
+			edit_group: "그룹 수정",
+			delete_group: "그룹 삭제",
+			add_detail: "상세 코드 추가",
+			edit_detail: "상세 코드 수정",
+			detail_list: "공통 코드 그룹 상세 정보",
+			detail_code: "코드",
+			detail_name: "명칭",
+		},
 	},
 	errors: {
 		INVALID_PARENT_ORG: "상위 조직 정보가 유효하지 않거나 자기 참조입니다.",
