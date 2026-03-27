@@ -63,15 +63,15 @@ export const getCodeDetails = async (groupCode: string) => {
 
 /** 공통 코드 데이터를 내보내기 위해 조회합니다. (target: all | groups | details) */
 export const exportCodesApi = async (target: "all" | "groups" | "details") => {
-	const response = await http.get<APIResponse<any>>(
+	const response = await http.get<APIResponse<unknown>>(
 		`/cmm/export/codes/${target}`,
 	);
 	return response.data?.data;
 };
 
 /** 엑셀 데이터를 기반으로 공통 코드를 일괄 임포트합니다. */
-export const importCodesApi = async (items: any[]) => {
-	const response = await http.post<APIResponse<any>>("/cmm/import/codes/all", {
+export const importCodesApi = async (items: unknown[]) => {
+	const response = await http.post<APIResponse<unknown>>("/cmm/import/codes/all", {
 		items,
 	});
 	return response.data;
@@ -164,7 +164,7 @@ export const getNextSequence = async (domainCode: string, prefix: string) => {
 
 /** 감사 로그(Audit Logs)를 조회합니다. */
 export const getAuditLogs = async (params: Record<string, unknown>) => {
-	const response = await http.get<APIResponse<any>>("/sys/audit-logs", {
+	const response = await http.get<APIResponse<unknown>>("/sys/audit-logs", {
 		params,
 	});
 	return response.data;

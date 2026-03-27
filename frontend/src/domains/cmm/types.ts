@@ -31,13 +31,14 @@ export interface CodeGroup {
 	is_system: boolean;
 	is_active: boolean;
 	props: PropsRecord;
+	details?: CodeDetail[]; // 상세 코드 목록 (Optional)
 	created_at: string;
 	updated_at: string;
 }
 
 // 4. 코드 그룹 생성/수정 파라미터
 export interface CodeGroupParams
-	extends Partial<Omit<CodeGroup, "id" | "created_at" | "updated_at">> {
+	extends Partial<Omit<CodeGroup, "id" | "details" | "created_at" | "updated_at">> {
 	group_code: string;
 	group_name: string;
 }
@@ -79,6 +80,11 @@ export interface Attachment {
 	is_deleted: boolean;
 	created_at: string;
 }
+
+/**
+ * 첨부파일 메타데이터 수정 파라미터
+ */
+export interface AttachmentUpdate extends Partial<Omit<Attachment, "id" | "file_path" | "file_size" | "created_at">> {}
 
 // 8. 알림 인터페이스
 export interface Notification {
