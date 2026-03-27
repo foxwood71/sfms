@@ -3,7 +3,7 @@ import { type ThemeConfig, theme } from "antd";
 /**
  * SFMS 테마 타입 정의
  */
-export type ThemeMode = "light" | "dark" | "navy" | "gov" | "mac";
+export type ThemeMode = "light" | "dark" | "navy" | "gov" | "mac" | "win";
 
 /**
  * 1. Default Light 테마
@@ -120,6 +120,57 @@ export const macTheme: ThemeConfig = {
 };
 
 /**
+ * 6. Windows Style 테마 (Windows 11 스타일 - Light Blue & Gray)
+ */
+export const winTheme: ThemeConfig = {
+	algorithm: theme.defaultAlgorithm,
+	token: {
+		colorPrimary: "#0078d4", // Windows Blue
+		colorInfo: "#0078d4",    // 정보 알림 강조
+		colorLink: "#0078d4",    // 링크 색상
+		colorBgBase: "#f3f3f3",  // Windows 11 배경색 (Mica 효과 대체)
+		colorBgContainer: "#ffffff",
+		colorBgLayout: "#f3f3f3",
+		colorTextBase: "#000000",
+		borderRadius: 4,         // 윈도우의 절제된 곡률
+	},
+	components: {
+		Card: {
+			borderRadiusLG: 12, // Bento Standard v1.1 준수
+			boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)", // 윈도우 스타일의 부드러운 그림자
+		},
+		Layout: {
+			headerBg: "#ffffff",
+			bodyBg: "#f3f3f3",
+			siderBg: "#eeeeee",
+		},
+		Table: {
+			headerBg: "#ffffff",
+			headerColor: "#000000",
+			rowHoverBg: "#e5e5e5",
+			borderColor: "#d2d2d2",
+		},
+		Button: {
+			borderRadius: 4,
+			colorPrimaryHover: "#005a9e", // 윈도우 블루 호버 (조금 더 어두운 파랑)
+			colorPrimaryActive: "#004578", // 윈도우 블루 클릭 (더 어두운 파랑)
+		},
+		Input: {
+			borderRadius: 4,
+			activeBorderColor: "#0078d4",
+		},
+		Menu: {
+			itemSelectedBg: "#e5e5e5",
+			itemSelectedColor: "#0078d4",
+		},
+		Tabs: {
+			itemSelectedColor: "#0078d4",
+			inkBarColor: "#0078d4",
+		},
+	},
+};
+
+/**
  * 모드에 따른 테마 설정 반환
  */
 export const getThemeConfig = (mode: ThemeMode): ThemeConfig => {
@@ -134,6 +185,8 @@ export const getThemeConfig = (mode: ThemeMode): ThemeConfig => {
 			return govTheme;
 		case "mac":
 			return macTheme;
+		case "win":
+			return winTheme;
 		default:
 			return navyTheme;
 	}

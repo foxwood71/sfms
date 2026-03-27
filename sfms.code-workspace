@@ -11,7 +11,7 @@
 		// -------------------------------------------------------------
 		// 1. 공통 에디터 설정
 		// -------------------------------------------------------------
-		"workbench.colorTheme": "Catppuccin Mocha",
+		"workbench.colorTheme": "Dark Modern",
 		"workbench.iconTheme": "catppuccin-mocha",
 		"editor.insertSpaces": true,
 		"editor.tabSize": 4, // 모든 파일의 들여쓰기를 4칸으로 통일
@@ -111,7 +111,7 @@
 		"[javascript][javascriptreact][typescript][typescriptreact][json][jsonc][yaml][css]": {
 			"editor.tabSize": 4,
 			"editor.defaultFormatter": "biomejs.biome",
-			"editor.formatOnSave": true,
+			"editor.formatOnSave": false,
 			"editor.codeActionsOnSave": {
 				// fixAll이 "source.organizeImports.biome": "explicit"를 포함하므로 하나만 집중적으로 사용
 				"source.fixAll.biome": "explicit"
@@ -135,7 +135,7 @@
 
 		// dependency-cruiser 확장 설정
 		"dependency-cruiser.configFile": ".dependency-cruiser.js",
-		"dependency-cruiser.runOnSave": true,
+		"dependency-cruiser.runOnSave": false,
 		"dependency-cruiser.layout": "hierarchical",
 		"dependency-cruiser.maxDepth": 3,
 		"dependency-cruiser.exclude": [

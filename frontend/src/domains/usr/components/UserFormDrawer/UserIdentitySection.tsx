@@ -29,6 +29,8 @@ interface UserIdentitySectionProps {
 	watchedName?: string;
 	/** 현재 폼에서 감시 중인 직위 레이블 */
 	posLabel?: string;
+	/** 현재 폼에서 감시 중인 직책 레이블 */
+	dutyLabel?: string;
 	/** 현재 할당된 역할 리스트 */
 	currentRoles: Role[];
 	/** 읽기 전용 여부 (수정 모드 아닐 때) */
@@ -48,6 +50,7 @@ const UserIdentitySection: React.FC<UserIdentitySectionProps> = ({
 	user,
 	watchedName,
 	posLabel,
+	dutyLabel,
 	currentRoles,
 	isReadOnly,
 	onImageUpload,
@@ -109,12 +112,14 @@ const UserIdentitySection: React.FC<UserIdentitySectionProps> = ({
 					>
 						{watchedName || (user ? user.name : "신규 사용자")}
 					</span>
-					{posLabel && (
+					{(posLabel || dutyLabel) && (
 						<Text
 							type="secondary"
 							style={{ fontSize: "18px", fontWeight: 500 }}
 						>
 							{posLabel}
+							{posLabel && dutyLabel && " / "}
+							{dutyLabel}
 						</Text>
 					)}
 				</div>
@@ -137,7 +142,7 @@ const UserIdentitySection: React.FC<UserIdentitySectionProps> = ({
 									options.onSuccess?.(res.data);
 								} catch (err) {
 									message.error("사진 업로드에 실패했습니다.");
-									options.onError?.(err as any);
+									options.onError?.(err as Error);
 								}
 							}}
 							showUploadList={false}
@@ -177,7 +182,6 @@ const UserIdentitySection: React.FC<UserIdentitySectionProps> = ({
 								<Tag
 									key={r.id}
 									color={getRoleColor(r.code || r.name)}
-									size="small"
 									style={{
 										borderRadius: "10px",
 										fontSize: "10px",

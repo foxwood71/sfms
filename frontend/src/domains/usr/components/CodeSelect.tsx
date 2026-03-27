@@ -3,6 +3,7 @@ import type { SelectProps } from "antd";
 import { Select } from "antd";
 import type React from "react";
 import { getCodeDetails } from "@/domains/cmm/api";
+import type { CodeDetail } from "@/domains/cmm/types";
 
 interface CodeSelectProps extends SelectProps {
 	/** 조회할 공통 코드 그룹 키 */
@@ -22,13 +23,12 @@ const CodeSelect: React.FC<CodeSelectProps> = ({
 }) => {
 	const { data: codes, isLoading } = useQuery({
 		queryKey: ["codeDetails", groupCode, includeInactive],
-		queryFn: () =>
-			getCodeDetails(groupCode, includeInactive ? undefined : true),
+		queryFn: () => getCodeDetails(groupCode),
 	});
 
 	// API 응답 데이터를 Ant Design Select 옵션 규격으로 변환
 	const options =
-		codes?.map((code) => ({
+		codes?.map((code: CodeDetail) => ({
 			label: code.detail_name,
 			value: code.detail_code,
 			disabled: !code.is_active,

@@ -9,7 +9,7 @@ export interface AuditLog {
 	target_domain: string;
 	target_table: string;
 	target_id: string;
-	snapshot: Record<string, any>;
+	snapshot: Record<string, unknown>;
 	client_ip: string | null;
 	user_agent: string | null;
 	description: string | null;

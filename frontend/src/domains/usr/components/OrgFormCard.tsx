@@ -23,7 +23,7 @@ interface OrgFormCardProps {
 	/** 폼 인스턴스 (외부 제어용) */
 	form?: FormInstance;
 	/** 완료 콜백 (내부 submitter 사용 시) */
-	onFinish?: (values: any) => Promise<void> | void;
+	onFinish?: (values: CreateOrgParams) => Promise<void> | void;
 }
 
 /**

@@ -3,6 +3,6 @@
 		"@pnpm/exe": "^10.30.3"
 	},
 	"devDependencies": {
-		"@google/gemini-cli": "^0.35.1"
+		"@google/gemini-cli": "^0.35.2"
 	}
 }

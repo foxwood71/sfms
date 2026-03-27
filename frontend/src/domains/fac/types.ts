@@ -23,7 +23,7 @@ export interface Facility {
     address?: string;
     is_active: boolean;
     sort_order: number;
-    metadata_info: Record<string, any>;
+    metadata_info: Record<string, unknown>;
     created_at: string;
     updated_at: string;
 }
@@ -63,7 +63,7 @@ export interface Space {
     sort_order: number;
     is_restricted: boolean;
     org_id?: number;
-    metadata_info: Record<string, any>;
+    metadata_info: Record<string, unknown>;
     children?: Space[];
     created_at: string;
     updated_at: string;

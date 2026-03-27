@@ -32,7 +32,7 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ userId, userN
                     await changePasswordApi(userId, { new_password: values.new_password });
                     message.success(MESSAGES.USR.PWD_RESET_SUCCESS);
                     return true;
-                } catch (err) {
+                } catch {
                     message.error(MESSAGES.COMMON.SAVE_FAILURE);
                     return false;
                 }

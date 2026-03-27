@@ -86,7 +86,7 @@ const RoleAssignmentModal: React.FC<RoleAssignmentModalProps> = ({
 					onSuccess(tempRoleIds);
 					queryClient.invalidateQueries({ queryKey: ["users"] });
 					return true;
-				} catch (err) {
+				} catch {
 					message.error(MESSAGES.COMMON.SAVE_FAILURE);
 					return false;
 				}

@@ -1,1 +1,5 @@
-psql:02_sys_schema.pgsql:4: 알림:  "sys" 이름의 스키마(schema)가 이미 있음, 건너뜀
+psql:999_full_deploy.sql:3: 알림:  "fac" 스키마(schema) 없음, 건너뜀
+psql:999_full_deploy.sql:4: 알림:  "iam" 스키마(schema) 없음, 건너뜀
+psql:999_full_deploy.sql:5: 알림:  "usr" 스키마(schema) 없음, 건너뜀
+psql:999_full_deploy.sql:6: 알림:  "cmm" 스키마(schema) 없음, 건너뜀
+psql:999_full_deploy.sql:7: 알림:  "sys" 스키마(schema) 없음, 건너뜀

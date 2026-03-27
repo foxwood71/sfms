@@ -1,15 +1,11 @@
 import { CloseOutlined, EditOutlined, SaveOutlined } from "@ant-design/icons";
-import {
-	DrawerForm,
-	ProForm,
-	ProFormSwitch,
-	ProFormText,
-} from "@ant-design/pro-components";
+import { DrawerForm, ProForm, ProFormText } from "@ant-design/pro-components";
 import { useQuery } from "@tanstack/react-query";
-import { Button, Col, Divider, Row, Select, Space, Switch, theme } from "antd";
+import { Button, Col, Divider, Row, Select, Switch, theme } from "antd";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { getCodeDetails } from "@/domains/cmm/api";
+import type { CodeDetail } from "@/domains/cmm/types";
 import type { User, UserFormValues } from "@/domains/usr/types";
 import { LAYOUT_CONSTANTS } from "@/shared/constants/layout";
 import CodeSelect from "../CodeSelect";
@@ -52,6 +48,7 @@ const UserFormDrawer: React.FC<UserFormDrawerProps> = ({
 	// 폼 값 실시간 감시
 	const watchedName = ProForm.useWatch("name", form);
 	const watchedPos = ProForm.useWatch("pos", form);
+	const watchedDuty = ProForm.useWatch("duty", form);
 	const watchedRoleIds = ProForm.useWatch("role_ids", form);
 	const watchedActive = ProForm.useWatch("is_active", form);
 	const watchedStatus = ProForm.useWatch("account_status", form);
@@ -70,8 +67,16 @@ const UserFormDrawer: React.FC<UserFormDrawerProps> = ({
 
 	const posLabel = useMemo(
 		() =>
-			posCodes?.find((c) => c.detail_code === watchedPos)?.detail_name || "",
+			posCodes?.find((c: CodeDetail) => c.detail_code === watchedPos)
+				?.detail_name || "",
 		[watchedPos, posCodes],
+	);
+
+	const dutyLabel = useMemo(
+		() =>
+			dutyCodes?.find((c: CodeDetail) => c.detail_code === watchedDuty)
+				?.detail_name || "",
+		[watchedDuty, dutyCodes],
 	);
 
 	// 드로어 오픈 시 초기화 로직
@@ -193,6 +198,7 @@ const UserFormDrawer: React.FC<UserFormDrawerProps> = ({
 					user={editingUser}
 					watchedName={watchedName}
 					posLabel={posLabel}
+					dutyLabel={dutyLabel}
 					currentRoles={editingUser?.roles || []}
 					isReadOnly={isReadOnly}
 					onImageUpload={(id) => form.setFieldValue("profile_image_id", id)}
@@ -443,8 +449,8 @@ const UserFormDrawer: React.FC<UserFormDrawerProps> = ({
 								name="account_status"
 								noStyle
 								valuePropName="checked"
-								getValueProps={(v) => ({ checked: v === "ACTIVE" })}
-								getValueFromEvent={(c) => (c ? "ACTIVE" : "BLOCKED")}
+								getValueProps={(v: string) => ({ checked: v === "ACTIVE" })}
+								getValueFromEvent={(c: boolean) => (c ? "ACTIVE" : "BLOCKED")}
 							>
 								<Switch size="small" disabled={isReadOnly} />
 							</ProForm.Item>

@@ -4,7 +4,7 @@ import { persist } from "zustand/middleware";
 /**
  * 테마 모드 타입 정의
  */
-export type ThemeMode = "light" | "dark" | "navy" | "gov" | "mac";
+export type ThemeMode = "light" | "dark" | "navy" | "gov" | "mac" | "win";
 
 /**
  * 테마 상태 관리를 위한 인터페이스

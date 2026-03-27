@@ -4,7 +4,7 @@
 
 import { http } from "@/shared/api/http";
 import type { APIResponse } from "@/shared/api/types";
-import type { Facility, FacilityParams, Space, SpaceParams } from "./types";
+import type { Facility, FacilityCategory, FacilityParams, Space, SpaceFunction, SpaceParams, SpaceType } from "./types";
 
 // --- 0. 기초 코드 (Base Codes) 조회 ---
 
@@ -12,7 +12,7 @@ import type { Facility, FacilityParams, Space, SpaceParams } from "./types";
  * 시설 카테고리 목록 조회
  */
 export const getFacilityCategoriesApi = async () => {
-    const response = await http.get<APIResponse<any[]>>("/fac/categories");
+    const response = await http.get<APIResponse<FacilityCategory[]>>("/fac/categories");
     return response.data;
 };
 
@@ -20,7 +20,7 @@ export const getFacilityCategoriesApi = async () => {
  * 공간 물리적 유형 목록 조회
  */
 export const getSpaceTypesApi = async () => {
-    const response = await http.get<APIResponse<any[]>>("/fac/space-types");
+    const response = await http.get<APIResponse<SpaceType[]>>("/fac/space-types");
     return response.data;
 };
 
@@ -28,7 +28,7 @@ export const getSpaceTypesApi = async () => {
  * 공간 기능적 용도 목록 조회
  */
 export const getSpaceFunctionsApi = async () => {
-    const response = await http.get<APIResponse<any[]>>("/fac/space-functions");
+    const response = await http.get<APIResponse<SpaceFunction[]>>("/fac/space-functions");
     return response.data;
 };
 

@@ -85,7 +85,7 @@ psql -h localhost -U sfms_admin -d sfms_db -f 00_deploy.pgsql > execute_result.l
 정상 처리된 로그와 에러 로그를 구분해서 관리해야 할 때 유용합니다.
 
 ```bash
-psql -h localhost -U sfms_admin -d sfms_db -f 00_deploy.pgsql > result.log 2> error.log
+psql -h localhost -U sfms_user -d sfms_db -f 999_full_deploy.pgsql > result.log 2> error.log
 
 ```
 

@@ -8,9 +8,8 @@ import { useMutation } from "@tanstack/react-query";
 import { App, theme } from "antd";
 import type React from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 import { http } from "@/shared/api/http";
-import { useAuthStore } from "@/shared/stores/useAuthStore";
+import { type UserInfo, useAuthStore } from "@/shared/stores/useAuthStore";
 import { getMeApi, loginApi } from "../api/auth";
 import type { LoginFormValues } from "../types";
 
@@ -20,7 +19,6 @@ import type { LoginFormValues } from "../types";
 const LoginPage: React.FC = () => {
 	const { t } = useTranslation();
 	const { token } = theme.useToken();
-	const navigate = useNavigate();
 	const { message } = App.useApp();
 	const setAuth = useAuthStore((state) => state.setAuth);
 
@@ -51,32 +49,35 @@ const LoginPage: React.FC = () => {
 			return {
 				accessToken: access_token,
 				refreshToken: refresh_token,
-				user: userRes.data,
+				user: userRes.data as UserInfo,
 			};
 		},
 		onSuccess: (data) => {
 			// 5. 최종 인증 정보 완성
-			setAuth(data.accessToken, data.refreshToken, data.user as any);
+			setAuth(data.accessToken, data.refreshToken, data.user);
 			message.success(t("auth.login_success"));
 
 			// [가장 확실한 방법] 강제 새로고침을 통해 상태 초기화 및 메인 이동
 			window.location.href = "/";
 		},
-		onError: (err: any) => {
+		onError: (err: unknown) => {
 			console.error("Login Mutation Error:", err);
-			const status = err.response?.status;
+			
+			// 에러 객체 타입 가드 (AxiosError 대응)
+			const axiosError = err as { response?: { status?: number; data?: { message?: string } }; config?: { url?: string } };
+			const status = axiosError.response?.status;
 
 			// 에러 발생 시 주입했던 헤더 제거
-			delete http.defaults.headers.common["Authorization"];
+			delete http.defaults.headers.common.Authorization;
 
 			if (status === 401) {
-				if (err.config?.url?.includes("/auth/login")) {
+				if (axiosError.config?.url?.includes("/auth/login")) {
 					message.error(t("auth.login_failure"));
 				} else {
 					message.error(t("auth.info_fetch_failure"));
 				}
 			} else {
-				message.error(err.response?.data?.message || t("common.fetch_failure"));
+				message.error(axiosError.response?.data?.message || t("common.fetch_failure"));
 			}
 		},
 	});
@@ -125,7 +126,7 @@ const LoginPage: React.FC = () => {
 					<ProFormCheckbox noStyle name="remember">
 						{t("auth.remember_me")}
 					</ProFormCheckbox>
-					<a style={{ float: "right" }}>
+					<a style={{ float: "right" }} href="#/">
 						{t("auth.forgot_password")}
 					</a>
 				</div>

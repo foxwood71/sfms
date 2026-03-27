@@ -36,6 +36,11 @@ const ThemeToggle: React.FC = () => {
 			label: "Soft Mac (MacOS Style)",
 			icon: currentTheme === "mac" ? <CheckOutlined /> : null,
 		},
+		{
+			key: "win",
+			label: "Windows Style (Win 11)",
+			icon: currentTheme === "win" ? <CheckOutlined /> : null,
+		},
 	];
 
 	const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
