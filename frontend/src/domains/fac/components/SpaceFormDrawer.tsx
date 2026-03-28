@@ -78,8 +78,8 @@ const SpaceFormDrawer: React.FC<SpaceFormDrawerProps> = ({
                 mode === "view"
                     ? t("fac.space.detail_title")
                     : mode === "edit"
-                      ? t("common.edit")
-                      : t("fac.space.new_space")
+                        ? t("common.edit")
+                        : t("fac.space.new_space")
             }
             open={open}
             onOpenChange={onOpenChange}
@@ -89,29 +89,29 @@ const SpaceFormDrawer: React.FC<SpaceFormDrawerProps> = ({
                 render: (props) =>
                     mode === "view"
                         ? [
-                              <Button key="close" onClick={() => onOpenChange(false)}>
-                                  {t("common.confirm")}
-                              </Button>,
-                              <Button key="edit" type="primary" onClick={() => setMode("edit")}>
-                                  {t("common.edit")}
-                              </Button>,
-                          ]
+                            <Button key="close" onClick={() => onOpenChange(false)}>
+                                {t("common.confirm")}
+                            </Button>,
+                            <Button key="edit" type="primary" onClick={() => setMode("edit")}>
+                                {t("common.edit")}
+                            </Button>,
+                        ]
                         : [
-                              <Button
-                                  key="cancel"
-                                  onClick={() => (editingSpace ? setMode("view") : onOpenChange(false))}
-                              >
-                                  {t("common.cancel")}
-                              </Button>,
-                              <Button
-                                  key="submit"
-                                  type="primary"
-                                  icon={<SaveOutlined />}
-                                  onClick={() => props.form?.submit()}
-                              >
-                                  {t("common.save")}
-                              </Button>,
-                          ],
+                            <Button
+                                key="cancel"
+                                onClick={() => (editingSpace ? setMode("view") : onOpenChange(false))}
+                            >
+                                {t("common.cancel")}
+                            </Button>,
+                            <Button
+                                key="submit"
+                                type="primary"
+                                icon={<SaveOutlined />}
+                                onClick={() => props.form?.submit()}
+                            >
+                                {t("common.save")}
+                            </Button>,
+                        ],
             }}
             drawerProps={{ destroyOnHidden: true, width: 550 }}
             layout="vertical"

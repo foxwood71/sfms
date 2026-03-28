@@ -165,7 +165,7 @@ const AuditLogPage: React.FC = () => {
 
 	return (
 		<PageContainer
-			header={{ title: t("menu.sys_audit_logs") }}
+			header={{ title: t("menu.sys-audit-logs") }}
 			childrenContentStyle={{
 				padding: "0 24px 24px 24px",
 				height: "calc(100vh - 140px)",

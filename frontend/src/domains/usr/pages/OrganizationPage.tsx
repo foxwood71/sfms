@@ -30,7 +30,7 @@ import {
 import type { DataNode } from "antd/es/tree";
 import type { AxiosError } from "axios";
 import type React from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
 	createOrganizationApi,
@@ -45,10 +45,9 @@ import type {
 	UpdateOrgParams,
 } from "@/domains/usr/types";
 import type { APIErrorResponse } from "@/shared/api/types";
-import { LAYOUT_CONSTANTS } from "@/shared/constants/layout";
 
 /**
- * 부서(조직) 관리 페이지 (Final Integrated Master Standard)
+ * 부서(조직) 관리 페이지 (Final Integrated Master Standard - Type Fixes)
  */
 const OrganizationPage: React.FC = () => {
 	const { t } = useTranslation();
@@ -74,8 +73,8 @@ const OrganizationPage: React.FC = () => {
 		queryFn: () => getOrganizationsApi("tree", showInactive ? undefined : true),
 	});
 
-	// --- [재귀 탐색] 유틸리티 (로직 유실 방지) ---
-	const getAllKeys = (items: Organization[]): React.Key[] => {
+	// --- [재귀 탐색] 유틸리티 (useCallback으로 린트 해결) ---
+	const getAllKeys = useCallback((items: Organization[]): React.Key[] => {
 		const keys: React.Key[] = ["root"];
 		const collect = (list: Organization[]) => {
 			for (const item of list) {
@@ -85,34 +84,34 @@ const OrganizationPage: React.FC = () => {
 		};
 		collect(items);
 		return keys;
-	};
+	}, []);
 
-	const findOrgInTree = (
-		items: Organization[],
-		idStr: string,
-	): Organization | null => {
-		for (const item of items) {
-			if (String(item.id) === idStr) return item;
-			if (item.children && item.children.length > 0) {
-				const found = findOrgInTree(item.children, idStr);
-				if (found) return found;
+	const findOrgInTree = useCallback(
+		(items: Organization[], idStr: string): Organization | null => {
+			for (const item of items) {
+				if (String(item.id) === idStr) return item;
+				if (item.children && item.children.length > 0) {
+					const found = findOrgInTree(item.children, idStr);
+					if (found) return found;
+				}
 			}
-		}
-		return null;
-	};
+			return null;
+		},
+		[],
+	);
 
 	useEffect(() => {
 		if (orgResponse?.data && isFirstLoad) {
 			setExpandedKeys(getAllKeys(orgResponse.data));
 			setIsInitialLoad(false);
 		}
-	}, [orgResponse?.data, isFirstLoad]);
+	}, [orgResponse?.data, isFirstLoad, getAllKeys]);
 
 	const selectedOrg = useMemo(() => {
 		if (selectedKey === null || selectedKey === "root" || !orgResponse?.data)
 			return null;
 		return findOrgInTree(orgResponse.data, String(selectedKey));
-	}, [selectedKey, orgResponse]);
+	}, [selectedKey, orgResponse, findOrgInTree]);
 
 	// [GUIDE] 시스템 노드(ID 0) 여부 판단
 	const isSystemNode = selectedKey === "0";
@@ -130,10 +129,9 @@ const OrganizationPage: React.FC = () => {
 		}
 	};
 
-	// 4. Mutation 로직 (parent_id 보정 포함)
+	// 4. Mutation 로직
 	const saveMutation = useMutation({
 		mutationFn: (values: CreateOrgParams | UpdateOrgParams) => {
-			// 저장 시 parent_id를 숫자로 변환하여 백엔드 규격 준수
 			const payload = {
 				...values,
 				parent_id: values.parent_id !== null ? Number(values.parent_id) : null,
@@ -217,9 +215,9 @@ const OrganizationPage: React.FC = () => {
 			<style>{`
                 .ant-pro-card { height: 100% !important; display: flex !important; flex-direction: column !important; }
 				.ant-pro-card-body { flex: 1 !important; display: flex !important; flex-direction: column !important; padding: 0 !important; overflow: hidden !important; }
-                .ant-pro-card-header {
-                    padding: 0 20px !important;
-                    background: ${token.colorFillAlter} !important;
+                .ant-pro-card-header { 
+                    padding: 0 20px !important; 
+                    background: ${token.colorFillAlter} !important; 
                     border-bottom: 1px solid ${token.colorBorderSecondary} !important;
                     min-height: 56px !important;
                 }
@@ -241,7 +239,6 @@ const OrganizationPage: React.FC = () => {
 				}}
 			>
 				<Splitter style={{ height: "100%", background: "transparent" }}>
-					{/* 좌측 패널: 트리 (15%~40% 조절 제한) */}
 					<Splitter.Panel defaultSize="30%" min="15%" max="40%">
 						<ProCard
 							title={t("org.tree_title")}
@@ -250,20 +247,14 @@ const OrganizationPage: React.FC = () => {
 								<Space size={4}>
 									<Tooltip
 										title={
-											isAllExpanded
-												? t("common.collapse_all")
-												: t("common.expand_all")
+											isAllExpanded ? t("common.collapse_all") : t("common.expand_all")
 										}
 									>
 										<Button
 											type="text"
 											size="small"
 											icon={
-												isAllExpanded ? (
-													<CompressOutlined />
-												) : (
-													<ExpandOutlined />
-												)
+												isAllExpanded ? <CompressOutlined /> : <ExpandOutlined />
 											}
 											onClick={toggleExpandAll}
 										/>
@@ -292,7 +283,6 @@ const OrganizationPage: React.FC = () => {
 										loading={isFetching}
 									/>
 
-									{/* [FIX] 시스템 노드 가이드 적용 */}
 									<Tooltip
 										title={
 											isSystemNode
@@ -324,6 +314,37 @@ const OrganizationPage: React.FC = () => {
 								</Space>
 							}
 						>
+							{showFilter && (
+								<div
+									style={{
+										padding: "12px 20px",
+										background: token.colorFillAlter,
+										borderBottom: `1px solid ${token.colorBorderSecondary}`,
+									}}
+								>
+									<Input.Search
+										placeholder={t("org.search_placeholder")}
+										size="small"
+										allowClear
+										onChange={(e) => setSearchValue(e.target.value)}
+										style={{ marginBottom: 8 }}
+									/>
+									<div
+										style={{
+											display: "flex",
+											justifyContent: "space-between",
+											alignItems: "center",
+										}}
+									>
+										<span
+											style={{ fontSize: "12px", color: token.colorTextSecondary }}
+										>
+											{t("org.include_inactive")}
+										</span>
+										<Switch size="small" checked={showInactive} onChange={setShowInactive} />
+									</div>
+								</div>
+							)}
 							<div style={{ flex: 1, overflowY: "auto", padding: "12px" }}>
 								<Tree
 									showIcon
@@ -352,15 +373,15 @@ const OrganizationPage: React.FC = () => {
 						<ProCard
 							title={isAdding ? t("org.new_org") : t("org.detail_title")}
 							bordered={false}
-							// [FIX] Empty 중앙 배치를 위한 스타일 강제 적용
-							styles={{
-								body: {
-									display: "flex",
-									flexDirection: "column",
-									justifyContent: "center",
-									alignItems: "center",
-									height: "100%",
-								},
+							// [FIX] ProCard styles 에러 해결: style 속성으로 직접 정의
+							style={{ display: "flex", flexDirection: "column", height: "100%" }}
+							bodyStyle={{
+								display: "flex",
+								flexDirection: "column",
+								justifyContent: "center",
+								alignItems: "center",
+								height: "100%",
+								padding: 0,
 							}}
 							extra={
 								(selectedKey !== null && selectedKey !== "root") || isAdding ? (
@@ -441,23 +462,23 @@ const OrganizationPage: React.FC = () => {
 									}}
 								>
 									<OrgFormCard
+										// [FIX] initialValues 타입 보정: parent_id를 number로 변환하여 전달 및 타입 단언 추가
 										initialValues={
-											isAdding
+											(isAdding
 												? {
 														parent_id:
 															selectedKey !== null && selectedKey !== "root"
-																? String(selectedKey)
+																? Number(selectedKey)
 																: null,
 														is_active: true,
 														sort_order: 10,
-													}
+												  }
 												: {
 														...selectedOrg,
-														parent_id:
-															selectedOrg.parent_id !== null
-																? String(selectedOrg.parent_id)
-																: null,
-													}
+														parent_id: selectedOrg?.parent_id
+															? Number(selectedOrg.parent_id)
+															: null,
+												  }) as Organization | CreateOrgParams
 										}
 										disabled={!isEditing}
 										onFinish={(values) => saveMutation.mutate(values)}

@@ -122,13 +122,13 @@ const AssetManagePage: React.FC = () => {
             children:
                 selectedNode?.id === fac.id && spaceTree?.data
                     ? spaceTree.data.map((s: SpaceType) => ({
-                          key: `SPC-${s.id}`,
-                          title: s.name,
-                          icon: <ClusterOutlined />,
-                          type: "SPC",
-                          id: s.id,
-                          data: s,
-                      }))
+                        key: `SPC-${s.id}`,
+                        title: s.name,
+                        icon: <ClusterOutlined />,
+                        type: "SPC",
+                        id: s.id,
+                        data: s,
+                    }))
                     : [],
         }));
     }, [facilities, spaceTree, selectedNode]);
@@ -140,9 +140,9 @@ const AssetManagePage: React.FC = () => {
         >
             <style>{`
                 .ant-pro-card-body { overflow: hidden !important; display: flex; flex-direction: column; height: 100%; padding: 0 !important; }
-                .ant-pro-card-header { 
-                    padding: 0 20px !important; 
-                    background: ${token.colorFillAlter} !important; 
+                .ant-pro-card-header {
+                    padding: 0 20px !important;
+                    background: ${token.colorFillAlter} !important;
                     border-bottom: 1px solid ${token.colorBorderSecondary} !important;
                     min-height: 56px !important;
                 }

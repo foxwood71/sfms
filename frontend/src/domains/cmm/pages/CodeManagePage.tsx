@@ -61,9 +61,9 @@ const CodeManagePage: React.FC = () => {
             return editingDetail
                 ? updateCodeDetail(selectedGroup.group_code, editingDetail.detail_code, values)
                 : createCodeDetail({
-                      ...values,
-                      group_code: selectedGroup.group_code,
-                  });
+                    ...values,
+                    group_code: selectedGroup.group_code,
+                });
         },
         onSuccess: () => {
             message.success(t("common.save_success"));

@@ -37,7 +37,6 @@ export const KO_MESSAGES = {
 		expand_all: "전체 펼치기",
 		collapse_all: "전체 접기",
 		only_one_line_edit: "이미 다른 행을 편집 중입니다.",
-		delete_confirm_msg: "정말 삭제하시겠습니까?",
 		excel_download: "엑셀 다운로드",
 		excel_upload: "엑셀 업로드",
 		template_download: "양식 다운로드",
@@ -45,15 +44,11 @@ export const KO_MESSAGES = {
 		import_failure: "엑셀 파일을 처리하는 중 오류가 발생했습니다.",
 		no_data_to_import: "업로드된 파일에 데이터가 없습니다.",
 		no_data_to_export: "내보낼 데이터가 없습니다.",
-		excel_import_details: "상세 코드 대량 등록",
-		excel_import_groups: "코드 그룹 대량 등록",
 		excel_import_confirm_title: "엑셀 업로드 확인",
 		excel_import_confirm_msg:
 			"업로드된 데이터로 기존 정보가 변경되거나 신규 등록됩니다. 정말 진행하시겠습니까?",
 		excel_import_summary: "총 {{count}}건의 데이터를 불러왔습니다.",
 		excel_filename_all_codes: "SFMS_공통코드_전체",
-		sheet_name_groups: "코드 그룹",
-		sheet_name_details: "상세 코드",
 		fetch_failure: "데이터를 불러오는 중 오류가 발생했습니다.",
 		company_name: "(주)SFMS",
 		user: "사용자",
@@ -68,6 +63,7 @@ export const KO_MESSAGES = {
 		upload: "업로드",
 		description: "설명",
 		sort_order: "정렬 순서",
+		detail_info: "상세 정보",
 	},
 	menu: {
 		dashboard: "대시보드",
@@ -101,6 +97,14 @@ export const KO_MESSAGES = {
 	fac: {
 		manage: {
 			title: "시설 및 공간 통합 관리",
+			tree_title: "시설/공간 계층",
+			detail_title: "시설 및 공간 정보",
+			select_prompt: "시설을 선택하거나 새로운 시설을 추가하세요.",
+			tab_info: "기본 정보",
+			tab_docs: "관련 자료",
+			tab_history: "변경 이력",
+			auto_generated: "자동 생성",
+			code_tooltip: "분류 코드 기반 자동 채번",
 		},
 		facility: {
 			title: "시설물 관리",
@@ -154,6 +158,7 @@ export const KO_MESSAGES = {
 			client_ip: "IP 주소",
 			created_at: "발생 일시",
 			snapshot_title: "감사 로그 스냅샷 상세",
+			snapshot_data: "데이터 스냅샷",
 		},
 	},
 	user: {
@@ -219,6 +224,7 @@ export const KO_MESSAGES = {
 			detail_list: "공통 코드 그룹 상세 정보",
 			detail_code: "코드",
 			detail_name: "명칭",
+			select_group_prompt: "그룹을 선택하세요.",
 		},
 	},
 	errors: {
