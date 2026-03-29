@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import selectinload
 
 from app.core.codes import ErrorCode
 from app.core.exceptions import (
@@ -19,6 +19,7 @@ from app.core.exceptions import (
     NotFoundException,
 )
 from app.domains.cmm.models import Attachment, CodeDetail, CodeGroup, Notification
+
 from .schemas import (
     AttachmentCreate,
     CodeDetailCreate,
@@ -44,13 +45,20 @@ class CodeService:
         """특정 코드 그룹과 하위 상세 코드 목록을 조회합니다."""
         stmt = (
             select(CodeGroup)
-            .options(joinedload(CodeGroup.details))
+            .options(
+                selectinload(CodeGroup.details)
+            )  # [FIX] 강제 필터링 제거 (모든 데이터 표시)
             .where(CodeGroup.group_code == group_code)
         )
         result = await db.execute(stmt)
-        group = result.unique().scalar_one_or_none()
+        group = result.scalar_one_or_none()
         if not group:
             raise NotFoundException(domain=DOMAIN, error_code=ErrorCode.NOT_FOUND)
+
+        # [KEEP] 정렬 로직은 유지
+        if group.details:
+            group.details.sort(key=lambda x: (x.sort_order, x.detail_code))
+
         return CodeGroupRead.model_validate(group)
 
     @staticmethod
@@ -60,14 +68,20 @@ class CodeService:
         """전역 코드 목록을 조회합니다."""
         stmt = (
             select(CodeGroup)
-            .options(joinedload(CodeGroup.details))
-            .order_by(CodeGroup.group_code)
+            .options(selectinload(CodeGroup.details))
+            .order_by(CodeGroup.group_code.asc())
         )
         if domain_code:
             stmt = stmt.where(CodeGroup.domain_code == domain_code)
 
         result = await db.execute(stmt)
-        groups = result.unique().scalars().all()
+        groups = result.scalars().all()
+
+        # [KEEP] 각 그룹 내부의 상세 코드들도 정렬 순서로 보정
+        for g in groups:
+            if g.details:
+                g.details.sort(key=lambda x: (x.sort_order, x.detail_code))
+
         return [CodeGroupRead.model_validate(g) for g in groups]
 
     @staticmethod

@@ -225,6 +225,12 @@ export const KO_MESSAGES = {
 			detail_code: "코드",
 			detail_name: "명칭",
 			select_group_prompt: "그룹을 선택하세요.",
+			include_inactive: "비활성 코드 포함",
+			domain_usr: "사용자 및 조직",
+			domain_fac: "시설 및 공간",
+			domain_sys: "시스템 관리",
+			domain_cmm: "공통 설정",
+			domain_other: "기타",
 		},
 	},
 	errors: {
