@@ -5,21 +5,21 @@ import type { APIResponse } from "@/shared/api/types";
 /**
  * 로그인 실행 API (Zero Any 적용)
  */
-export const loginApi = (payload: object): Promise<APIResponse<LoginResponse>> => 
-    http.post("/auth/login", payload).then(res => res.data);
+export const loginApi = (payload: object): Promise<APIResponse<LoginResponse>> =>
+    http.post("/auth/login", payload).then((res) => res.data);
 
 /**
  * 로그아웃 실행 API (보안 강화를 위해 리프레시 토큰 전달)
  */
-export const logoutApi = (refreshToken?: string | null): Promise<APIResponse<null>> => 
-    http.post("/auth/logout", { refresh_token: refreshToken }).then(res => res.data);
+export const logoutApi = (refreshToken?: string | null): Promise<APIResponse<null>> =>
+    http.post("/auth/logout", { refresh_token: refreshToken }).then((res) => res.data);
 
 /**
  * 현재 로그인된 본인 정보 조회 API
  */
 export const getMeApi = (token?: string): Promise<APIResponse<LoginResponse["user"]>> => {
     const headers = token ? { Authorization: `Bearer ${token}` } : {};
-    return http.get("/auth/me", { headers }).then(res => res.data);
+    return http.get("/auth/me", { headers }).then((res) => res.data);
 };
 
 /**
@@ -36,4 +36,4 @@ export const getRolesApi = async (): Promise<Role[]> => {
  * @param roleIds 할당할 역할 ID 리스트
  */
 export const assignUserRolesApi = (userId: number, roleIds: number[]): Promise<APIResponse<null>> =>
-    http.post(`/iam/users/${userId}/roles`, { role_ids: roleIds }).then(res => res.data);
+    http.post(`/iam/users/${userId}/roles`, { role_ids: roleIds }).then((res) => res.data);

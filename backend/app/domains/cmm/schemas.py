@@ -4,7 +4,6 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 # --------------------------------------------------------
 # [CommonCode] 공통 코드 관련 스키마
 # --------------------------------------------------------

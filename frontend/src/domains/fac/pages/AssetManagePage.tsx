@@ -122,13 +122,13 @@ const AssetManagePage: React.FC = () => {
             children:
                 selectedNode?.id === fac.id && spaceTree?.data
                     ? spaceTree.data.map((s: SpaceType) => ({
-                        key: `SPC-${s.id}`,
-                        title: s.name,
-                        icon: <ClusterOutlined />,
-                        type: "SPC",
-                        id: s.id,
-                        data: s,
-                    }))
+                          key: `SPC-${s.id}`,
+                          title: s.name,
+                          icon: <ClusterOutlined />,
+                          type: "SPC",
+                          id: s.id,
+                          data: s,
+                      }))
                     : [],
         }));
     }, [facilities, spaceTree, selectedNode]);

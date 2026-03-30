@@ -9,17 +9,17 @@ export { KO_MESSAGES };
  * @returns 변환된 한국어 메시지 (없을 경우 키 자체 반환)
  */
 export const getErrorMessage = (errorKey: string | undefined): string => {
-	if (!errorKey) return i18n.t("common.save_failure");
+    if (!errorKey) return i18n.t("common.save_failure");
 
-	// errors 객체 내에서 영문 키로 메시지 추출
-	const translated = i18n.t(`errors.${errorKey}`);
+    // errors 객체 내에서 영문 키로 메시지 추출
+    const translated = i18n.t(`errors.${errorKey}`);
 
-	// i18next는 번역이 없을 경우 키를 그대로 반환하므로, 이를 체크하여 대체 메시지 처리
-	if (translated === `errors.${errorKey}`) {
-		return errorKey || i18n.t("errors.UNKNOWN");
-	}
+    // i18next는 번역이 없을 경우 키를 그대로 반환하므로, 이를 체크하여 대체 메시지 처리
+    if (translated === `errors.${errorKey}`) {
+        return errorKey || i18n.t("errors.UNKNOWN");
+    }
 
-	return translated;
+    return translated;
 };
 
 /**
@@ -27,45 +27,45 @@ export const getErrorMessage = (errorKey: string | undefined): string => {
  * getter를 활용하여 실시간 번역된 값을 제공합니다.
  */
 export const MESSAGES = {
-	get COMMON() {
-		return {
-			SAVE_SUCCESS: i18n.t("common.save_success"),
-			SAVE_FAILURE: i18n.t("common.save_failure"),
-			DELETE_CONFIRM: i18n.t("common.delete_confirm"),
-			DELETE_SUCCESS: i18n.t("common.delete_success"),
-			FETCH_FAILURE: i18n.t("common.fetch_failure"),
-			SELECT_PLACEHOLDER: i18n.t("common.select_placeholder"),
-			SEARCH_PLACEHOLDER: i18n.t("common.search_placeholder"),
-			CANCEL: i18n.t("common.cancel"),
-			CONFIRM: i18n.t("common.confirm"),
-			RELOAD: i18n.t("common.reload"),
-		};
-	},
+    get COMMON() {
+        return {
+            SAVE_SUCCESS: i18n.t("common.save_success"),
+            SAVE_FAILURE: i18n.t("common.save_failure"),
+            DELETE_CONFIRM: i18n.t("common.delete_confirm"),
+            DELETE_SUCCESS: i18n.t("common.delete_success"),
+            FETCH_FAILURE: i18n.t("common.fetch_failure"),
+            SELECT_PLACEHOLDER: i18n.t("common.select_placeholder"),
+            SEARCH_PLACEHOLDER: i18n.t("common.search_placeholder"),
+            CANCEL: i18n.t("common.cancel"),
+            CONFIRM: i18n.t("common.confirm"),
+            RELOAD: i18n.t("common.reload"),
+        };
+    },
 
-	get AUTH() {
-		return {
-			LOGIN_SUCCESS: i18n.t("auth.login_success"),
-			LOGIN_FAILURE: i18n.t("auth.login_failure"),
-			LOGOUT_SUCCESS: i18n.t("auth.logout_success"),
-			SESSION_EXPIRED: i18n.t("auth.session_expired"),
-			REQUIRED_LOGIN: i18n.t("auth.required_login"),
-			ID_PLACEHOLDER: i18n.t("auth.id_placeholder"),
-			PWD_PLACEHOLDER: i18n.t("auth.pwd_placeholder"),
-		};
-	},
+    get AUTH() {
+        return {
+            LOGIN_SUCCESS: i18n.t("auth.login_success"),
+            LOGIN_FAILURE: i18n.t("auth.login_failure"),
+            LOGOUT_SUCCESS: i18n.t("auth.logout_success"),
+            SESSION_EXPIRED: i18n.t("auth.session_expired"),
+            REQUIRED_LOGIN: i18n.t("auth.required_login"),
+            ID_PLACEHOLDER: i18n.t("auth.id_placeholder"),
+            PWD_PLACEHOLDER: i18n.t("auth.pwd_placeholder"),
+        };
+    },
 
-	get USR() {
-		return {
-			ROLE_UPDATE_SUCCESS: i18n.t("user.role_update_success"),
-			PWD_RESET_SUCCESS: i18n.t("user.pwd_reset_success"),
-		};
-	},
+    get USR() {
+        return {
+            ROLE_UPDATE_SUCCESS: i18n.t("user.role_update_success"),
+            PWD_RESET_SUCCESS: i18n.t("user.pwd_reset_success"),
+        };
+    },
 
-	get ORG() {
-		return {
-			MSG_CREATED: i18n.t("org.msg_created"),
-			MSG_UPDATED: i18n.t("org.msg_updated"),
-			MSG_DELETED: i18n.t("org.msg_deleted"),
-		};
-	},
+    get ORG() {
+        return {
+            MSG_CREATED: i18n.t("org.msg_created"),
+            MSG_UPDATED: i18n.t("org.msg_updated"),
+            MSG_DELETED: i18n.t("org.msg_deleted"),
+        };
+    },
 };

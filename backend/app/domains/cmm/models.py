@@ -32,21 +32,29 @@ class CodeGroup(Base):
     __table_args__ = {"schema": "cmm", "comment": "공통 코드 그룹 정의 테이블"}
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    group_code: Mapped[str] = mapped_column(String(30), unique=True, nullable=False, index=True)
+    group_code: Mapped[str] = mapped_column(
+        String(30), unique=True, nullable=False, index=True
+    )
     domain_code: Mapped[str | None] = mapped_column(String(3), nullable=True)
     group_name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # [SFMS Standard] 코드 규격 관리 필드 추가
     code_length: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
-    is_seq_used: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    is_seq_used: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
 
     is_system: Mapped[bool] = mapped_column(Boolean, default=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    props: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="'{}'::jsonb")
+    props: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, default=dict, server_default="'{}'::jsonb"
+    )
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
     created_by: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -67,16 +75,22 @@ class CodeDetail(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     group_code: Mapped[str] = mapped_column(
-        String(30), ForeignKey("cmm.code_groups.group_code", ondelete="CASCADE"), nullable=False
+        String(30),
+        ForeignKey("cmm.code_groups.group_code", ondelete="CASCADE"),
+        nullable=False,
     )
     detail_code: Mapped[str] = mapped_column(String(30), nullable=False)
     detail_name: Mapped[str] = mapped_column(String(100), nullable=False)
 
-    props: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="'{}'::jsonb")
+    props: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, default=dict, server_default="'{}'::jsonb"
+    )
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
     created_by: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -93,7 +107,9 @@ class Attachment(Base):
     __tablename__ = "attachments"
     __table_args__ = {"schema": "cmm", "comment": "통합 첨부파일 관리 테이블"}
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     domain_code: Mapped[str] = mapped_column(String(3), nullable=False)
     resource_type: Mapped[str] = mapped_column(String(50), nullable=False)
     ref_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
@@ -104,11 +120,17 @@ class Attachment(Base):
     file_size: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     content_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
-    org_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True, index=True, comment="업로드 당시 부서 ID")
-    props: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="'{}'::jsonb")
+    org_id: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True, index=True, comment="업로드 당시 부서 ID"
+    )
+    props: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, default=dict, server_default="'{}'::jsonb"
+    )
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
     created_by: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -126,7 +148,9 @@ class Notification(Base):
     domain_code: Mapped[str | None] = mapped_column(String(3), nullable=True)
 
     sender_user_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
-    receiver_user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    receiver_user_id: Mapped[int] = mapped_column(
+        BigInteger, nullable=False, index=True
+    )
 
     category: Mapped[str] = mapped_column(String(20), nullable=False)
     priority: Mapped[str] = mapped_column(String(10), default="NORMAL")
@@ -135,12 +159,18 @@ class Notification(Base):
     content: Mapped[str | None] = mapped_column(Text, nullable=True)
     link_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
-    props: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="'{}'::jsonb")
+    props: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, default=dict, server_default="'{}'::jsonb"
+    )
     is_read: Mapped[bool] = mapped_column(Boolean, default=False)
-    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    read_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )

@@ -333,7 +333,7 @@ class RoleService:
             created_by=actor_id,
             updated_by=actor_id,
         )
-        db.add(new_rule := new_role)
+        db.add(new_role)
         await db.commit()
         await db.refresh(new_role)
         return new_role

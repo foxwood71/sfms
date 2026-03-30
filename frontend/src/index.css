@@ -4,34 +4,33 @@
 
 html,
 body {
-	margin: 0;
-	padding: 0;
-	width: 100%;
-	height: 100%; /* vh 대신 %를 사용하여 모바일 브라우저 툴바 대응 */
-	font-family:
-		"Noto Sans KR", "Pretendard Variable", Pretendard, -apple-system, sans-serif;
-	-webkit-font-smoothing: antialiased;
-	-moz-osx-smoothing: grayscale;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%; /* vh 대신 %를 사용하여 모바일 브라우저 툴바 대응 */
+    font-family: "Noto Sans KR", "Pretendard Variable", Pretendard, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-smoothing: grayscale;
 }
 
 #root {
-	width: 100%;
-	height: 100vh;
-	overflow: hidden; /* 앱 전체의 넘침을 여기서 차단 */
-	display: flex;
-	flex-direction: column;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden; /* 앱 전체의 넘침을 여기서 차단 */
+    display: flex;
+    flex-direction: column;
 }
 
 /* Ant Design Pro Layout 커스텀: 메인 컨테이너도 높이 100% 유지 */
 .ant-design-pro {
-	height: 100%;
+    height: 100%;
 }
 
 /* 공통 스크롤바 스타일 (선택 사항: 필요한 곳에만 얇은 스크롤바 적용) */
 .custom-scroll::-webkit-scrollbar {
-	width: 6px;
+    width: 6px;
 }
 .custom-scroll::-webkit-scrollbar-thumb {
-	background: rgba(0, 0, 0, 0.1);
-	border-radius: 3px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
 }

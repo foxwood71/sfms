@@ -55,8 +55,8 @@ const FacilityFormDrawer: React.FC<FacilityFormDrawerProps> = ({ open, onOpenCha
                 mode === "view"
                     ? t("fac.facility.detail_title")
                     : mode === "edit"
-                        ? t("common.edit")
-                        : t("fac.facility.new_facility")
+                      ? t("common.edit")
+                      : t("fac.facility.new_facility")
             }
             open={open}
             onOpenChange={onOpenChange}
@@ -66,29 +66,29 @@ const FacilityFormDrawer: React.FC<FacilityFormDrawerProps> = ({ open, onOpenCha
                 render: (props) =>
                     mode === "view"
                         ? [
-                            <Button key="close" onClick={() => onOpenChange(false)}>
-                                {t("common.confirm")}
-                            </Button>,
-                            <Button key="edit" type="primary" onClick={() => setMode("edit")}>
-                                {t("common.edit")}
-                            </Button>,
-                        ]
+                              <Button key="close" onClick={() => onOpenChange(false)}>
+                                  {t("common.confirm")}
+                              </Button>,
+                              <Button key="edit" type="primary" onClick={() => setMode("edit")}>
+                                  {t("common.edit")}
+                              </Button>,
+                          ]
                         : [
-                            <Button
-                                key="cancel"
-                                onClick={() => (editingFacility ? setMode("view") : onOpenChange(false))}
-                            >
-                                {t("common.cancel")}
-                            </Button>,
-                            <Button
-                                key="submit"
-                                type="primary"
-                                icon={<SaveOutlined />}
-                                onClick={() => props.form?.submit()}
-                            >
-                                {t("common.save")}
-                            </Button>,
-                        ],
+                              <Button
+                                  key="cancel"
+                                  onClick={() => (editingFacility ? setMode("view") : onOpenChange(false))}
+                              >
+                                  {t("common.cancel")}
+                              </Button>,
+                              <Button
+                                  key="submit"
+                                  type="primary"
+                                  icon={<SaveOutlined />}
+                                  onClick={() => props.form?.submit()}
+                              >
+                                  {t("common.save")}
+                              </Button>,
+                          ],
             }}
             drawerProps={{ destroyOnHidden: true, width: 500 }}
             layout="vertical"

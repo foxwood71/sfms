@@ -69,7 +69,7 @@ async def test_full_business_scenario(client):
         },
     )
     assert space_res.status_code == status.HTTP_201_CREATED
-    space_id = space_res.json()["data"]["id"]
+    space_res.json()["data"]["id"]
 
     # 4. [SYS] 자산번호 채번 규칙 생성 및 발급 테스트
     prefix = f"A{unique_suffix}"

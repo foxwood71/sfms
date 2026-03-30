@@ -242,7 +242,6 @@ async def get_users(
     )
 
 
-
 @router.post(
     "/users",
     response_model=APIResponse[UserRead],
