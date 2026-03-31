@@ -21,7 +21,7 @@ const { Title, Text } = Typography;
 interface SpaceFormDrawerProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    editingSpace: SpaceType | null;
+    editingSpace: SpaceType | SpaceParams | null;
     facilityName: string;
     parentTreeData: TreeSelectProps["treeData"]; // 부모 선택용 트리 데이터
     onFinish: (values: SpaceParams) => Promise<boolean>;
@@ -47,7 +47,7 @@ const SpaceFormDrawer: React.FC<SpaceFormDrawerProps> = ({
 
     useEffect(() => {
         if (open) {
-            if (editingSpace?.id) {
+            if (editingSpace && "id" in editingSpace && editingSpace.id) {
                 setMode("view");
                 form.setFieldsValue(editingSpace);
             } else {
@@ -99,7 +99,7 @@ const SpaceFormDrawer: React.FC<SpaceFormDrawerProps> = ({
                         : [
                               <Button
                                   key="cancel"
-                                  onClick={() => (editingSpace ? setMode("view") : onOpenChange(false))}
+                                  onClick={() => (mode === "add" ? onOpenChange(false) : setMode("view"))}
                               >
                                   {t("common.cancel")}
                               </Button>,

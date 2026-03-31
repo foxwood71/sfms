@@ -6,7 +6,7 @@
 
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
     BigInteger,
@@ -90,7 +90,7 @@ class Organization(Base):
     children: Mapped[list["Organization"]] = relationship(
         "Organization", back_populates="parent", cascade="all, delete-orphan"
     )
-    parent: Mapped[Optional["Organization"]] = relationship(
+    parent: Mapped["Organization" | None] = relationship(
         "Organization", back_populates="children", remote_side=[id]
     )
     users: Mapped[list["User"]] = relationship("User", back_populates="organization")
@@ -189,7 +189,7 @@ class User(Base):
     )
 
     # Relationships
-    organization: Mapped[Optional["Organization"]] = relationship(
+    organization: Mapped["Organization" | None] = relationship(
         "Organization", back_populates="users"
     )
     roles: Mapped[list["Role"]] = relationship(

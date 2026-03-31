@@ -22,7 +22,7 @@ async def set_cache(key: str, value: Any, expire: int | None = None) -> None:
     Args:
         key (str): 캐시 키
         value (Any): 저장할 데이터 (딕셔너리/리스트는 JSON 문자열로 자동 변환)
-        expire (Optional[int]): 만료 시간(초). 지정하지 않으면 영구 저장.
+        expire (int | None): 만료 시간(초). 지정하지 않으면 영구 저장.
 
     """
     try:

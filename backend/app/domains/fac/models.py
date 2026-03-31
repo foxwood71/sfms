@@ -6,7 +6,7 @@
 
 import uuid
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from sqlalchemy import (
     BigInteger,
@@ -29,7 +29,11 @@ from app.core.database import Base
 
 
 class FacilityCategory(Base):
-    """시설물 유형 분류 뷰 (공통 코드 통합)."""
+    """시설물 유형 분류 뷰 (공통 코드 통합).
+
+    이 모델은 데이터베이스 뷰(fac.v_facility_categories)를 참조하며,
+    공통 코드(cmm.code_details) 중 'FAC_CAT' 그룹을 필터링하여 제공합니다.
+    """
 
     __tablename__ = "v_facility_categories"
     __table_args__ = {"schema": "fac", "info": {"view": True}}
@@ -40,7 +44,11 @@ class FacilityCategory(Base):
 
 
 class SpaceType(Base):
-    """공간 물리적 유형 뷰 (공통 코드 통합)."""
+    """공간 물리적 유형 뷰 (공통 코드 통합).
+
+    이 모델은 데이터베이스 뷰(fac.v_space_types)를 참조하며,
+    공통 코드(cmm.code_details) 중 'SPC_TYP' 그룹을 필터링하여 제공합니다.
+    """
 
     __tablename__ = "v_space_types"
     __table_args__ = {"schema": "fac", "info": {"view": True}}
@@ -51,7 +59,11 @@ class SpaceType(Base):
 
 
 class SpaceFunction(Base):
-    """공간 기능적 용도 뷰 (공통 코드 통합)."""
+    """공간 용도/기능 분류 뷰 (공통 코드 통합).
+
+    이 모델은 데이터베이스 뷰(fac.v_space_functions)를 참조하며,
+    공통 코드(cmm.code_details) 중 'SPC_FNC' 그룹을 필터링하여 제공합니다.
+    """
 
     __tablename__ = "v_space_functions"
     __table_args__ = {"schema": "fac", "info": {"view": True}}
@@ -62,107 +74,147 @@ class SpaceFunction(Base):
 
 
 # --------------------------------------------------------
-# [Main Entities] 시설 및 공간 마스터
+# [Main Models] 시설 및 공간 관리 메인 테이블
 # --------------------------------------------------------
 
 
 class Facility(Base):
-    """최상위 시설물(사업소/처리장) 정보 모델입니다."""
+    """최상위 시설(사업소, 처리장 등) 정보를 저장하는 모델입니다.
+
+    모든 자산 및 공간의 최상위 루트가 되며, 시설별 메타데이터를 관리합니다.
+    """
 
     __tablename__ = "facilities"
-    __table_args__ = {"schema": "fac", "comment": "최상위 시설물 정보 테이블"}
+    __table_args__ = {"schema": "fac", "comment": "최상위 시설(사업소/처리장) 정보 관리 테이블"}
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-
-    # [SFMS Code Standard] 코드 기반 참조
-    category_group_code: Mapped[str] = mapped_column(
-        String(30), server_default="FAC_CATEGORY"
+    id: Mapped[int] = mapped_column(
+        BigInteger, primary_key=True, autoincrement=True, comment="시설 고유 ID"
     )
-    category_code: Mapped[str] = mapped_column(String(3), nullable=False)
+    category_code: Mapped[str] = mapped_column(
+        String(3), nullable=False, comment="시설 분류 코드 (FAC_CAT)"
+    )
+    name: Mapped[str] = mapped_column(String(100), nullable=False, comment="시설 명칭")
+    code: Mapped[str] = mapped_column(
+        String(50),
+        unique=True,
+        nullable=False,
+        index=True,
+        comment="시설 식별 코드 (예: HEADQUARTER)",
+    )
 
     representative_image_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), nullable=True
+        UUID(as_uuid=True), nullable=True, comment="대표 이미지 ID (cmm.attachments)"
     )
-
-    code: Mapped[str] = mapped_column(
-        String(50), unique=True, nullable=False, index=True
-    )
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
-    address: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    sort_order: Mapped[int] = mapped_column(Integer, default=0)
-
     metadata_info: Mapped[dict[str, Any]] = mapped_column(
-        "metadata", JSONB, default=dict, server_default="'{}'::jsonb"
+        "metadata",
+        JSONB,
+        default=dict,
+        server_default="'{}'::jsonb",
+        comment="추가 메타데이터 (JSON)",
     )
-    legacy_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, comment="사용 여부")
+    sort_order: Mapped[int] = mapped_column(Integer, default=10, comment="정렬 순서")
+
+    # [Audit] 감사 로그
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
+        DateTime(timezone=True), server_default=func.now(), comment="생성 일시"
     )
-    created_by: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    created_by: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True, comment="생성자 ID"
+    )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        comment="수정 일시",
     )
-    updated_by: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    updated_by: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True, comment="수정자 ID"
+    )
 
     # Relationships
     spaces: Mapped[list["Space"]] = relationship("Space", back_populates="facility")
 
 
 class Space(Base):
-    """시설물 내부의 공간 계층(Tree) 관리 모델입니다."""
+    """시설 내 공간(건물, 층, 호실 등) 정보를 저장하는 모델입니다.
+
+    자기 참조(Self-referential) 관계를 통해 계층적 구조를 형성하며,
+    부서(USR 도메인)와 연계되어 관리 책임을 정의합니다.
+    """
 
     __tablename__ = "spaces"
-    __table_args__ = {"schema": "fac", "comment": "시설물 내부 공간 계층 관리 테이블"}
+    __table_args__ = {"schema": "fac", "comment": "시설 하위 공간(건축물/층/실) 계층 정보 테이블"}
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(
+        BigInteger, primary_key=True, autoincrement=True, comment="공간 고유 ID"
+    )
     facility_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("fac.facilities.id", ondelete="CASCADE"), nullable=False
+        BigInteger,
+        ForeignKey("fac.facilities.id", ondelete="CASCADE"),
+        nullable=False,
+        comment="소속 시설 ID",
     )
     parent_id: Mapped[int | None] = mapped_column(
-        BigInteger, ForeignKey("fac.spaces.id", ondelete="CASCADE"), nullable=True
+        BigInteger,
+        ForeignKey("fac.spaces.id", ondelete="RESTRICT"),
+        nullable=True,
+        comment="상위 공간 ID (최상위 공간은 NULL)",
+    )
+
+    org_id: Mapped[int | None] = mapped_column(
+        BigInteger,
+        ForeignKey("usr.organizations.id", ondelete="SET NULL"),
+        nullable=True,
+        comment="관리 책임 부서 ID",
+    )
+
+    space_type_code: Mapped[str] = mapped_column(
+        String(3), nullable=False, comment="공간 물리적 유형 (SPC_TYP)"
+    )
+    space_func_code: Mapped[str | None] = mapped_column(
+        String(3), nullable=True, comment="공간 용도/기능 분류 (SPC_FNC)"
+    )
+
+    name: Mapped[str] = mapped_column(String(100), nullable=False, comment="공간 명칭")
+    area_size: Mapped[float | None] = mapped_column(
+        Numeric(precision=10, scale=2), nullable=True, comment="바닥 면적 (sqm)"
     )
 
     representative_image_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), nullable=True
-    )
-
-    # [SFMS Code Standard] 코드 기반 참조
-    space_type_group_code: Mapped[str] = mapped_column(
-        String(30), server_default="SPACE_TYPE"
-    )
-    space_type_code: Mapped[str] = mapped_column(String(3), nullable=False)
-
-    space_func_group_code: Mapped[str] = mapped_column(
-        String(30), server_default="SPACE_FUNC"
-    )
-    space_func_code: Mapped[str] = mapped_column(String(3), nullable=False)
-
-    code: Mapped[str] = mapped_column(String(50), nullable=False)
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
-    area_size: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    sort_order: Mapped[int] = mapped_column(Integer, default=0)
-    is_restricted: Mapped[bool] = mapped_column(Boolean, default=False)
-
-    org_id: Mapped[int | None] = mapped_column(
-        BigInteger, index=True, comment="관리 책임 부서 ID"
+        UUID(as_uuid=True), nullable=True, comment="공간 사진 ID"
     )
     metadata_info: Mapped[dict[str, Any]] = mapped_column(
-        "metadata", JSONB, default=dict, server_default="'{}'::jsonb"
+        "metadata",
+        JSONB,
+        default=dict,
+        server_default="'{}'::jsonb",
+        comment="추가 정보 (JSON)",
     )
-    legacy_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    legacy_source_tbl: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=10)
+    is_restricted: Mapped[bool] = mapped_column(
+        Boolean, default=False, comment="출입 제한 구역 여부"
+    )
+
+    # [Audit] 감사 로그
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
+        DateTime(timezone=True), server_default=func.now(), comment="생성 일시"
     )
-    created_by: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    created_by: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True, comment="생성자 ID"
+    )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        comment="수정 일시",
     )
-    updated_by: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    updated_by: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True, comment="수정자 ID"
+    )
 
     # Relationships
     facility: Mapped["Facility"] = relationship("Facility", back_populates="spaces")
@@ -172,6 +224,6 @@ class Space(Base):
         cascade="all, delete-orphan",
         remote_side=[parent_id],
     )
-    parent: Mapped[Optional["Space"]] = relationship(
+    parent: Mapped["Space" | None] = relationship(
         "Space", back_populates="children", remote_side=[id]
     )

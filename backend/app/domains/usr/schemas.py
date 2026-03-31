@@ -1,6 +1,6 @@
 """사용자(User) 및 조직(Organization) 도메인의 데이터 검증 및 직렬화를 위한 Pydantic 스키마 정의 모듈입니다.
 
-이 모듈은 사용자 및 조직의 조회 및 생성/수정/조회 시 사용되는 데이터
+이 모듈은 사용자 및 조직의 조회 및 생성/수정/조회 시 사용되는 데이터 구조를 정의합니다.
 """
 
 import uuid
@@ -84,7 +84,15 @@ class UserBase(BaseModel):
     @field_validator("email")
     @classmethod
     def to_lower_email(cls, v: str) -> str:
-        """입력된 이메일을 모두 소문자로 변환합니다."""
+        """입력된 이메일을 모두 소문자로 변환합니다.
+
+        Args:
+            v (str): 입력된 이메일 주소
+
+        Returns:
+            str: 소문자로 변환된 이메일 주소
+
+        """
         return v.lower()
 
 
@@ -98,7 +106,15 @@ class UserCreate(UserBase):
     @field_validator("login_id")
     @classmethod
     def to_lower_login_id(cls, v: str) -> str:
-        """입력된 로그인 ID를 모두 소문자로 변환합니다."""
+        """입력된 로그인 ID를 모두 소문자로 변환합니다.
+
+        Args:
+            v (str): 입력된 로그인 ID
+
+        Returns:
+            str: 소문자로 변환된 로그인 ID
+
+        """
         return v.lower()
 
 
@@ -140,11 +156,17 @@ class UserRead(UserBase):
     @model_validator(mode="before")
     @classmethod
     def wrap_data(cls, data: Any) -> Any:
-        """데이터 변환 및 필드 매핑 처리를 수행합니다."""
+        """데이터 변환 및 필드 매핑 처리를 수행합니다.
+
+        Args:
+            data (Any): 입력 데이터
+
+        Returns:
+            Any: 변환된 데이터 딕셔너리
+
+        """
         if not isinstance(data, dict):
             # 1. metadata 매핑 (SQLAlchemy 'metadata' 컬럼 -> Pydantic 'metadata' 필드)
-            # SQLAlchemy 모델의 .metadata는 MetaData 객체이므로 .user_metadata 컬럼을 봐야함
-            # 하지만 모델에서 이미 이 부분을 처리하고 있을 수 있으므로 안전하게 접근
             user_meta = getattr(data, "user_metadata", {})
             if not isinstance(user_meta, dict):
                 user_meta = {}

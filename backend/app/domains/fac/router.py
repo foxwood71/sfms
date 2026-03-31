@@ -151,7 +151,7 @@ async def delete_facility(
 # --------------------------------------------------------
 
 
-@router.get("/facilities/{facility_id}/spaces", response_model=APIResponse[list[Any]])
+@router.get("/facilities/{facility_id}/spaces", response_model=APIResponse[list[SpaceRead]])
 async def get_spaces(
     facility_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -165,7 +165,7 @@ async def get_spaces(
         current_user (User): 현재 인증된 사용자 정보
 
     Returns:
-        APIResponse[list[Any]]: 최상위 노드부터 하위 children이 포함된 트리 구조
+        APIResponse[list[SpaceRead]]: 최상위 노드부터 하위 children이 포함된 트리 구조
 
     """
     tree_data = await SpaceService.get_space_tree(db, facility_id=facility_id)

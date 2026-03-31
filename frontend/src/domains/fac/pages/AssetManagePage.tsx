@@ -122,13 +122,13 @@ const AssetManagePage: React.FC = () => {
             children:
                 selectedNode?.id === fac.id && spaceTree?.data
                     ? spaceTree.data.map((s: SpaceType) => ({
-                          key: `SPC-${s.id}`,
-                          title: s.name,
-                          icon: <ClusterOutlined />,
-                          type: "SPC",
-                          id: s.id,
-                          data: s,
-                      }))
+                        key: `SPC-${s.id}`,
+                        title: s.name,
+                        icon: <ClusterOutlined />,
+                        type: "SPC",
+                        id: s.id,
+                        data: s,
+                    }))
                     : [],
         }));
     }, [facilities, spaceTree, selectedNode]);
@@ -205,8 +205,18 @@ const AssetManagePage: React.FC = () => {
                                     treeData={treeData}
                                     onSelect={(_, info) => {
                                         if (info.selected) {
-                                            const node = info.node as unknown as AssetTreeNode;
-                                            setSelectedNode({ type: node.type, id: node.id });
+                                            // [FIX] any 제거: unknown 타입을 사용하여 안전하게 캐스팅
+                                            const isAssetTreeNode = (node: unknown): node is AssetTreeNode => {
+                                                return (
+                                                    typeof node === "object" &&
+                                                    node !== null &&
+                                                    "type" in node &&
+                                                    "id" in node
+                                                );
+                                            };
+                                            if (isAssetTreeNode(info.node)) {
+                                                setSelectedNode({ type: info.node.type, id: info.node.id });
+                                            }
                                         }
                                     }}
                                 />

@@ -1,11 +1,9 @@
 """인증 및 권한(IAM) 도메인의 데이터 검증 및 직렬화를 위한 Pydantic 스키마 정의 모듈입니다.
 
-이 모듈은 JWT 토큰, 로그인 요청, 역할(Role) 관리 및 사용자 권한 할당을 위한
-데이터 구조를 정의합니다.
+이 모듈은 JWT 토큰, 로그인 요청, 역할(Role) 관리 및 사용자 권한 할당을 위한 데이터 구조를 정의합니다.
 """
 
 from datetime import datetime
-from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -47,7 +45,7 @@ class RoleBase(BaseModel):
         ..., min_length=2, max_length=50, description="역할 식별 코드 (예: ADMIN)"
     )
     description: str | None = Field(None, description="역할 상세 설명")
-    permissions: dict[str, Any] = Field(
+    permissions: dict[str, list[str]] = Field(
         default_factory=dict, description="메뉴/기능별 권한 매트릭스 (JSON)"
     )
     is_system: bool = Field(False, description="시스템 필수 역할 여부 (수정/삭제 제한)")
@@ -64,7 +62,7 @@ class RoleUpdate(BaseModel):
 
     name: str | None = Field(None, min_length=2, max_length=100)
     description: str | None = None
-    permissions: dict[str, Any] | None = None
+    permissions: dict[str, list[str]] | None = None
     is_active: bool | None = None
 
 
@@ -104,15 +102,24 @@ class UserWithPermissions(UserRead):
 
     @model_validator(mode="before")
     @classmethod
-    def fix_sqlalchemy_metadata(cls, data: Any) -> Any:
-        """SQLAlchemy 모델에서 데이터를 읽을 때 metadata 충돌을 방지합니다."""
+    def fix_sqlalchemy_metadata(cls, data: dict[str, object] | object) -> dict[str, object]:
+        """SQLAlchemy 모델에서 데이터를 읽을 때 metadata 충돌을 방지합니다.
+
+        Any를 제거하고 object와 구체적인 dict 구조를 사용하도록 개선되었습니다.
+
+        Args:
+            data (dict[str, object] | object): 입력 데이터 (SQLAlchemy 모델 또는 딕셔너리)
+
+        Returns:
+            dict[str, object]: 변환된 데이터 딕셔너리
+
+        """
         if not isinstance(data, dict):
-            # SQLAlchemy 모델 객체인 경우 (지연 로딩 및 프레임워크 객체 충돌 방지)
-            result = {}
+            # SQLAlchemy 모델 객체인 경우
+            result: dict[str, object] = {}
             # 부모(UserRead)의 필드들을 수동으로 복사
             for field in cls.model_fields.keys():
                 if field == "user_metadata":
-                    # DB의 'metadata' 컬럼 값(dict)을 'user_metadata' 필드에 매핑
                     meta_val = getattr(data, "metadata", {})
                     result[field] = meta_val if isinstance(meta_val, dict) else {}
                 elif field == "is_superuser":
