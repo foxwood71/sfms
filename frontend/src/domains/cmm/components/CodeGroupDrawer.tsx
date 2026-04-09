@@ -71,8 +71,8 @@ const CodeGroupDrawer: React.FC<CodeGroupDrawerProps> = ({ open, onOpenChange, e
                 mode === "view"
                     ? t("cmm.code.detail_title")
                     : mode === "edit"
-                      ? t("cmm.code.edit_group")
-                      : t("cmm.code.new_group")
+                    ? t("cmm.code.edit_group")
+                    : t("cmm.code.new_group")
             }
             open={open}
             onOpenChange={onOpenChange}
@@ -82,30 +82,30 @@ const CodeGroupDrawer: React.FC<CodeGroupDrawerProps> = ({ open, onOpenChange, e
                 render: (props) =>
                     mode === "view"
                         ? [
-                              <Button key="close" onClick={() => onOpenChange(false)}>
-                                  {t("common.confirm")}
-                              </Button>,
-                              <Button key="edit" type="primary" icon={<EditOutlined />} onClick={() => setMode("edit")}>
-                                  {t("common.edit")}
-                              </Button>,
-                          ]
-                        : [
-                              <Button
-                                  key="cancel"
-                                  onClick={() => (editingGroup ? setMode("view") : onOpenChange(false))}
-                                  icon={<CloseOutlined />}
-                              >
-                                  {editingGroup ? t("common.cancel") : t("common.cancel")}
-                              </Button>,
-                              <Button
-                                  key="submit"
-                                  type="primary"
-                                  icon={<SaveOutlined />}
-                                  onClick={() => props.form?.submit()}
-                              >
-                                  {editingGroup ? t("common.save") : t("common.confirm")}
-                              </Button>,
-                          ],
+                            <Button key="close" onClick={() => onOpenChange(false)}>
+                                {t("common.confirm")}
+                            </Button>,
+                            <Button key="edit" type="primary" icon={<EditOutlined />} onClick={() => setMode("edit")}>
+                                {t("common.edit")}
+                            </Button>,
+                        ]
+                    : [
+                            <Button
+                                key="cancel"
+                                onClick={() => (editingGroup ? setMode("view") : onOpenChange(false))}
+                                icon={<CloseOutlined />}
+                            >
+                                {editingGroup ? t("common.cancel") : t("common.cancel")}
+                            </Button>,
+                            <Button
+                                key="submit"
+                                type="primary"
+                                icon={<SaveOutlined />}
+                                onClick={() => props.form?.submit()}
+                            >
+                                {editingGroup ? t("common.save") : t("common.confirm")}
+                            </Button>,
+                        ],
             }}
             drawerProps={{
                 destroyOnClose: true,

@@ -92,8 +92,8 @@ const AssetFormDrawer: React.FC<AssetFormDrawerProps> = ({ open, onOpenChange, e
                 ? t("fac.facility.new_facility")
                 : t("fac.space.new_space")
             : isFac
-              ? t("fac.facility.detail_title")
-              : t("fac.space.detail_title");
+                ? t("fac.facility.detail_title")
+                : t("fac.space.detail_title");
 
     const displayHeaderName =
         watchedName || editingNode?.data?.name || (isFac ? t("fac.facility.name") : t("fac.space.name"));

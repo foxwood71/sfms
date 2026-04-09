@@ -1,16 +1,16 @@
 import { CloseOutlined, EditOutlined, SaveOutlined } from "@ant-design/icons";
 import { DrawerForm, ProForm, ProFormText } from "@ant-design/pro-components";
 import { useQuery } from "@tanstack/react-query";
-import { Button, Col, Divider, Row, Select, Switch, theme } from "antd";
+import { Button, Select, theme } from "antd";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { getCodeDetails } from "@/domains/cmm/api";
 import type { CodeDetail } from "@/domains/cmm/types";
 import type { User, UserFormValues } from "@/domains/usr/types";
-import { LAYOUT_CONSTANTS } from "@/shared/constants/layout";
-import CodeSelect from "../CodeSelect";
-import OrgTreeSelect from "../OrgTreeSelect";
+import AccountInfoSection from "./AccountInfoSection";
+import AccountStatusSection from "./AccountStatusSection";
 import PasswordChangeModal from "./PasswordChangeModal";
+import PersonnelInfoSection from "./PersonnelInfoSection";
 import RoleAssignmentModal from "./RoleAssignmentModal";
 import UserIdentitySection from "./UserIdentitySection";
 
@@ -75,8 +75,15 @@ const UserFormDrawer: React.FC<UserFormDrawerProps> = ({ open, onOpenChange, edi
             if (editingUser) {
                 setMode("view");
                 form.setFieldsValue({
-                    ...editingUser,
+                    login_id: editingUser.login_id,
+                    name: editingUser.name,
+                    emp_code: editingUser.emp_code,
+                    email: editingUser.email,
+                    phone: editingUser.phone,
                     org_id: editingUser.org_id ? Number(editingUser.org_id) : undefined,
+                    is_active: editingUser.is_active,
+                    account_status: editingUser.account_status,
+                    profile_image_id: editingUser.profile_image_id,
                     pos: editingUser.metadata?.pos,
                     duty: editingUser.metadata?.duty,
                     role_ids: editingUser.roles?.map((r) => r.id) || [],
@@ -103,8 +110,8 @@ const UserFormDrawer: React.FC<UserFormDrawerProps> = ({ open, onOpenChange, edi
     const fieldStyle = useMemo(
         () => ({
             style: {
-                height: "32px", // AntD 기본 높이 고정
-                color: isReadOnly ? token.colorText : undefined, // 읽기 모드일 때 글자색 명확하게
+                height: "32px",
+                color: isReadOnly ? token.colorText : undefined,
                 fontWeight: isReadOnly ? 500 : undefined,
             },
         }),
@@ -124,35 +131,35 @@ const UserFormDrawer: React.FC<UserFormDrawerProps> = ({ open, onOpenChange, edi
                     render: (props) =>
                         mode === "view"
                             ? [
-                                  <Button key="close" onClick={() => onOpenChange(false)}>
-                                      닫기
-                                  </Button>,
-                                  <Button
-                                      key="edit"
-                                      type="primary"
-                                      icon={<EditOutlined />}
-                                      onClick={() => setMode("edit")}
-                                  >
-                                      수정하기
-                                  </Button>,
-                              ]
+                                <Button key="close" onClick={() => onOpenChange(false)}>
+                                    닫기
+                                </Button>,
+                                <Button
+                                    key="edit"
+                                    type="primary"
+                                    icon={<EditOutlined />}
+                                    onClick={() => setMode("edit")}
+                                >
+                                    수정하기
+                                </Button>,
+                            ]
                             : [
-                                  <Button
-                                      key="cancel"
-                                      onClick={() => (editingUser ? setMode("view") : onOpenChange(false))}
-                                      icon={<CloseOutlined />}
-                                  >
-                                      {editingUser ? "수정 취소" : "취소"}
-                                  </Button>,
-                                  <Button
-                                      key="submit"
-                                      type="primary"
-                                      icon={<SaveOutlined />}
-                                      onClick={() => props.form?.submit()}
-                                  >
-                                      {editingUser ? "수정 완료" : "등록 완료"}
-                                  </Button>,
-                              ],
+                                <Button
+                                    key="cancel"
+                                    onClick={() => (editingUser ? setMode("view") : onOpenChange(false))}
+                                    icon={<CloseOutlined />}
+                                >
+                                    {editingUser ? "수정 취소" : "취소"}
+                                </Button>,
+                                <Button
+                                    key="submit"
+                                    type="primary"
+                                    icon={<SaveOutlined />}
+                                    onClick={() => props.form?.submit()}
+                                >
+                                    {editingUser ? "수정 완료" : "등록 완료"}
+                                </Button>,
+                            ],
                 }}
                 drawerProps={{
                     destroyOnHidden: true,
@@ -175,7 +182,7 @@ const UserFormDrawer: React.FC<UserFormDrawerProps> = ({ open, onOpenChange, edi
                     }
                 `}</style>
 
-                {/* 1. 프로필 Identity 섹션 (분리됨) */}
+                {/* 1. 프로필 Identity 섹션 */}
                 <UserIdentitySection
                     user={editingUser}
                     watchedName={watchedName}
@@ -193,219 +200,26 @@ const UserFormDrawer: React.FC<UserFormDrawerProps> = ({ open, onOpenChange, edi
                     <Select mode="multiple" />
                 </ProForm.Item>
 
-                {/* 2. 기본 계정 정보 */}
-                <Divider
-                    orientation="left"
-                    style={{
-                        margin: "0 0 16px 0",
-                        fontSize: "13px",
-                        color: token.colorTextSecondary,
-                        fontWeight: 600,
-                    }}
-                >
-                    기본 계정 정보
-                </Divider>
-                <Row gutter={LAYOUT_CONSTANTS.FORM_GUTTER}>
-                    <Col span={12}>
-                        <ProFormText
-                            name="login_id"
-                            label="로그인 ID"
-                            disabled={mode !== "add"}
-                            fieldProps={fieldStyle}
-                            rules={
-                                mode === "add"
-                                    ? [
-                                          {
-                                              required: true,
-                                              min: 4,
-                                              message: "4자 이상 입력해주세요",
-                                          },
-                                      ]
-                                    : []
-                            }
-                            placeholder={mode === "add" ? "사용할 ID 입력" : ""}
-                        />
-                    </Col>
-                    <Col span={12}>
-                        <ProFormText
-                            name="name"
-                            label="성명"
-                            rules={[{ required: true }]}
-                            disabled={isReadOnly}
-                            fieldProps={fieldStyle}
-                        />
-                    </Col>
-                </Row>
-                <Row gutter={LAYOUT_CONSTANTS.FORM_GUTTER}>
-                    <Col span={12}>
-                        <ProFormText
-                            name="emp_code"
-                            label="사번"
-                            rules={[
-                                { required: true, message: "사번을 입력해주세요" },
-                                {
-                                    pattern: /^[A-Z0-9_-]+$/,
-                                    message: "영문 대문자, 숫자, _, -만 입력 가능합니다",
-                                },
-                            ]}
-                            fieldProps={{
-                                ...fieldStyle,
-                                placeholder: "예: GUMC-001",
-                                onChange: (e) => {
-                                    const val = e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, "");
-                                    form.setFieldValue("emp_code", val);
-                                },
-                            }}
-                            disabled={isReadOnly}
-                        />
-                    </Col>
-                    {mode === "add" && (
-                        <Col span={12}>
-                            <ProFormText.Password
-                                name="password"
-                                label="초기 비밀번호"
-                                rules={[{ required: true, min: 8 }]}
-                                fieldProps={{ ...fieldStyle, autoComplete: "new-password" }}
-                            />
-                        </Col>
-                    )}
-                </Row>
+                {/* 2. 기본 계정 정보 섹션 */}
+                <AccountInfoSection
+                    mode={mode}
+                    isReadOnly={isReadOnly}
+                    fieldStyle={fieldStyle}
+                    onEmpCodeChange={(val) => form.setFieldValue("emp_code", val)}
+                />
 
-                {/* 3. 인사 / 부서 정보 */}
-                <Divider
-                    orientation="left"
-                    style={{
-                        margin: "12px 0 16px 0",
-                        fontSize: "13px",
-                        color: token.colorTextSecondary,
-                        fontWeight: 600,
-                    }}
-                >
-                    인사 / 부서 정보
-                </Divider>
-                <Row gutter={LAYOUT_CONSTANTS.FORM_GUTTER}>
-                    <Col span={24}>
-                        <ProForm.Item name="org_id" label="소속 부서" rules={[{ required: true }]}>
-                            <OrgTreeSelect disabled={isReadOnly} style={{ height: "32px" }} />
-                        </ProForm.Item>
-                    </Col>
-                </Row>
-                <Row gutter={LAYOUT_CONSTANTS.FORM_GUTTER}>
-                    <Col span={12}>
-                        <ProForm.Item name="pos" label="직위/직급">
-                            <CodeSelect groupCode="POS_TYPE" disabled={isReadOnly} style={{ height: "32px" }} />
-                        </ProForm.Item>
-                    </Col>
-                    <Col span={12}>
-                        <ProForm.Item name="duty" label="직책">
-                            <CodeSelect groupCode="DUTY_TYPE" disabled={isReadOnly} style={{ height: "32px" }} />
-                        </ProForm.Item>
-                    </Col>
-                </Row>
-                <Row gutter={LAYOUT_CONSTANTS.FORM_GUTTER}>
-                    <Col span={12}>
-                        <ProFormText
-                            name="email"
-                            label="이메일"
-                            rules={[{ type: "email" }]}
-                            disabled={isReadOnly}
-                            fieldProps={fieldStyle}
-                        />
-                    </Col>
-                    <Col span={12}>
-                        <ProFormText name="phone" label="연락처" disabled={isReadOnly} fieldProps={fieldStyle} />
-                    </Col>
-                </Row>
+                {/* 3. 인사 / 부서 정보 섹션 */}
+                <PersonnelInfoSection
+                    isReadOnly={isReadOnly}
+                    fieldStyle={fieldStyle}
+                />
 
-                {/* 4. 상태 표시 바 */}
-                <Row gutter={12} style={{ marginTop: 8 }}>
-                    <Col span={12}>
-                        <div
-                            style={{
-                                boxSizing: "border-box",
-                                height: "46px", // 명시적인 고정 높이
-                                padding: "0 16px",
-                                borderRadius: token.borderRadiusLG,
-                                border: `1px solid ${watchedActive ? token.colorSuccessBorder : token.colorBorderSecondary}`,
-                                background: watchedActive ? token.colorSuccessBg : token.colorFillQuaternary,
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                            }}
-                        >
-                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                                <span
-                                    style={{
-                                        fontSize: "13px",
-                                        color: token.colorTextDescription,
-                                        lineHeight: "1",
-                                    }}
-                                >
-                                    재직 상태:
-                                </span>
-                                <span
-                                    style={{
-                                        fontSize: "13px",
-                                        fontWeight: 700,
-                                        color: watchedActive ? token.colorSuccess : token.colorTextDisabled,
-                                        lineHeight: "1",
-                                    }}
-                                >
-                                    {watchedActive ? "재직" : "퇴사"}
-                                </span>
-                            </div>
-                            <ProForm.Item name="is_active" noStyle valuePropName="checked">
-                                <Switch size="small" disabled={isReadOnly} />
-                            </ProForm.Item>
-                        </div>
-                    </Col>
-                    <Col span={12}>
-                        <div
-                            style={{
-                                boxSizing: "border-box",
-                                height: "46px", // 동일한 고정 높이
-                                padding: "0 16px",
-                                borderRadius: token.borderRadiusLG,
-                                border: `1px solid ${watchedStatus === "ACTIVE" ? token.colorInfoBorder : token.colorErrorBorder}`,
-                                background: watchedStatus === "ACTIVE" ? token.colorInfoBg : token.colorErrorBg,
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                            }}
-                        >
-                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                                <span
-                                    style={{
-                                        fontSize: "13px",
-                                        color: token.colorTextDescription,
-                                        lineHeight: "1",
-                                    }}
-                                >
-                                    계정 상태:
-                                </span>
-                                <span
-                                    style={{
-                                        fontSize: "13px",
-                                        fontWeight: 700,
-                                        color: watchedStatus === "ACTIVE" ? token.colorInfo : token.colorError,
-                                        lineHeight: "1",
-                                    }}
-                                >
-                                    {watchedStatus === "ACTIVE" ? "정상" : "차단"}
-                                </span>
-                            </div>
-                            <ProForm.Item
-                                name="account_status"
-                                noStyle
-                                valuePropName="checked"
-                                getValueProps={(v: string) => ({ checked: v === "ACTIVE" })}
-                                getValueFromEvent={(c: boolean) => (c ? "ACTIVE" : "BLOCKED")}
-                            >
-                                <Switch size="small" disabled={isReadOnly} />
-                            </ProForm.Item>
-                        </div>
-                    </Col>
-                </Row>
+                {/* 4. 상태 표시 바 섹션 */}
+                <AccountStatusSection
+                    isReadOnly={isReadOnly}
+                    watchedActive={!!watchedActive}
+                    watchedStatus={watchedStatus || "ACTIVE"}
+                />
             </DrawerForm>
 
             {/* 별도 컴포넌트로 분리된 모달들 */}

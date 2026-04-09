@@ -64,30 +64,30 @@ const CodeDetailDrawer: React.FC<CodeDetailDrawerProps> = ({
                 render: (props) =>
                     mode === "view"
                         ? [
-                              <Button key="close" onClick={() => onOpenChange(false)}>
-                                  닫기
-                              </Button>,
-                              <Button key="edit" type="primary" icon={<EditOutlined />} onClick={() => setMode("edit")}>
-                                  수정하기
-                              </Button>,
-                          ]
-                        : [
-                              <Button
-                                  key="cancel"
-                                  onClick={() => (editingDetail ? setMode("view") : onOpenChange(false))}
-                                  icon={<CloseOutlined />}
-                              >
-                                  {editingDetail ? "수정 취소" : "취소"}
-                              </Button>,
-                              <Button
-                                  key="submit"
-                                  type="primary"
-                                  icon={<SaveOutlined />}
-                                  onClick={() => props.form?.submit()}
-                              >
-                                  {editingDetail ? "수정 완료" : "등록 완료"}
-                              </Button>,
-                          ],
+                            <Button key="close" onClick={() => onOpenChange(false)}>
+                                닫기
+                            </Button>,
+                            <Button key="edit" type="primary" icon={<EditOutlined />} onClick={() => setMode("edit")}>
+                                수정하기
+                            </Button>,
+                        ]
+                    : [
+                            <Button
+                                key="cancel"
+                                onClick={() => (editingDetail ? setMode("view") : onOpenChange(false))}
+                                icon={<CloseOutlined />}
+                            >
+                                {editingDetail ? "수정 취소" : "취소"}
+                            </Button>,
+                            <Button
+                                key="submit"
+                                type="primary"
+                                icon={<SaveOutlined />}
+                                onClick={() => props.form?.submit()}
+                            >
+                                {editingDetail ? "수정 완료" : "등록 완료"}
+                            </Button>,
+                        ],
             }}
             drawerProps={{
                 destroyOnHidden: true,
