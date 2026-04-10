@@ -1,0 +1,31 @@
+services:
+    pgsql:
+        ports:
+            - "5432:5432"
+        volumes:
+            # 개발 환경에서만 Gitea DB 생성 스크립트
+            - ${PWD}/pgsql/sql/20_app_db_init_gitea.sql:/docker-entrypoint-initdb.d/20_app_db_init_gitea.sql:ro
+        secrets:
+            - source: pgsql-key
+              target: /run/secrets/server.key
+            #   uid: "999"
+            #   gid: "999"
+            #   mode: 400
+            - source: pgsql-crt
+              target: /run/secrets/server.crt
+            #   uid: "999"
+            #   gid: "999"
+            #   mode: 444
+            - source: pgsql-ca-crt
+              target: /run/secrets/ca.crt
+            #   uid: "999"
+            #   gid: "999"
+            #   mode: 444
+
+secrets:
+    pgsql-key:
+        file: ${PWD}/pgsql/certs/pgsql.key
+    pgsql-crt:
+        file: ${PWD}/pgsql/certs/pgsql.crt
+    pgsql-ca-crt:
+        file: ${PWD}/pgsql/certs/ca.crt

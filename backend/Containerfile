@@ -24,11 +24,12 @@ RUN apt-get update && apt-get install -y \
 RUN pip install --no-cache-dir uv
 
 # 4. 패키지 의존성 파일 복사 (레이어 캐싱)
-COPY requirements.txt .
+COPY pyproject.toml uv.lock ./
 
 # 5. uv를 사용한 패키지 고속 설치
-# --system 플래그를 사용하여 컨테이너의 글로벌 파이썬 환경에 설치합니다.
-RUN uv pip install --system --no-cache -r requirements.txt
+# uv sync는 시스템 설치를 지원하지 않으므로, lock 파일을 기반으로 requirements.txt를 생성하여 설치합니다.
+RUN uv export --frozen --no-dev --no-cache --format requirements-txt -o requirements.txt && \
+    uv pip install --system --no-cache -r requirements.txt
 
 # 6. 소스 코드 복사
 # (주의: 로컬 개발 시에는 compose.yaml의 volumes로 덮어씌워지지만, 이미지 빌드 완결성을 위해 필요)

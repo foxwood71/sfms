@@ -4,6 +4,8 @@
 모든 테이블은 'usr' 스키마에 정의됩니다.
 """
 
+from __future__ import annotations
+
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
@@ -87,13 +89,13 @@ class Organization(Base):
     )
 
     # Relationships
-    children: Mapped[list["Organization"]] = relationship(
+    children: Mapped[list[Organization]] = relationship(
         "Organization", back_populates="parent", cascade="all, delete-orphan"
     )
-    parent: Mapped["Organization" | None] = relationship(
+    parent: Mapped[Organization | None] = relationship(
         "Organization", back_populates="children", remote_side=[id]
     )
-    users: Mapped[list["User"]] = relationship("User", back_populates="organization")
+    users: Mapped[list[User]] = relationship("User", back_populates="organization")
 
 
 class User(Base):
@@ -189,10 +191,10 @@ class User(Base):
     )
 
     # Relationships
-    organization: Mapped["Organization" | None] = relationship(
+    organization: Mapped[Organization | None] = relationship(
         "Organization", back_populates="users"
     )
-    roles: Mapped[list["Role"]] = relationship(
+    roles: Mapped[list[Role]] = relationship(
         "Role", secondary="iam.user_roles", back_populates="users"
     )
 

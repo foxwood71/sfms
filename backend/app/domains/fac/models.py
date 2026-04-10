@@ -4,6 +4,8 @@
 참조 표준: ID 기반 참조에서 3자리 영문 코드(String) 기반 참조로 전환.
 """
 
+from __future__ import annotations
+
 import uuid
 from datetime import datetime
 from typing import Any
@@ -134,7 +136,7 @@ class Facility(Base):
     )
 
     # Relationships
-    spaces: Mapped[list["Space"]] = relationship("Space", back_populates="facility")
+    spaces: Mapped[list[Space]] = relationship("Space", back_populates="facility")
 
 
 class Space(Base):
@@ -217,13 +219,13 @@ class Space(Base):
     )
 
     # Relationships
-    facility: Mapped["Facility"] = relationship("Facility", back_populates="spaces")
-    children: Mapped[list["Space"]] = relationship(
+    facility: Mapped[Facility] = relationship("Facility", back_populates="spaces")
+    children: Mapped[list[Space]] = relationship(
         "Space",
         back_populates="parent",
         cascade="all, delete-orphan",
         remote_side=[parent_id],
     )
-    parent: Mapped["Space" | None] = relationship(
+    parent: Mapped[Space | None] = relationship(
         "Space", back_populates="children", remote_side=[id]
     )

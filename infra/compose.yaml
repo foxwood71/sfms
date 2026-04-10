@@ -7,8 +7,8 @@ include:
   - ./compose/01_pgsql.${SFMS_ENV}.yaml
   - ./compose/02_redis.${SFMS_ENV}.yaml
   - ./compose/03_minio.${SFMS_ENV}.yaml
-  # - compose/04_backend.${SFMS_ENV}.yaml
-  # - compose/05_nginx.${SFMS_ENV}.yaml
+  - ./compose/04_api.${SFMS_ENV}.yaml
+  - ./compose/05_nginx.${SFMS_ENV}.yaml
   - compose/06_pgadm.${SFMS_ENV}.yaml
   - compose/07_gitea.${SFMS_ENV}.yaml
   # - compose/08_portainer.${SFMS_ENV}.yaml -> # 인증서가 없어도 인증서를 자체적으로 만들어서 구분할 필요가 없음

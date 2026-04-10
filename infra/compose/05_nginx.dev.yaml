@@ -1,2 +1,21 @@
 services:
-    nginx:
+  nginx:
+    image: nginx:stable-alpine
+    container_name: nginx
+    depends_on:
+      - api
+    restart: always
+    ports:
+      - "80:80"
+    environment:
+      - TZ=Asia/Seoul
+    volumes:
+      - ./nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/scripts/entrypoint-wrapper.sh:/usr/local/bin/entrypoint-wrapper.sh:ro
+      - ./data/logs/nginx:/var/log/nginx:Z
+      - ../frontend/dist:/usr/share/nginx/html:ro,Z
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    entrypoint: ["/bin/sh", "/usr/local/bin/entrypoint-wrapper.sh"]
+    networks:
+      - sfms-net
