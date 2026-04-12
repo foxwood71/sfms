@@ -1,7 +1,7 @@
 # ---------------------------------------------------------
 # 1단계: 빌더 이미지 (은전한닢 사전 컴파일 전용)
 # ---------------------------------------------------------
-FROM groonga/pgroonga:latest-debian-16 AS builder
+FROM docker.io/groonga/pgroonga:latest-debian-16 AS builder
 
 # 사전을 컴파일하는 데 필요한 빌드 툴과 라이브러리 설치
 RUN apt-get update && \
@@ -18,7 +18,7 @@ RUN curl -LO https://bitbucket.org/eunjeon/mecab-ko-dic/downloads/mecab-ko-dic-2
 # ---------------------------------------------------------
 # 2단계: 최종 운영 이미지 (가벼운 상태 유지)
 # ---------------------------------------------------------
-FROM groonga/pgroonga:latest-debian-16
+FROM docker.io/groonga/pgroonga:latest-debian-16
 
 # 실행에 필요한 최소한의 MeCab 런타임 패키지만 설치
 # MeCab 기본 설정 파일을 수정해서 한국어 사전을 기본으로 인식하도록 변경

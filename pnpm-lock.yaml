@@ -13,13 +13,13 @@ importers:
         version: 10.30.3
     devDependencies:
       '@google/gemini-cli':
-        specifier: ^0.37.0
-        version: 0.37.0
+        specifier: ^0.37.1
+        version: 0.37.1
 
 packages:
 
-  '@google/gemini-cli@0.37.0':
-    resolution: {integrity: sha512-IdS3MxTxtwbnx7EqNkD0ucVj/jH9MoOuRxuceiQQ93glW3xLGMyQkbqz7HCtDFV1vI57vX2gragNPWyiFKwdEQ==}
+  '@google/gemini-cli@0.37.1':
+    resolution: {integrity: sha512-F9koIXd9ZX1yu2MPyMvnwbrdehmPIPqctYI2dy3eS6EKqzg8V83LOvbApGBqrIKec1z2skfnEbC9C6sDNkcojw==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -230,7 +230,7 @@ packages:
 
 snapshots:
 
-  '@google/gemini-cli@0.37.0':
+  '@google/gemini-cli@0.37.1':
     optionalDependencies:
       '@lydell/node-pty': 1.1.0
       '@lydell/node-pty-darwin-arm64': 1.1.0

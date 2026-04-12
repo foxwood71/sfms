@@ -13,10 +13,12 @@ services:
         condition: service_healthy
     restart: always
     environment:
-      # DB_PASSWORD와 REDIS_PASSWORD는 infra/.env 또는 쉘 환경변수에서 주입되어야 합니다.
+      # 비밀번호는 infra/.env 파일에서 주입됩니다.
       - DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@pgsql:5432/${DB_NAME}
       - REDIS_URL=redis://:${REDIS_PASSWORD:-password123!}@redis:6379/0
-      - S3_ENDPOINT=http://minio:9000
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER}
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD}
       - TZ=Asia/Seoul
     volumes:
       - ../backend:/app:Z
@@ -24,7 +26,7 @@ services:
     networks:
       - sfms-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
       interval: 30s
       timeout: 10s
       retries: 3

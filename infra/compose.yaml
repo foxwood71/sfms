@@ -17,7 +17,7 @@ services:
   # dummy / infra용 작은 서비스 하나
   _meta:
     profiles: [ "", "dev", "prod", "meta" ] # 프로파일 설정
-    image: busybox
+    image: docker.io/library/busybox
     command: [ "sh", "-c", "echo app && sleep 3600" ]
   # 기본 up에서는 안 쓰고 싶으면 프로파일로 빼두기
 

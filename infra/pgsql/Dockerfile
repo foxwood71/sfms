@@ -1,4 +1,4 @@
-FROM postgres:16-bookworm
+FROM docker.io/library/postgres:16-bookworm
 
 #### 환경 변수 설정
 ENV LANG=ko_KR.UTF-8

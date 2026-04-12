@@ -1,9 +1,26 @@
 services:
+  # 1. 프론트엔드 빌더 서비스
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: frontend-builder
+    command: ["pnpm", "build"]
+    volumes:
+      - ../frontend:/app:Z
+      - ../frontend/dist:/app/dist:Z
+    networks:
+      - sfms-net
+
+  # 2. Nginx 서비스
   nginx:
-    image: nginx:stable-alpine
+    image: docker.io/library/nginx:stable-alpine
     container_name: nginx
     depends_on:
-      - api
+      api:
+        condition: service_healthy
+      frontend:
+        condition: service_completed_successfully
     restart: always
     ports:
       - "80:80"

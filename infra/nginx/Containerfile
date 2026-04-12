@@ -1,5 +1,5 @@
 # 1단계: 빌드 스테이지 (Build Stage)
-FROM node:24-slim AS build-stage
+FROM docker.io/library/node:24-slim AS build-stage
 WORKDIR /app
 
 # pnpm 설치 및 의존성 복사
@@ -19,7 +19,7 @@ RUN pnpm build
 
 # 2단계: 실행 스테이지 (Production Stage)
 # 빌드된 결과물만 가벼운 nginx로 옮겨서 보안과 용량을 모두 잡습니다.
-FROM nginx:stable-alpine
+FROM docker.io/library/nginx:stable-alpine
 WORKDIR /usr/share/nginx/html
 
 # 1단계에서 빌드된 dist 폴더 내용만 복사

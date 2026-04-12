@@ -60,7 +60,7 @@ services:
     # 잦은 DB 조회를 줄이고 API 응답 속도를 높이기 위한 인메모리 캐시입니다.
     # ====================================================================
     redis:
-        image: redis:7-alpine
+        image: docker.io/library/redis:7-alpine
         container_name: redis
         restart: always
         # command는 컨테이너가 실행될 때 기본으로 실행할 실행 파일(또는 프로세스)을 덮어쓰는 명령어입니다.
@@ -106,7 +106,7 @@ services:
     # 도면, 보고서, 현장 이미지 등 대용량 파일을 아마존 S3와 동일한 방식으로 저장합니다.
     # ====================================================================
     minio:
-        image: minio/minio:latest
+        image: docker.io/minio/minio:latest
         container_name: minio
         restart: always
         entrypoint: ["/bin/bash", "/usr/local/bin/entrypoint-wrapper.sh"]
@@ -194,7 +194,7 @@ services:
     # # 프록시 서버입니다.
     # # ====================================================================
     # nginx:
-    #     image: nginx:alpine
+    #     image: docker.io/library/nginx:alpine
     #     container_name: sfms-nginx
     #     depends_on:
     #         - sfms-backend
@@ -241,7 +241,7 @@ services:
     # 브라우저에서 접속하여 엑셀처럼 DB 테이블을 조회하고 SQL을 날릴 수 있는 관리자 도구입니다.
     # ====================================================================
     pgadm:
-        image: dpage/pgadmin4
+        image: docker.io/dpage/pgadmin4
         container_name: pgadm
         restart: always
         user: "5050:5050"
@@ -283,7 +283,7 @@ services:
     # 사내망(오프라인)에서도 소스 코드를 안전하게 관리하기 위한 경량화 로컬 Git 서버입니다.
     # ====================================================================
     gitea:
-        image: gitea/gitea:latest
+        image: docker.io/gitea/gitea:latest
         container_name: gitea
         depends_on:
             pgsql:
@@ -370,7 +370,7 @@ services:
     #  -> 인증서가 없어도 인증서를 자체적으로 만들어서 구분할 필요가 없음
     # ====================================================================
     portainer:
-        image: portainer/portainer-ce:latest
+        image: docker.io/portainer/portainer-ce:latest
         container_name: portainer
         restart: always
         # entrypoint: ["/bin/sh", "/usr/local/bin/entrypoint-wrapper.sh"] # shell 자체가 없어 실행불가

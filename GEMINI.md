@@ -16,8 +16,13 @@
 * **📏 코드 밀도 및 분리 표준 (Code Density & Separation)**:
   * **라인 수 제한**: 파일당 **100~200라인 내외**를 유지하며, 250라인 초과 시 반드시 컴포넌트 분리 또는 로직 추출을 수행합니다.
   * **관심사 분리**: 비즈니스 로직(상태 관리, API 호출, 데이터 가공)은 반드시 **Custom Hooks(`hooks/`)**로 추출하고, `.tsx`는 UI 렌더링에만 집중합니다.
-  * **컴포넌트화**: 반복되는 UI 패턴은 원자 단위 컴포넌트로 분리하여 재사용성을 극대화합니다. 페이지 전용 서브 컴포넌트는 해당 페이지 폴더의 `components/` 디렉토리에서 관리합니다.
-* **UI/UX 벤또 표준 (Bento Standard v1.1 - Refined)**:
+  *   **컴포넌트화**: 반복되는 UI 패턴은 원자 단위 컴포넌트로 분리하여 재사용성을 극대화합니다. 페이지 전용 서브 컴포넌트는 해당 페이지 폴더의 `components/` 디렉토리에서 관리합니다.
+  *   **🚀 성능 및 번들 최적화 (Bundle Optimization)**:
+      *   **Route-based Code Splitting**: 모든 페이지 단위 컴포넌트는 `React.lazy()`와 `Suspense`를 사용하여 라우트 기반 코드 분할을 필수 적용합니다.
+      *   **Vendor Chunking**: `antd`, `react`, `lucide-react` 등 대용량 외부 라이브러리는 Vite 설정을 통해 별도의 벤더 청크로 분리하여 브라우저 캐싱 효율을 높입니다.
+      *   **Threshold**: 단일 JS 청크 크기가 **500kB(Gzip 전)**를 초과할 경우, 반드시 컴포넌트 세분화 또는 동적 임포트(`import()`) 적용을 검토합니다.
+  *   **UI/UX 벤또 표준 (Bento Standard v1.1 - Refined)**:
+
   * **Single Bento Box**: 각 페이지의 메인 콘텐츠는 `borderRadius: 12px`, `overflow: hidden`, `boxShadow`가 적용된 **하나의 거대한 카드** 안에 담겨야 합니다.
   * **Solid Header Bar**: 헤더 영역은 `background: colorFillAlter`, `minHeight: 56px`, `padding: 0 20px`를 유지하여 안정감을 줍니다.
   * **Splitter Control**: 좌측 패널(트리 등)의 조절 범위는 **15% ~ 40%**로 제한하며, 우측 패널은 최소 **50%**를 보장합니다.

@@ -1,4 +1,4 @@
-FROM python:3.13-slim
+FROM docker.io/library/python:3.13-slim
 
 # 1. Python 컨테이너 필수 환경 변수 설정
 # 파이썬 바이트코드(.pyc) 파일 생성 방지
