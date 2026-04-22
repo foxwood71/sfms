@@ -1,6 +1,7 @@
 services:
   # 1. 프론트엔드 빌더 서비스
   frontend:
+    profiles: ["build"]
     build:
       context: ../frontend
       dockerfile: Dockerfile
@@ -19,8 +20,6 @@ services:
     depends_on:
       api:
         condition: service_healthy
-      frontend:
-        condition: service_completed_successfully
     restart: always
     ports:
       - "80:80"
