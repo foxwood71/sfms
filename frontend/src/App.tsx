@@ -1,5 +1,6 @@
-import { App as AntdApp, ConfigProvider } from "antd";
+import { App as AntdApp, ConfigProvider, Spin } from "antd";
 import koKR from "antd/locale/ko_KR";
+import React, { Suspense, lazy } from "react";
 import { useTranslation } from "react-i18next";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import ApiTester from "./domains/cmm/ApiTester";
@@ -14,6 +15,9 @@ import MainLayout from "./shared/layout/MainLayout";
 import { useAuthStore } from "./shared/stores/useAuthStore";
 import { useThemeStore } from "./shared/stores/useThemeStore";
 import { getThemeConfig } from "./styles/theme";
+
+// Lazy Loaded Pages
+const RoleManagementPage = lazy(() => import("./domains/iam/pages/RoleManagement"));
 
 /**
  * 임시 페이지 컴포넌트
@@ -37,36 +41,38 @@ function App() {
         <ConfigProvider locale={koKR} theme={getThemeConfig(themeMode)}>
             <AntdApp>
                 <BrowserRouter>
-                    <Routes>
-                        {/* 로그인 페이지 */}
-                        <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />} />
+                    <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" /></div>}>
+                        <Routes>
+                            {/* 로그인 페이지 */}
+                            <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />} />
 
-                        {/* 메인 서비스 영역 (인증 필요) */}
-                        <Route path="/" element={isAuthenticated ? <MainLayout /> : <Navigate to="/login" replace />}>
-                            <Route index element={<Navigate to="/dashboard" replace />} />
-                            <Route path="dashboard" element={<PagePlaceholder title={t("menu.dashboard")} />} />
+                            {/* 메인 서비스 영역 (인증 필요) */}
+                            <Route path="/" element={isAuthenticated ? <MainLayout /> : <Navigate to="/login" replace />}>
+                                <Route index element={<Navigate to="/dashboard" replace />} />
+                                <Route path="dashboard" element={<PagePlaceholder title={t("menu.dashboard")} />} />
 
-                            {/* 사용자 및 조직 */}
-                            <Route path="usr/organizations" element={<OrganizationPage />} />
-                            <Route path="usr/users" element={<UserListPage />} />
+                                {/* 사용자 및 조직 */}
+                                <Route path="usr/organizations" element={<OrganizationPage />} />
+                                <Route path="usr/users" element={<UserListPage />} />
 
-                            {/* 인증 및 권한 */}
-                            <Route path="iam/roles" element={<PagePlaceholder title={t("menu.iam-roles")} />} />
+                                {/* 인증 및 권한 */}
+                                <Route path="iam/roles" element={<RoleManagementPage />} />
 
-                            {/* 시설 및 공간 통합 관리 */}
-                            <Route path="fac/manage" element={<AssetManagePage />} />
+                                {/* 시설 및 공간 통합 관리 */}
+                                <Route path="fac/manage" element={<AssetManagePage />} />
 
-                            {/* 공통 설정 */}
-                            <Route path="cmm/codes" element={<CodeManagePage />} />
+                                {/* 공통 설정 */}
+                                <Route path="cmm/codes" element={<CodeManagePage />} />
 
-                            {/* 시스템 관리 */}
-                            <Route path="sys/audit-logs" element={<AuditLogPage />} />
-                            <Route path="sys/api-tester" element={<ApiTester />} />
-                        </Route>
+                                {/* 시스템 관리 */}
+                                <Route path="sys/audit-logs" element={<AuditLogPage />} />
+                                <Route path="sys/api-tester" element={<ApiTester />} />
+                            </Route>
 
-                        {/* 404 처리 */}
-                        <Route path="*" element={<Navigate to="/" replace />} />
-                    </Routes>
+                            {/* 404 처리 */}
+                            <Route path="*" element={<Navigate to="/" replace />} />
+                        </Routes>
+                    </Suspense>
                 </BrowserRouter>
             </AntdApp>
         </ConfigProvider>

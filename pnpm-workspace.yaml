@@ -1,4 +1,5 @@
 onlyBuiltDependencies:
+  - '@github/keytar'
   - '@pnpm/exe'
   - keytar
   - node-pty

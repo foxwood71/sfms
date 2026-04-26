@@ -15,6 +15,7 @@ DROP SCHEMA IF EXISTS sys CASCADE;
 \i 150_fac_tables.pgsql
 \i 011_bootstrap.pgsql
 \i 910_cmm_seed_data.pgsql
+\i 930_iam_seed_data.pgsql
 \i 190_phase1_constraints.pgsql
 \i 410_usr_dummy_data.pgsql
 
